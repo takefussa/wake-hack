@@ -1,33 +1,76 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
-import React from 'react';
+import type { ComponentProps } from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { HapticTab } from '@/components/common/haptic-tab';
+import { colors, componentSizes, fonts } from '@/constants/theme';
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
+
+function TabIcon({ color, focused, name }: { color: string; focused: boolean; name: IconName }) {
+  return (
+    <Ionicons
+      color={color}
+      name={focused ? name : (`${name}-outline` as IconName)}
+      size={componentSizes.tabIcon}
+    />
+  );
+}
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
+        tabBarActiveTintColor: colors.indigo,
+        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarHideOnKeyboard: true,
         tabBarButton: HapticTab,
+        tabBarLabelStyle: {
+          fontFamily: fonts?.sans,
+          fontSize: 10,
+          fontWeight: '500',
+          letterSpacing: 0,
+        },
+        tabBarStyle: {
+          borderTopColor: colors.separator,
+          backgroundColor: colors.surface,
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'ホーム',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={color} focused={focused} name="home" />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="connections"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'つながり',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={color} focused={focused} name="people" />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="friends"
+        options={{
+          title: 'フレンド',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={color} focused={focused} name="heart" />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'プロフィール',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={color} focused={focused} name="person" />
+          ),
         }}
       />
     </Tabs>

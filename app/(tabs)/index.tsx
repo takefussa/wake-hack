@@ -1,98 +1,98 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Redirect } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { AppLogo } from '@/components/common/app-logo';
+import { AppText } from '@/components/common/app-text';
+import { Avatar } from '@/components/common/avatar';
+import { Screen } from '@/components/common/screen';
+import { Waveform } from '@/components/common/waveform';
+import { NextMorningCard } from '@/components/home/next-morning-card';
+import { colors, spacing } from '@/constants/theme';
+import { useAppStore } from '@/store/use-app-store';
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 11) return 'おはようございます';
+  if (hour < 18) return 'こんにちは';
+  return 'こんばんは';
+}
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const currentUser = useAppStore((state) => state.currentUser);
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
+  const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
+  const loadDemoMorning = useAppStore((state) => state.loadDemoMorning);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  if (!currentUser) {
+    return <Redirect href="/onboarding" />;
+  }
+
+  return (
+    <Screen contentStyle={styles.content} testID="home-screen">
+      <View style={styles.topBar}>
+        <AppLogo compact mode="light" />
+        <Avatar avatarId={currentUser.avatarId} name={currentUser.nickname} size={40} />
+      </View>
+
+      <View style={styles.greeting}>
+        <AppText variant="screenTitle">
+          {getGreeting()}、{currentUser.nickname}さん
+        </AppText>
+        <AppText variant="secondary" tone="soft">
+          明日の朝を、少しだけ整えておきましょう。
+        </AppText>
+      </View>
+
+      <NextMorningCard
+        onPrepare={loadDemoMorning}
+        request={currentMorningRequest}
+        wakeVoice={assignedWakeVoice}
+      />
+
+      <View style={styles.voiceNote}>
+        <Avatar avatarId="sky" name="Yui" size={44} />
+        <View style={styles.voiceCopy}>
+          <AppText variant="secondary">声の向こうに、人がいる。</AppText>
+          <AppText variant="caption" tone="muted">
+            あなたの明日に向けて、誰かが短い声を残します。
+          </AppText>
+          <View style={styles.wave}>
+            <Waveform color={colors.indigo} height={22} levels={[5, 12, 19, 8, 16, 6, 13]} />
+          </View>
+        </View>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  content: {
+    gap: spacing.xxl,
+  },
+  topBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  greeting: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  voiceNote: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.separator,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  voiceCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  wave: {
+    width: 96,
+    marginTop: spacing.sm,
   },
 });
