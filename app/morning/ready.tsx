@@ -9,6 +9,7 @@ import { AppText } from '@/components/common/app-text';
 import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
 import { colors, fonts, radii, spacing } from '@/constants/theme';
+import { useTapLock } from '@/hooks/use-tap-lock';
 import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
 
@@ -20,13 +21,22 @@ export default function TomorrowReadyScreen() {
   const [isStartingWake, setIsStartingWake] = useState(false);
   const [wakeError, setWakeError] = useState<string | null>(null);
   const isStartingWakeRef = useRef(false);
+  const runOnce = useTapLock();
 
   if (!currentMorningRequest || !currentUser) {
     return <Redirect href="/morning/setup" />;
   }
+  if (!assignedWakeVoice) {
+    return <Redirect href="/morning/give-choice" />;
+  }
+  if (
+    assignedWakeVoice.receiverId !== currentUser.id ||
+    assignedWakeVoice.morningRequestId !== currentMorningRequest.id
+  ) {
+    return <Redirect href="/morning/give-choice" />;
+  }
 
-  const isCommunity =
-    assignedWakeVoice?.type === 'community' || !currentMorningRequest.personalEligible;
+  const isCommunity = assignedWakeVoice.type === 'community';
 
   async function handleStartWake() {
     if (isStartingWakeRef.current || !currentMorningRequest || !currentUser) return;
@@ -60,7 +70,7 @@ export default function TomorrowReadyScreen() {
             icon="chevron-back"
             label="ホームに戻る"
             mode="dark"
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => runOnce(() => router.replace('/(tabs)'))}
           />
         </View>
         <View style={styles.heroContent}>
@@ -106,7 +116,7 @@ export default function TomorrowReadyScreen() {
           <AppButton
             icon="mic-outline"
             label="やっぱり誰かに声を届ける"
-            onPress={() => router.push('/morning/request-list')}
+            onPress={() => runOnce(() => router.push('/morning/request-list'))}
             variant="textOnDark"
           />
         ) : null}

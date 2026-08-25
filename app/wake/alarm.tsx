@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -9,33 +9,37 @@ import { IconButton } from '@/components/common/icon-button';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { WakeVoicePlayer } from '@/components/wake/wake-voice-player';
 import { colors, fonts, spacing } from '@/constants/theme';
+import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
+import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { useAppStore } from '@/store/use-app-store';
 
-function formatCurrentTime(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-
 export default function WakeAlarmScreen() {
+  const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
   const cancelWakeSession = useAppStore((state) => state.cancelWakeSession);
   const startWakeMission = useAppStore((state) => state.startWakeMission);
   const sender = useVoiceSender(assignedWakeVoice);
-  const [now, setNow] = useState(() => new Date());
+  const runOnce = useTapLock();
   const stopPlaybackRef = useRef<() => void>(() => undefined);
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 15_000);
-    return () => clearInterval(timer);
-  }, []);
 
   const handlePlayerReady = useCallback((stopPlayback: () => void) => {
     stopPlaybackRef.current = stopPlayback;
   }, []);
 
-  if (!currentMorningRequest || !assignedWakeVoice || !wakeSession) {
+  if (!currentUser || !currentMorningRequest || !assignedWakeVoice || !wakeSession) {
+    return <Redirect href="/morning/ready" />;
+  }
+  if (
+    !isWakeContextValid({
+      currentUser,
+      morningRequest: currentMorningRequest,
+      voice: assignedWakeVoice,
+      wakeSession,
+    })
+  ) {
     return <Redirect href="/morning/ready" />;
   }
   if (wakeSession.status === 'mission') {
@@ -49,15 +53,19 @@ export default function WakeAlarmScreen() {
   const senderName = sender?.nickname ?? '誰か';
 
   function handleWakeUp() {
-    stopPlaybackRef.current();
-    startWakeMission();
-    router.replace('/wake/mission');
+    runOnce(() => {
+      stopPlaybackRef.current();
+      startWakeMission();
+      router.replace('/wake/mission');
+    });
   }
 
   function handleBack() {
-    stopPlaybackRef.current();
-    cancelWakeSession();
-    router.replace('/morning/ready');
+    runOnce(() => {
+      stopPlaybackRef.current();
+      cancelWakeSession();
+      router.replace('/morning/ready');
+    });
   }
 
   return (
@@ -73,7 +81,7 @@ export default function WakeAlarmScreen() {
           おはようございます
         </AppText>
         <AppText variant="time" style={styles.time}>
-          {formatCurrentTime(now)}
+          {wakeSession.alarmAt}
         </AppText>
         <AppText variant="secondary" tone="soft">
           今日は {currentMorningRequest.schedules.join('・')}

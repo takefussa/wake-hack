@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -11,19 +11,32 @@ import { ScreenHeader } from '@/components/common/screen-header';
 import { TimeWheel } from '@/components/morning/time-wheel';
 import { quickWakeTimes } from '@/constants/options';
 import { spacing } from '@/constants/theme';
+import { demoMorningDefaults } from '@/data/demo-scenario';
+import { goBackOrReplace } from '@/features/navigation/go-back';
+import { useTapLock } from '@/hooks/use-tap-lock';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function MorningSetupScreen() {
+  const currentUser = useAppStore((state) => state.currentUser);
   const morningRequestDraft = useAppStore((state) => state.morningRequestDraft);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const setMorningWakeTime = useAppStore((state) => state.setMorningWakeTime);
+  const runOnce = useTapLock();
   const [wakeAt, setWakeAt] = useState(
-    morningRequestDraft?.wakeAt ?? currentMorningRequest?.wakeAt ?? '07:00'
+    morningRequestDraft?.wakeAt ??
+      currentMorningRequest?.wakeAt ??
+      demoMorningDefaults.wakeAt
   );
 
+  if (!currentUser) {
+    return <Redirect href="/onboarding" />;
+  }
+
   function handleNext() {
-    setMorningWakeTime(wakeAt);
-    router.push('/morning/condition');
+    runOnce(() => {
+      setMorningWakeTime(wakeAt);
+      router.push('/morning/condition');
+    });
   }
 
   return (
@@ -31,7 +44,7 @@ export default function MorningSetupScreen() {
       <StatusBar style="dark" />
       <ScreenHeader
         description="明日、声を届けてほしい時刻を選びます。"
-        onBack={() => router.back()}
+        onBack={() => goBackOrReplace('/(tabs)')}
         stepLabel="明日の朝 1 / 2"
         title="何時に起きますか？"
       />

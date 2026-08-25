@@ -9,25 +9,41 @@ import { Screen } from '@/components/common/screen';
 import { ScreenHeader } from '@/components/common/screen-header';
 import { Waveform } from '@/components/common/waveform';
 import { colors, radii, spacing } from '@/constants/theme';
+import { goBackOrReplace } from '@/features/navigation/go-back';
+import { useTapLock } from '@/hooks/use-tap-lock';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function GiveChoiceScreen() {
+  const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const chooseCommunityWake = useAppStore((state) => state.chooseCommunityWake);
+  const runOnce = useTapLock();
 
+  if (!currentUser) {
+    return <Redirect href="/onboarding" />;
+  }
   if (!currentMorningRequest) {
     return <Redirect href="/morning/setup" />;
   }
 
   function handleCommunity() {
-    chooseCommunityWake();
-    router.replace('/morning/ready');
+    runOnce(() => {
+      chooseCommunityWake();
+      router.replace('/morning/ready');
+    });
+  }
+
+  function handleGive() {
+    runOnce(() => router.push('/morning/request-list'));
   }
 
   return (
     <Screen contentStyle={styles.content} testID="give-choice-screen">
       <StatusBar style="dark" />
-      <ScreenHeader onBack={() => router.back()} title="明日の朝の準備ができました" />
+      <ScreenHeader
+        onBack={() => goBackOrReplace('/morning/condition')}
+        title="明日の朝の準備ができました"
+      />
 
       <View style={styles.readyMark}>
         <View style={styles.checkCircle}>
@@ -53,7 +69,7 @@ export default function GiveChoiceScreen() {
         <AppButton
           icon="mic-outline"
           label="誰かに声を届ける"
-          onPress={() => router.push('/morning/request-list')}
+          onPress={handleGive}
           testID="choose-give"
         />
         <AppButton label="今日は届けない" onPress={handleCommunity} variant="text" />

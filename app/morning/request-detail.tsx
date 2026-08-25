@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -10,6 +10,8 @@ import { LoadingState } from '@/components/common/loading-state';
 import { Screen } from '@/components/common/screen';
 import { ScreenHeader } from '@/components/common/screen-header';
 import { colors, fonts, radii, spacing } from '@/constants/theme';
+import { goBackOrReplace } from '@/features/navigation/go-back';
+import { useTapLock } from '@/hooks/use-tap-lock';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -37,12 +39,15 @@ function DetailRow({ label, value, last = false }: DetailRowProps) {
 export default function RequestDetailScreen() {
   const params = useLocalSearchParams<{ requestId?: string | string[] }>();
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
+  const currentUser = useAppStore((state) => state.currentUser);
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
   const selectGiveRequest = useAppStore((state) => state.selectGiveRequest);
   const [request, setRequest] = useState<MorningRequest | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const runOnce = useTapLock();
 
   useEffect(() => {
     let isMounted = true;
@@ -85,26 +90,42 @@ export default function RequestDetailScreen() {
 
   const hasAlreadyGiven = user !== null && currentGiveReceiverIds.includes(user.id);
 
+  if (!currentUser) {
+    return <Redirect href="/onboarding" />;
+  }
+  if (!currentMorningRequest) {
+    return <Redirect href="/morning/setup" />;
+  }
+
   function handleStartRecording() {
     if (!request || hasAlreadyGiven) return;
-    selectGiveRequest(request.id);
-    router.push({
-      pathname: '/morning/record',
-      params: { requestId: request.id },
+    runOnce(() => {
+      selectGiveRequest(request.id);
+      router.push({
+        pathname: '/morning/record',
+        params: { requestId: request.id },
+      });
     });
   }
 
   return (
     <Screen contentStyle={styles.content} testID="request-detail-screen">
       <StatusBar style="dark" />
-      <ScreenHeader onBack={() => router.back()} title="この人の明日の朝へ" />
+      <ScreenHeader
+        onBack={() => goBackOrReplace('/morning/request-list')}
+        title="この人の明日の朝へ"
+      />
 
       {isLoading ? <LoadingState label="朝の様子を読み込んでいます" /> : null}
 
       {!isLoading && error ? (
         <View style={styles.state}>
           <AppText variant="bodyMedium">{error}</AppText>
-          <AppButton label="一覧に戻る" onPress={() => router.back()} variant="secondary" />
+          <AppButton
+            label="一覧に戻る"
+            onPress={() => goBackOrReplace('/morning/request-list')}
+            variant="secondary"
+          />
         </View>
       ) : null}
 

@@ -9,6 +9,8 @@ import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { colors, radii, spacing } from '@/constants/theme';
+import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
+import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { thanksService } from '@/services/thanks-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -36,6 +38,7 @@ function SummaryRow({ label, value, last = false }: SummaryRowProps) {
 }
 
 export default function WakeCompleteScreen() {
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
   const currentUser = useAppStore((state) => state.currentUser);
@@ -43,10 +46,29 @@ export default function WakeCompleteScreen() {
   const thanksMessages = useAppStore((state) => state.thanksMessages);
   const addThanksMessages = useAppStore((state) => state.addThanksMessages);
   const sender = useVoiceSender(assignedWakeVoice);
+  const runOnce = useTapLock();
   const currentUserId = currentUser?.id;
+  const hasValidCompleteContext = Boolean(
+    currentUser &&
+      currentMorningRequest &&
+      assignedWakeVoice &&
+      wakeSession &&
+      isWakeContextValid({
+        currentUser,
+        morningRequest: currentMorningRequest,
+        voice: assignedWakeVoice,
+        wakeSession,
+      })
+  );
 
   useEffect(() => {
-    if (!currentUserId || wakeSession?.status !== 'completed') return;
+    if (
+      !hasValidCompleteContext ||
+      !currentUserId ||
+      wakeSession?.status !== 'completed'
+    ) {
+      return;
+    }
     const userId = currentUserId;
 
     let isMounted = true;
@@ -66,9 +88,21 @@ export default function WakeCompleteScreen() {
     return () => {
       isMounted = false;
     };
-  }, [addThanksMessages, currentUserId, givenVoiceMessages, wakeSession?.status]);
+  }, [
+    addThanksMessages,
+    currentUserId,
+    givenVoiceMessages,
+    hasValidCompleteContext,
+    wakeSession?.status,
+  ]);
 
-  if (!assignedWakeVoice || !wakeSession) {
+  if (
+    !hasValidCompleteContext ||
+    !currentUser ||
+    !currentMorningRequest ||
+    !assignedWakeVoice ||
+    !wakeSession
+  ) {
     return <Redirect href="/morning/ready" />;
   }
   if (wakeSession.status !== 'completed') {
@@ -88,11 +122,13 @@ export default function WakeCompleteScreen() {
     : false;
 
   function handleThanks() {
-    if (hasSentThanks) {
-      router.push(isPersonal ? '/friend/request' : '/(tabs)/connections');
-      return;
-    }
-    router.push('/wake/thanks');
+    runOnce(() => {
+      if (hasSentThanks) {
+        router.push(isPersonal ? '/friend/request' : '/(tabs)/connections');
+        return;
+      }
+      router.push('/wake/thanks');
+    });
   }
 
   return (
@@ -141,7 +177,7 @@ export default function WakeCompleteScreen() {
         />
         <AppButton
           label="ホームに戻る"
-          onPress={() => router.replace('/(tabs)')}
+          onPress={() => runOnce(() => router.replace('/(tabs)'))}
           variant="secondary"
         />
       </View>

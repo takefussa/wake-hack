@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -12,14 +12,28 @@ import { Screen } from '@/components/common/screen';
 import { colors, radii, spacing } from '@/constants/theme';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
+import { useAppStore } from '@/store/use-app-store';
 import type { UserProfile } from '@/types';
 
 export default function GiveCompleteScreen() {
   const params = useLocalSearchParams<{ requestId?: string | string[] }>();
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
+  const currentUser = useAppStore((state) => state.currentUser);
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
+  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
+  const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const [recipient, setRecipient] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isNavigatingRef = useRef(false);
+
+  const completedVoice = givenVoiceMessages.find(
+    (voice) =>
+      voice.senderId === currentUser?.id &&
+      voice.morningRequestId === requestId &&
+      typeof voice.receiverId === 'string' &&
+      currentGiveReceiverIds.includes(voice.receiverId)
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -52,6 +66,22 @@ export default function GiveCompleteScreen() {
     };
   }, [requestId]);
 
+  if (!currentUser) {
+    return <Redirect href="/onboarding" />;
+  }
+  if (!currentMorningRequest) {
+    return <Redirect href="/morning/setup" />;
+  }
+  if (!requestId || !completedVoice) {
+    return <Redirect href="/morning/request-list" />;
+  }
+
+  function navigateOnce(action: () => void) {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    action();
+  }
+
   return (
     <Screen contentStyle={styles.content} testID="give-complete-screen">
       <StatusBar style="dark" />
@@ -63,7 +93,7 @@ export default function GiveCompleteScreen() {
           <AppText variant="bodyMedium">{error}</AppText>
           <AppButton
             label="明日の準備へ戻る"
-            onPress={() => router.replace('/morning/ready')}
+            onPress={() => navigateOnce(() => router.replace('/morning/ready'))}
             variant="secondary"
           />
         </View>
@@ -98,12 +128,14 @@ export default function GiveCompleteScreen() {
             <AppButton
               icon="people-outline"
               label="もう1人応援する"
-              onPress={() => router.dismissTo('/morning/request-list', {})}
+              onPress={() =>
+                navigateOnce(() => router.dismissTo('/morning/request-list', {}))
+              }
               testID="give-another"
             />
             <AppButton
               label="明日の準備へ戻る"
-              onPress={() => router.replace('/morning/ready')}
+              onPress={() => navigateOnce(() => router.replace('/morning/ready'))}
               variant="secondary"
             />
           </View>

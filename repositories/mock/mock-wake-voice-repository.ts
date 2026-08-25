@@ -1,4 +1,5 @@
 import { mockCommunityVoices, mockPersonalWakeVoice } from '@/data/mock-voices';
+import { bindWakeVoice } from '@/features/wake/bind-wake-voice';
 import type { WakeVoiceRepository } from '@/repositories/interfaces/wake-voice-repository';
 import type { MorningRequest, VoiceMessage } from '@/types';
 
@@ -9,11 +10,7 @@ export class MockWakeVoiceRepository implements WakeVoiceRepository {
   ): Promise<VoiceMessage | null> {
     if (!request.personalEligible) return null;
 
-    return {
-      ...mockPersonalWakeVoice,
-      receiverId,
-      morningRequestId: request.id,
-    };
+    return bindWakeVoice(mockPersonalWakeVoice, request.id, receiverId);
   }
 
   async findCommunityForRequest(
@@ -21,10 +18,6 @@ export class MockWakeVoiceRepository implements WakeVoiceRepository {
     receiverId: string
   ): Promise<VoiceMessage> {
     const communityVoice = mockCommunityVoices[0];
-    return {
-      ...communityVoice,
-      receiverId,
-      morningRequestId: request.id,
-    };
+    return bindWakeVoice(communityVoice, request.id, receiverId);
   }
 }

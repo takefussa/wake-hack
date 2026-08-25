@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
+import { useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
@@ -9,18 +10,40 @@ import { Screen } from '@/components/common/screen';
 import { StatTile } from '@/components/common/stat-tile';
 import { Tag } from '@/components/common/tag';
 import { colors, componentSizes, spacing } from '@/constants/theme';
+import { morningRequestService } from '@/services/morning-request-service';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function ProfileScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const friendships = useAppStore((state) => state.friendships);
+  const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
+  const wakeSession = useAppStore((state) => state.wakeSession);
   const resetPrototype = useAppStore((state) => state.resetPrototype);
+  const [isResetting, setIsResetting] = useState(false);
+  const isResettingRef = useRef(false);
 
-  if (!currentUser) return null;
+  if (!currentUser) return <Redirect href="/onboarding" />;
 
   const matchedFriendCount = friendships.filter(
     (friendship) => friendship.status === 'matched'
   ).length;
+  const completedMorningCount = wakeSession?.status === 'completed' ? 1 : 0;
+
+  async function performReset() {
+    if (isResettingRef.current) return;
+
+    isResettingRef.current = true;
+    setIsResetting(true);
+    try {
+      await morningRequestService.resetPrototypeData();
+      await resetPrototype();
+      router.replace('/onboarding');
+    } catch {
+      isResettingRef.current = false;
+      setIsResetting(false);
+      Alert.alert('リセットできませんでした', 'もう一度お試しください。');
+    }
+  }
 
   function handleReset() {
     Alert.alert('プロトタイプをリセット', 'プロフィールと朝の状態を消して、最初から確認します。', [
@@ -28,10 +51,7 @@ export default function ProfileScreen() {
       {
         text: 'リセット',
         style: 'destructive',
-        onPress: () => {
-          resetPrototype();
-          router.replace('/onboarding');
-        },
+        onPress: () => void performReset(),
       },
     ]);
   }
@@ -79,10 +99,10 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <AppText variant="sectionTitle">朝の記録</AppText>
         <View style={styles.stats}>
-          <StatTile value="12人" label="声を届けた" />
-          <StatTile value="10回" label="起こしてもらった" />
+          <StatTile value={`${givenVoiceMessages.length}人`} label="声を届けた" />
+          <StatTile value={`${completedMorningCount}回`} label="起こしてもらった" />
           <StatTile value={`${matchedFriendCount}人`} label="フレンド" />
-          <StatTile value="5日" label="連続起床" />
+          <StatTile value={`${completedMorningCount}日`} label="連続起床" />
         </View>
       </View>
 
@@ -99,10 +119,11 @@ export default function ProfileScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="プロトタイプをリセット"
+        disabled={isResetting}
         onPress={handleReset}
         style={({ pressed }) => [styles.reset, pressed && styles.resetPressed]}>
         <AppText variant="secondary" style={styles.resetText}>
-          プロトタイプをリセット
+          {isResetting ? 'リセットしています…' : 'プロトタイプをリセット'}
         </AppText>
       </Pressable>
     </Screen>

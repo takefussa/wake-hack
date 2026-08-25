@@ -69,7 +69,13 @@ export function AppButton({
         pressed && !disabled && styles.pressed,
       ]}>
       <View style={styles.content}>
-        <AppText variant="bodyMedium" tone={textTone} numberOfLines={1}>
+        <AppText
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+          numberOfLines={1}
+          style={styles.label}
+          tone={textTone}
+          variant="bodyMedium">
           {label}
         </AppText>
         {icon ? <Ionicons name={icon} size={18} color={iconColor} /> : null}
@@ -92,10 +98,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   content: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
+  },
+  label: {
+    flexShrink: 1,
+    textAlign: 'center',
   },
   primary: {
     backgroundColor: colors.indigo,

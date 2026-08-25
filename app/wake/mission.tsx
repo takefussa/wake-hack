@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -11,28 +11,50 @@ import { MissionProgress } from '@/components/wake/mission-progress';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { prototypeConfig } from '@/constants/config';
 import { colors, radii, spacing } from '@/constants/theme';
+import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useAppStore } from '@/store/use-app-store';
 
 const simulationStepCount = 10;
 
 export default function WakeMissionScreen() {
+  const currentUser = useAppStore((state) => state.currentUser);
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
+  const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
   const wakeMissionProgress = useAppStore((state) => state.wakeMissionProgress);
   const advanceWakeMission = useAppStore((state) => state.advanceWakeMission);
   const completeMission = useAppStore((state) => state.completeMission);
+  const isCompletingRef = useRef(false);
+  const hasValidSession = Boolean(
+    currentUser &&
+      currentMorningRequest &&
+      assignedWakeVoice &&
+      wakeSession &&
+      isWakeContextValid({
+        currentUser,
+        morningRequest: currentMorningRequest,
+        voice: assignedWakeVoice,
+        wakeSession,
+      })
+  );
 
   useEffect(() => {
     if (
+      hasValidSession &&
       wakeSession?.status === 'mission' &&
-      wakeMissionProgress >= prototypeConfig.wakeMissionSteps
+      wakeMissionProgress >= prototypeConfig.wakeMissionSteps &&
+      !isCompletingRef.current
     ) {
+      isCompletingRef.current = true;
       completeMission();
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => undefined
+      );
       router.replace('/wake/complete');
     }
-  }, [completeMission, wakeMissionProgress, wakeSession?.status]);
+  }, [completeMission, hasValidSession, wakeMissionProgress, wakeSession?.status]);
 
-  if (!wakeSession) {
+  if (!hasValidSession || !currentMorningRequest || !assignedWakeVoice || !wakeSession) {
     return <Redirect href="/morning/ready" />;
   }
   if (wakeSession.status === 'ringing') {
@@ -43,7 +65,7 @@ export default function WakeMissionScreen() {
   }
 
   function handleSimulateSteps() {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
     advanceWakeMission(simulationStepCount);
   }
 

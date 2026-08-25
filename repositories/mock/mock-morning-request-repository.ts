@@ -2,11 +2,15 @@ import { mockMorningRequests } from '@/data/mock-requests';
 import type { MorningRequestRepository } from '@/repositories/interfaces/morning-request-repository';
 import type { MorningRequest } from '@/types';
 
-export class MockMorningRequestRepository implements MorningRequestRepository {
-  private requests = mockMorningRequests.map((request) => ({
+function createInitialRequests(): MorningRequest[] {
+  return mockMorningRequests.map((request) => ({
     ...request,
     schedules: [...request.schedules],
   }));
+}
+
+export class MockMorningRequestRepository implements MorningRequestRepository {
+  private requests = createInitialRequests();
 
   async create(request: MorningRequest): Promise<MorningRequest> {
     const existingIndex = this.requests.findIndex((item) => item.id === request.id);
@@ -39,5 +43,9 @@ export class MockMorningRequestRepository implements MorningRequestRepository {
     };
     this.requests[requestIndex] = updatedRequest;
     return { ...updatedRequest, schedules: [...updatedRequest.schedules] };
+  }
+
+  async reset(): Promise<void> {
+    this.requests = createInitialRequests();
   }
 }

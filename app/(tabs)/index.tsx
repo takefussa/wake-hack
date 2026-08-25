@@ -8,6 +8,7 @@ import { Screen } from '@/components/common/screen';
 import { Waveform } from '@/components/common/waveform';
 import { NextMorningCard } from '@/components/home/next-morning-card';
 import { colors, spacing } from '@/constants/theme';
+import { useTapLock } from '@/hooks/use-tap-lock';
 import { useAppStore } from '@/store/use-app-store';
 
 function getGreeting(): string {
@@ -21,18 +22,21 @@ export default function HomeScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
+  const runOnce = useTapLock();
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
   }
 
   function handleMorningAction() {
-    if (!currentMorningRequest) {
-      router.push('/morning/setup');
-      return;
-    }
+    runOnce(() => {
+      if (!currentMorningRequest) {
+        router.push('/morning/setup');
+        return;
+      }
 
-    router.push(assignedWakeVoice ? '/morning/ready' : '/morning/give-choice');
+      router.push(assignedWakeVoice ? '/morning/ready' : '/morning/give-choice');
+    });
   }
 
   return (
@@ -63,7 +67,7 @@ export default function HomeScreen() {
       />
 
       <View style={styles.voiceNote}>
-        <Avatar avatarId="sky" name="Takuma" size={44} />
+        <Avatar avatarId="sky" size={44} />
         <View style={styles.voiceCopy}>
           <AppText variant="secondary">声の向こうに、人がいる。</AppText>
           <AppText variant="caption" tone="muted">

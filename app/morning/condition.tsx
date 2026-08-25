@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -10,7 +10,9 @@ import { Screen } from '@/components/common/screen';
 import { ScreenHeader } from '@/components/common/screen-header';
 import { moodOptions, scheduleOptions, voiceStyleOptions } from '@/constants/options';
 import { colors, spacing } from '@/constants/theme';
+import { demoMorningDefaults } from '@/data/demo-scenario';
 import { toggleSchedule } from '@/features/morning/morning-request-form';
+import { goBackOrReplace } from '@/features/navigation/go-back';
 import { morningRequestService } from '@/services/morning-request-service';
 import { useAppStore } from '@/store/use-app-store';
 import type { MoodType, ScheduleType, VoiceStyle } from '@/types';
@@ -19,11 +21,16 @@ export default function TomorrowConditionScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const morningRequestDraft = useAppStore((state) => state.morningRequestDraft);
   const setMorningRequest = useAppStore((state) => state.setMorningRequest);
-  const [schedules, setSchedules] = useState<ScheduleType[]>([]);
-  const [mood, setMood] = useState<MoodType | null>(null);
-  const [voiceStyle, setVoiceStyle] = useState<VoiceStyle | null>(null);
+  const [schedules, setSchedules] = useState<ScheduleType[]>([
+    ...demoMorningDefaults.schedules,
+  ]);
+  const [mood, setMood] = useState<MoodType | null>(demoMorningDefaults.mood);
+  const [voiceStyle, setVoiceStyle] = useState<VoiceStyle | null>(
+    demoMorningDefaults.preferredVoiceStyle
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isSavingRef = useRef(false);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -38,8 +45,9 @@ export default function TomorrowConditionScreen() {
   const canSubmit = schedules.length > 0 && mood !== null && voiceStyle !== null;
 
   async function handleSubmit() {
-    if (!canSubmit || !mood || !voiceStyle || isSaving) return;
+    if (!canSubmit || !mood || !voiceStyle || isSavingRef.current) return;
 
+    isSavingRef.current = true;
     setIsSaving(true);
     setError(null);
 
@@ -54,6 +62,7 @@ export default function TomorrowConditionScreen() {
       router.push('/morning/give-choice');
     } catch {
       setError('明日の朝を保存できませんでした。もう一度お試しください。');
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   }
@@ -63,7 +72,7 @@ export default function TomorrowConditionScreen() {
       <StatusBar style="dark" />
       <ScreenHeader
         description={`${morningRequestDraft.wakeAt}の朝について、今の気持ちを少しだけ教えてください。`}
-        onBack={() => router.back()}
+        onBack={() => goBackOrReplace('/morning/setup')}
         stepLabel="明日の朝 2 / 2"
         title="どんな朝になりそう？"
       />

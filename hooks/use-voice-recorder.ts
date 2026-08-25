@@ -52,10 +52,14 @@ export function useVoiceRecorder() {
   useEffect(() => {
     if (!recording?.uri) return;
 
-    if (player.playing) {
-      player.pause();
+    try {
+      if (player.playing) {
+        player.pause();
+      }
+      player.replace({ uri: recording.uri });
+    } catch {
+      setError('録音した声の再生を準備できませんでした。');
     }
-    player.replace({ uri: recording.uri });
   }, [player, recording?.uri]);
 
   useEffect(() => {
@@ -220,8 +224,12 @@ export function useVoiceRecorder() {
   }, [isBusy, player, playerStatus, recording]);
 
   const resetRecording = useCallback(() => {
-    if (player.playing) {
-      player.pause();
+    try {
+      if (player.playing) {
+        player.pause();
+      }
+    } catch {
+      // Reset remains available even if the native player has already stopped.
     }
     setRecording(null);
     setError(null);
