@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -14,12 +14,15 @@ import { MorningScreen } from '@/components/wake/morning-screen';
 import { prototypeConfig } from '@/constants/config';
 import { thanksReactionOptions } from '@/constants/options';
 import { colors, fonts, radii, spacing } from '@/constants/theme';
+import { goBackOrReplace } from '@/features/navigation/go-back';
+import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { thanksService } from '@/services/thanks-service';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function ThanksSendScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
   const thanksMessages = useAppStore((state) => state.thanksMessages);
@@ -29,8 +32,19 @@ export default function ThanksSendScreen() {
   const [text, setText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isSendingRef = useRef(false);
 
-  if (!currentUser || !assignedWakeVoice || !wakeSession) {
+  if (!currentUser || !currentMorningRequest || !assignedWakeVoice || !wakeSession) {
+    return <Redirect href="/morning/ready" />;
+  }
+  if (
+    !isWakeContextValid({
+      currentUser,
+      morningRequest: currentMorningRequest,
+      voice: assignedWakeVoice,
+      wakeSession,
+    })
+  ) {
     return <Redirect href="/morning/ready" />;
   }
   if (wakeSession.status !== 'completed') {
@@ -49,8 +63,9 @@ export default function ThanksSendScreen() {
   }
 
   async function handleSend() {
-    if (!currentUser || !assignedWakeVoice || !reaction || isSending) return;
+    if (!currentUser || !assignedWakeVoice || !reaction || isSendingRef.current) return;
 
+    isSendingRef.current = true;
     setIsSending(true);
     setError(null);
     try {
@@ -62,10 +77,13 @@ export default function ThanksSendScreen() {
         text,
       });
       addThanksMessages(messages);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => undefined
+      );
       router.replace(isPersonal ? '/friend/request' : '/(tabs)/connections');
     } catch {
       setError('ありがとうを届けられませんでした。もう一度お試しください。');
+      isSendingRef.current = false;
       setIsSending(false);
     }
   }
@@ -79,7 +97,7 @@ export default function ThanksSendScreen() {
             ? `${sender?.nickname ?? '声をくれた人'}さんへ、起きられたことを短く返します。`
             : '今朝の声を届けてくれたみんなへ、起きられたことを返します。'
         }
-        onBack={() => router.back()}
+        onBack={() => goBackOrReplace('/wake/complete')}
         title="ありがとうを届ける"
       />
 

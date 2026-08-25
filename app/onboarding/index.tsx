@@ -10,18 +10,22 @@ import { Screen } from '@/components/common/screen';
 import { OnboardingScene } from '@/components/onboarding/onboarding-scene';
 import { colors, spacing } from '@/constants/theme';
 import { onboardingPages } from '@/data/onboarding-pages';
+import { useTapLock } from '@/hooks/use-tap-lock';
 
 export default function OnboardingScreen() {
   const [pageIndex, setPageIndex] = useState(0);
   const page = onboardingPages[pageIndex];
   const isLastPage = pageIndex === onboardingPages.length - 1;
+  const runOnce = useTapLock();
 
   function handleNext() {
-    if (isLastPage) {
-      router.push('/onboarding/profile');
-      return;
-    }
-    setPageIndex((current) => current + 1);
+    runOnce(() => {
+      if (isLastPage) {
+        router.push('/onboarding/profile');
+        return;
+      }
+      setPageIndex((current) => current + 1);
+    });
   }
 
   return (

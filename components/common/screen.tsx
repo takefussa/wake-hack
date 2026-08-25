@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, layout, spacing } from '@/constants/theme';
@@ -46,11 +46,7 @@ export function Screen({
   return (
     <View style={[styles.root, { backgroundColor }]}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.safeArea}>
-          {body}
-        </KeyboardAvoidingView>
+        {body}
       </SafeAreaView>
     </View>
   );

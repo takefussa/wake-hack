@@ -1,3 +1,4 @@
+import { demoWakeSenderId } from '@/data/demo-scenario';
 import type { FriendshipRepository } from '@/repositories/interfaces/friendship-repository';
 import { MockFriendshipRepository } from '@/repositories/mock/mock-friendship-repository';
 import type { Friendship } from '@/types';
@@ -14,7 +15,10 @@ export class FriendshipService {
   }
 
   shouldAutoMatch(friendship: Friendship): boolean {
-    return friendship.userAId === 'user-yui' || friendship.userBId === 'user-yui';
+    return (
+      friendship.userAId === demoWakeSenderId ||
+      friendship.userBId === demoWakeSenderId
+    );
   }
 
   async resolveDemoMatch(friendship: Friendship): Promise<Friendship> {

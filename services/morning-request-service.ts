@@ -35,6 +35,10 @@ export class MorningRequestService {
     }
     return request;
   }
+
+  async resetPrototypeData(): Promise<void> {
+    await this.repository.reset();
+  }
 }
 
 export const morningRequestService = new MorningRequestService(

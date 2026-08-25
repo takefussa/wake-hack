@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -9,6 +9,7 @@ import { Screen } from '@/components/common/screen';
 import { ScreenHeader } from '@/components/common/screen-header';
 import { ProfileFields } from '@/components/profile/profile-fields';
 import { colors, spacing } from '@/constants/theme';
+import { goBackOrReplace } from '@/features/navigation/go-back';
 import { isProfileInputValid } from '@/features/profile/profile-form';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -27,6 +28,7 @@ export default function ProfileEditScreen() {
   const [tags, setTags] = useState<ProfileTag[]>(currentUser?.tags ?? []);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isSavingRef = useRef(false);
 
   const canSubmit = useMemo(() => {
     if (!userType) return false;
@@ -38,7 +40,7 @@ export default function ProfileEditScreen() {
   }
 
   async function handleSubmit() {
-    if (!currentUser || !userType || !canSubmit || isSaving) return;
+    if (!currentUser || !userType || !canSubmit || isSavingRef.current) return;
 
     const input: UpdateProfileInput = {
       avatarId,
@@ -48,6 +50,7 @@ export default function ProfileEditScreen() {
       userType,
       tags,
     };
+    isSavingRef.current = true;
     setIsSaving(true);
     setError(null);
 
@@ -59,6 +62,7 @@ export default function ProfileEditScreen() {
       router.replace('/(tabs)/profile');
     } catch {
       setError('プロフィールを保存できませんでした。もう一度お試しください。');
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   }
@@ -68,7 +72,7 @@ export default function ProfileEditScreen() {
       <StatusBar style="dark" />
       <ScreenHeader
         description="朝の相手に見える情報を変更できます。"
-        onBack={() => router.back()}
+        onBack={() => goBackOrReplace('/(tabs)/profile')}
         title="プロフィールを編集"
       />
 

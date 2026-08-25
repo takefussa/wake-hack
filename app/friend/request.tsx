@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -10,6 +10,7 @@ import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { Screen } from '@/components/common/screen';
 import { colors, radii, spacing } from '@/constants/theme';
+import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { friendshipService } from '@/services/friendship-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -17,6 +18,7 @@ import type { Friendship } from '@/types';
 
 export default function FriendRequestScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
   const thanksMessages = useAppStore((state) => state.thanksMessages);
@@ -37,8 +39,19 @@ export default function FriendRequestScreen() {
   );
   const [isMatching, setIsMatching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isMatchingRef = useRef(false);
 
-  if (!currentUser || !assignedWakeVoice || !wakeSession) {
+  if (!currentUser || !currentMorningRequest || !assignedWakeVoice || !wakeSession) {
+    return <Redirect href="/(tabs)" />;
+  }
+  if (
+    !isWakeContextValid({
+      currentUser,
+      morningRequest: currentMorningRequest,
+      voice: assignedWakeVoice,
+      wakeSession,
+    })
+  ) {
     return <Redirect href="/(tabs)" />;
   }
   if (assignedWakeVoice.type !== 'personal') {
@@ -61,8 +74,9 @@ export default function FriendRequestScreen() {
   const isPending = friendship?.status === 'pending';
 
   async function handleRequest() {
-    if (!currentUser || !assignedWakeVoice || friendship || isMatching) return;
+    if (!currentUser || !assignedWakeVoice || friendship || isMatchingRef.current) return;
 
+    isMatchingRef.current = true;
     setIsMatching(true);
     setError(null);
     try {
@@ -77,11 +91,14 @@ export default function FriendRequestScreen() {
       upsertFriendship(resolved);
       setFriendship(resolved);
       if (resolved.status === 'matched') {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+          () => undefined
+        );
       }
     } catch {
       setError('気持ちを届けられませんでした。もう一度お試しください。');
     } finally {
+      isMatchingRef.current = false;
       setIsMatching(false);
     }
   }

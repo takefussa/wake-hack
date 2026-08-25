@@ -10,6 +10,8 @@ import { Screen } from '@/components/common/screen';
 import { ScreenHeader } from '@/components/common/screen-header';
 import { MorningRequestCard } from '@/components/morning/morning-request-card';
 import { spacing } from '@/constants/theme';
+import { goBackOrReplace } from '@/features/navigation/go-back';
+import { useTapLock } from '@/hooks/use-tap-lock';
 import { rankMorningRequests } from '@/services/matching-service';
 import type { MorningRequestMatch } from '@/services/matching-service';
 import { morningRequestService } from '@/services/morning-request-service';
@@ -32,6 +34,7 @@ export default function RequestListScreen() {
   const [candidates, setCandidates] = useState<RequestCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const runOnce = useTapLock();
 
   const loadCandidates = useCallback(async () => {
     if (!currentUser || !currentMorningRequest) return;
@@ -79,12 +82,16 @@ export default function RequestListScreen() {
     return <Redirect href="/morning/setup" />;
   }
 
+  const backDestination = currentMorningRequest.personalEligible
+    ? '/morning/ready'
+    : '/morning/give-choice';
+
   return (
     <Screen contentStyle={styles.content} testID="request-list-screen">
       <StatusBar style="dark" />
       <ScreenHeader
         description="まだ声が届いていない人から、あなたに近い順に並んでいます。"
-        onBack={() => router.back()}
+        onBack={() => goBackOrReplace(backDestination)}
         title="明日の誰か"
       />
 
@@ -105,7 +112,7 @@ export default function RequestListScreen() {
           </AppText>
           <AppButton
             label="選択画面に戻る"
-            onPress={() => router.back()}
+            onPress={() => goBackOrReplace(backDestination)}
             variant="secondary"
           />
         </View>
@@ -118,10 +125,12 @@ export default function RequestListScreen() {
               commonPoints={commonPoints}
               key={request.id}
               onPress={() =>
-                router.push({
-                  pathname: '/morning/request-detail',
-                  params: { requestId: request.id },
-                })
+                runOnce(() =>
+                  router.push({
+                    pathname: '/morning/request-detail',
+                    params: { requestId: request.id },
+                  })
+                )
               }
               request={request}
               user={user}

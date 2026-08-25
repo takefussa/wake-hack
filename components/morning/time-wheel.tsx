@@ -57,6 +57,7 @@ function WheelColumn({ accessibilityLabel, items, value, onChange }: WheelColumn
       contentOffset={{ x: 0, y: initialOffset }}
       contentContainerStyle={styles.wheelContent}
       decelerationRate="fast"
+      nestedScrollEnabled
       onMomentumScrollEnd={selectFromScroll}
       onScrollEndDrag={selectFromDragEnd}
       ref={scrollRef}

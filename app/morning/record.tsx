@@ -12,6 +12,7 @@ import { RecordingRecipient } from '@/components/voice/recording-recipient';
 import { VoiceRecorderPanel } from '@/components/voice/voice-recorder-panel';
 import { prototypeConfig } from '@/constants/config';
 import { colors, spacing } from '@/constants/theme';
+import { goBackOrReplace } from '@/features/navigation/go-back';
 import { giveService } from '@/services/give-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
@@ -104,7 +105,7 @@ export default function RecordVoiceScreen() {
 
     isLeavingRef.current = true;
     await recorder.leaveRecording();
-    router.back();
+    goBackOrReplace('/morning/request-list');
   }
 
   async function handleSend() {
@@ -131,7 +132,9 @@ export default function RecordVoiceScreen() {
         uri: recorder.recording.uri,
         durationMs: recorder.recording.durationMs,
       });
-      completeGive(voiceMessage);
+      if (!completeGive(voiceMessage)) {
+        throw new Error('Give state could not be completed');
+      }
       router.replace({
         pathname: '/morning/give-complete',
         params: { requestId: request.id },
@@ -159,7 +162,11 @@ export default function RecordVoiceScreen() {
           <AppText variant="bodyMedium">
             {hasAlreadyGiven ? 'この人には、すでに声を届けています。' : pageError}
           </AppText>
-          <AppButton label="一覧に戻る" onPress={() => router.back()} variant="secondary" />
+          <AppButton
+            label="一覧に戻る"
+            onPress={() => goBackOrReplace('/morning/request-list')}
+            variant="secondary"
+          />
         </View>
       ) : null}
 

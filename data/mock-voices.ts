@@ -1,9 +1,9 @@
 import type { VoiceMessage } from '@/types';
 
 export const mockOnboardingVoice: VoiceMessage = {
-  id: 'onboarding-voice-yui',
-  senderId: 'user-yui',
-  uri: 'mock://onboarding/yui',
+  id: 'onboarding-voice-takuma',
+  senderId: 'user-takuma',
+  uri: 'mock://onboarding/takuma',
   durationMs: 9_134,
   type: 'personal',
   transcript:
@@ -61,11 +61,11 @@ export const mockCommunityVoices: VoiceMessage[] = [
 ];
 
 export const mockPersonalWakeVoice: VoiceMessage = {
-  id: 'personal-voice-yui',
-  senderId: 'user-yui',
+  id: 'personal-voice-takuma',
+  senderId: 'user-takuma',
   receiverId: 'current-user',
   morningRequestId: 'request-demo-current',
-  uri: 'mock://personal/yui',
+  uri: 'mock://personal/takuma',
   durationMs: 9_934,
   type: 'personal',
   transcript:

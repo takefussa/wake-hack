@@ -3,34 +3,20 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { prototypeConfig } from '@/constants/config';
-import { mockFriendships } from '@/data/mock-friends';
-import { mockThanksMessages } from '@/data/mock-thanks';
 import { mockCommunityVoices, mockPersonalWakeVoice } from '@/data/mock-voices';
+import { getPrototypeStateRepair } from '@/features/prototype/repair-persisted-state';
+import { bindWakeVoice } from '@/features/wake/bind-wake-voice';
+import { createDemoWokeAt } from '@/features/wake/create-demo-woke-at';
 import type {
   Friendship,
   MorningRequest,
-  MorningRequestDraft,
+  PrototypePersistedState,
   ThanksMessage,
   UserProfile,
   VoiceMessage,
-  WakeSession,
 } from '@/types';
 
-type PersistedAppState = {
-  currentUser: UserProfile | null;
-  morningRequestDraft: MorningRequestDraft | null;
-  currentMorningRequest: MorningRequest | null;
-  selectedGiveRequestId: string | null;
-  currentGiveReceiverIds: string[];
-  givenVoiceMessages: VoiceMessage[];
-  assignedWakeVoice: VoiceMessage | null;
-  wakeSession: WakeSession | null;
-  wakeMissionProgress: number;
-  thanksMessages: ThanksMessage[];
-  friendships: Friendship[];
-};
-
-type AppStore = PersistedAppState & {
+type AppStore = PrototypePersistedState & {
   isHydrated: boolean;
   setHydrated: (isHydrated: boolean) => void;
   setProfile: (profile: UserProfile) => void;
@@ -38,7 +24,7 @@ type AppStore = PersistedAppState & {
   setMorningWakeTime: (wakeAt: string) => void;
   setMorningRequest: (request: MorningRequest) => void;
   selectGiveRequest: (requestId: string) => void;
-  completeGive: (voiceMessage: VoiceMessage) => void;
+  completeGive: (voiceMessage: VoiceMessage) => boolean;
   chooseCommunityWake: () => void;
   startWakeSession: (voiceMessage: VoiceMessage) => boolean;
   cancelWakeSession: () => void;
@@ -48,10 +34,13 @@ type AppStore = PersistedAppState & {
   addThanks: (message: ThanksMessage) => void;
   addThanksMessages: (messages: ThanksMessage[]) => void;
   upsertFriendship: (friendship: Friendship) => void;
-  resetPrototype: () => void;
+  repairPersistedState: () => void;
+  resetPrototype: () => Promise<void>;
 };
 
-const initialPersistedState: PersistedAppState = {
+const prototypeStorageKey = 'wake-hack-prototype-v01';
+
+const initialPersistedState: PrototypePersistedState = {
   currentUser: null,
   morningRequestDraft: null,
   currentMorningRequest: null,
@@ -61,8 +50,8 @@ const initialPersistedState: PersistedAppState = {
   assignedWakeVoice: null,
   wakeSession: null,
   wakeMissionProgress: 0,
-  thanksMessages: mockThanksMessages,
-  friendships: mockFriendships,
+  thanksMessages: [],
+  friendships: [],
 };
 
 export const useAppStore = create<AppStore>()(
@@ -92,16 +81,17 @@ export const useAppStore = create<AppStore>()(
         }),
       selectGiveRequest: (requestId) => set({ selectedGiveRequestId: requestId }),
       completeGive: (voiceMessage) => {
-        const { currentMorningRequest, currentUser } = get();
+        const { currentGiveReceiverIds, currentMorningRequest, currentUser } = get();
         if (
           !currentMorningRequest ||
           !currentUser ||
           voiceMessage.type !== 'personal' ||
           voiceMessage.senderId !== currentUser.id ||
           !voiceMessage.receiverId ||
-          !voiceMessage.morningRequestId
+          !voiceMessage.morningRequestId ||
+          currentGiveReceiverIds.includes(voiceMessage.receiverId)
         ) {
-          return;
+          return false;
         }
 
         const receiverId = voiceMessage.receiverId;
@@ -118,17 +108,20 @@ export const useAppStore = create<AppStore>()(
             new Set([...state.currentGiveReceiverIds, receiverId])
           ),
           givenVoiceMessages: [...state.givenVoiceMessages, voiceMessage],
-          assignedWakeVoice: {
-            ...mockPersonalWakeVoice,
-            receiverId: currentUser.id,
-            morningRequestId: eligibleRequest.id,
-          },
+          assignedWakeVoice: bindWakeVoice(
+            mockPersonalWakeVoice,
+            eligibleRequest.id,
+            currentUser.id
+          ),
         }));
+        return true;
       },
       chooseCommunityWake: () => {
-        const currentMorningRequest = get().currentMorningRequest;
-        if (!currentMorningRequest) return;
+        const { currentMorningRequest, currentUser } = get();
+        if (!currentMorningRequest || !currentUser) return;
         if (currentMorningRequest.personalEligible) return;
+
+        const communityVoice = mockCommunityVoices[0];
 
         set({
           currentMorningRequest: {
@@ -137,7 +130,11 @@ export const useAppStore = create<AppStore>()(
             status: 'voice_assigned',
           },
           selectedGiveRequestId: null,
-          assignedWakeVoice: mockCommunityVoices[0],
+          assignedWakeVoice: bindWakeVoice(
+            communityVoice,
+            currentMorningRequest.id,
+            currentUser.id
+          ),
         });
       },
       startWakeSession: (voiceMessage) => {
@@ -213,7 +210,7 @@ export const useAppStore = create<AppStore>()(
             ...wakeSession,
             missionCompleted: true,
             status: 'completed',
-            wokeAt: new Date().toISOString(),
+            wokeAt: createDemoWokeAt(wakeSession.alarmAt),
           },
           currentMorningRequest: currentMorningRequest
             ? { ...currentMorningRequest, status: 'completed' }
@@ -264,16 +261,23 @@ export const useAppStore = create<AppStore>()(
           friendships[existingIndex] = nextFriendship;
           return { friendships };
         }),
-      resetPrototype: () =>
+      repairPersistedState: () => set((state) => getPrototypeStateRepair(state)),
+      resetPrototype: async () => {
+        try {
+          await AsyncStorage.removeItem(prototypeStorageKey);
+        } catch {
+          // The clean in-memory state is persisted again by Zustand below.
+        }
         set({
           ...initialPersistedState,
           isHydrated: true,
-        }),
+        });
+      },
     }),
     {
-      name: 'wake-hack-prototype-v01',
+      name: prototypeStorageKey,
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state): PersistedAppState => ({
+      partialize: (state): PrototypePersistedState => ({
         currentUser: state.currentUser,
         morningRequestDraft: state.morningRequestDraft,
         currentMorningRequest: state.currentMorningRequest,
@@ -286,8 +290,9 @@ export const useAppStore = create<AppStore>()(
         thanksMessages: state.thanksMessages,
         friendships: state.friendships,
       }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHydrated(true);
+      onRehydrateStorage: (state) => () => {
+        state.repairPersistedState();
+        state.setHydrated(true);
       },
     }
   )

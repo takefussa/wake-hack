@@ -1,11 +1,14 @@
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { resolveVoiceSource } from '@/features/voice/resolve-voice-source';
 import type { VoiceMessage } from '@/types';
 
 export function useVoicePlayer(voice: VoiceMessage, autoPlay = false) {
-  const source = resolveVoiceSource(voice);
+  const source = useMemo(
+    () => resolveVoiceSource(voice),
+    [voice.id, voice.type, voice.uri]
+  );
   const player = useAudioPlayer(source, { updateInterval: 100 });
   const status = useAudioPlayerStatus(player);
   const [error, setError] = useState<string | null>(null);

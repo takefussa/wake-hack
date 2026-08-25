@@ -2,7 +2,7 @@ import type { UserProfile } from '@/types';
 
 export const mockUsers: UserProfile[] = [
   {
-    id: 'user-yui',
+    id: 'user-takuma',
     nickname: 'Takuma',
     avatarId: 'sky',
     userType: '大学生',
