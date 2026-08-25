@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "wake-hack",
+    "name": "Wake Hack",
     "slug": "wake-hack",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "wakehack",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
@@ -33,9 +33,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#10142E",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#10142E"
           }
         }
       ]
