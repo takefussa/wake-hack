@@ -27,3 +27,12 @@ export type MorningRequest = {
   voiceCount: number;
   createdAt: string;
 };
+
+export type MorningRequestDraft = {
+  wakeAt: string;
+};
+
+export type CreateMorningRequestInput = Pick<
+  MorningRequest,
+  'wakeAt' | 'schedules' | 'mood' | 'preferredVoiceStyle'
+>;

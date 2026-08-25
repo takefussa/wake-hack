@@ -33,6 +33,7 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding/index" />
           <Stack.Screen name="onboarding/profile" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="morning" options={{ animation: 'slide_from_right' }} />
         </Stack>
         <StatusBar style="dark" />
       </ThemeProvider>

@@ -8,10 +8,10 @@ import type { MorningRequest, VoiceMessage } from '@/types';
 type NextMorningCardProps = {
   request: MorningRequest | null;
   wakeVoice: VoiceMessage | null;
-  onPrepare: () => void;
+  onAction: () => void;
 };
 
-export function NextMorningCard({ request, wakeVoice, onPrepare }: NextMorningCardProps) {
+export function NextMorningCard({ request, wakeVoice, onAction }: NextMorningCardProps) {
   if (!request) {
     return (
       <View style={styles.card}>
@@ -26,7 +26,7 @@ export function NextMorningCard({ request, wakeVoice, onPrepare }: NextMorningCa
             起きる時間と、今の気持ちを預けます。
           </AppText>
         </View>
-        <AppButton label="明日の朝を準備" onPress={onPrepare} variant="warm" />
+        <AppButton label="明日の朝を準備" onPress={onAction} variant="warm" />
       </View>
     );
   }
@@ -71,6 +71,12 @@ export function NextMorningCard({ request, wakeVoice, onPrepare }: NextMorningCa
           {statusLabel}
         </AppText>
       </View>
+
+      <AppButton
+        label={isReady ? '準備した内容を見る' : '内容を確認する'}
+        onPress={onAction}
+        variant="inverted"
+      />
     </View>
   );
 }
