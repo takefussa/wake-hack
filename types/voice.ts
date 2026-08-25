@@ -11,3 +11,11 @@ export type VoiceMessage = {
   transcript?: string;
   createdAt: string;
 };
+
+export type CreatePersonalVoiceInput = {
+  senderId: string;
+  receiverId: string;
+  morningRequestId: string;
+  uri: string;
+  durationMs: number;
+};

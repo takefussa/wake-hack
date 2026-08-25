@@ -1,0 +1,301 @@
+import {
+  getRecordingPermissionsAsync,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from 'expo-audio';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
+
+import { prototypeConfig } from '@/constants/config';
+
+const recordingOptions = {
+  ...RecordingPresets.HIGH_QUALITY,
+  isMeteringEnabled: true,
+};
+
+export type MicrophonePermissionState = 'checking' | 'granted' | 'denied';
+
+export type LocalVoiceRecording = {
+  uri: string;
+  durationMs: number;
+};
+
+export function useVoiceRecorder() {
+  const [permissionState, setPermissionState] =
+    useState<MicrophonePermissionState>('checking');
+  const [canAskPermissionAgain, setCanAskPermissionAgain] = useState(true);
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
+  const [recording, setRecording] = useState<LocalVoiceRecording | null>(null);
+  const [isBusy, setIsBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const recorder = useAudioRecorder(recordingOptions);
+  const recorderState = useAudioRecorderState(recorder, 100);
+  const player = useAudioPlayer(null, { updateInterval: 100 });
+  const playerStatus = useAudioPlayerStatus(player);
+  const hasActiveRecording = useRef(false);
+  const isStarting = useRef(false);
+  const isFinalizing = useRef(false);
+  const autoStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearAutoStopTimer = useCallback(() => {
+    if (autoStopTimer.current) {
+      clearTimeout(autoStopTimer.current);
+      autoStopTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!recording?.uri) return;
+
+    if (player.playing) {
+      player.pause();
+    }
+    player.replace({ uri: recording.uri });
+  }, [player, recording?.uri]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkPermission() {
+      try {
+        const permission = await getRecordingPermissionsAsync();
+        if (!isMounted) return;
+        setPermissionState(permission.granted ? 'granted' : 'denied');
+        setCanAskPermissionAgain(permission.canAskAgain);
+        if (permission.granted) {
+          setError(null);
+        }
+      } catch {
+        if (isMounted) {
+          setPermissionState('denied');
+          setError('マイクの状態を確認できませんでした。');
+        }
+      }
+    }
+
+    void checkPermission();
+    const appStateSubscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void checkPermission();
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      appStateSubscription.remove();
+    };
+  }, []);
+
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    setIsRequestingPermission(true);
+    setError(null);
+
+    try {
+      const permission = await requestRecordingPermissionsAsync();
+      setPermissionState(permission.granted ? 'granted' : 'denied');
+      setCanAskPermissionAgain(permission.canAskAgain);
+      if (!permission.granted) {
+        setError('マイクが許可されていません。設定から変更できます。');
+      }
+      return permission.granted;
+    } catch {
+      setPermissionState('denied');
+      setError('マイクの許可を確認できませんでした。');
+      return false;
+    } finally {
+      setIsRequestingPermission(false);
+    }
+  }, []);
+
+  const finishRecording = useCallback(async () => {
+    if (!hasActiveRecording.current || isFinalizing.current) return;
+
+    isFinalizing.current = true;
+    setIsBusy(true);
+    setError(null);
+    clearAutoStopTimer();
+
+    try {
+      if (recorder.isRecording) {
+        await recorder.stop();
+      }
+
+      const status = recorder.getStatus();
+      const uri = recorder.uri ?? status.url;
+      if (!uri) {
+        throw new Error('Recording URI unavailable');
+      }
+
+      setRecording({
+        uri,
+        durationMs: Math.min(
+          prototypeConfig.recordingMaxMs,
+          Math.max(status.durationMillis, Math.round(recorder.currentTime * 1_000))
+        ),
+      });
+      hasActiveRecording.current = false;
+      await setAudioModeAsync({
+        allowsRecording: false,
+        playsInSilentMode: true,
+      }).catch(() => undefined);
+    } catch {
+      setError('録音を停止できませんでした。もう一度お試しください。');
+      hasActiveRecording.current = recorder.isRecording;
+    } finally {
+      isFinalizing.current = false;
+      setIsBusy(false);
+    }
+  }, [clearAutoStopTimer, recorder]);
+
+  const startRecording = useCallback(async () => {
+    if (isBusy || isStarting.current || recorderState.isRecording) return;
+
+    isStarting.current = true;
+
+    try {
+      let hasPermission = permissionState === 'granted';
+      if (!hasPermission) {
+        hasPermission = await requestPermission();
+      }
+      if (!hasPermission) return;
+
+      setIsBusy(true);
+      setError(null);
+      setRecording(null);
+      if (player.playing) {
+        player.pause();
+      }
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+        interruptionMode: 'doNotMix',
+      });
+      await recorder.prepareToRecordAsync();
+      hasActiveRecording.current = true;
+      recorder.record({ forDuration: prototypeConfig.recordingMaxMs / 1_000 });
+      autoStopTimer.current = setTimeout(() => {
+        void finishRecording();
+      }, prototypeConfig.recordingMaxMs + 100);
+    } catch {
+      hasActiveRecording.current = false;
+      setError('録音を始められませんでした。もう一度お試しください。');
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(
+        () => undefined
+      );
+    } finally {
+      isStarting.current = false;
+      setIsBusy(false);
+    }
+  }, [finishRecording, isBusy, permissionState, player, recorder, recorderState.isRecording, requestPermission]);
+
+  const togglePlayback = useCallback(async () => {
+    if (!recording || isBusy) return;
+    setError(null);
+
+    try {
+      if (!player.isLoaded) {
+        setError('再生の準備中です。少し待ってからお試しください。');
+        return;
+      }
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+      if (playerStatus.playing) {
+        player.pause();
+        return;
+      }
+      if (
+        playerStatus.didJustFinish ||
+        playerStatus.currentTime >= Math.max(0, playerStatus.duration - 0.05)
+      ) {
+        await player.seekTo(0);
+      }
+      player.play();
+    } catch {
+      setError('録音した声を再生できませんでした。');
+    }
+  }, [isBusy, player, playerStatus, recording]);
+
+  const resetRecording = useCallback(() => {
+    if (player.playing) {
+      player.pause();
+    }
+    setRecording(null);
+    setError(null);
+  }, [player]);
+
+  const leaveRecording = useCallback(async () => {
+    clearAutoStopTimer();
+
+    try {
+      if (player.playing) {
+        player.pause();
+      }
+    } catch {
+      // The player may already be released while a native back gesture is completing.
+    }
+
+    const shouldStopRecording = hasActiveRecording.current;
+    hasActiveRecording.current = false;
+    if (shouldStopRecording) {
+      try {
+        await recorder.stop();
+      } catch {
+        // Leaving the screen should not be blocked by recorder cleanup.
+      }
+    }
+
+    await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(
+      () => undefined
+    );
+  }, [clearAutoStopTimer, player, recorder]);
+
+  useEffect(() => {
+    return () => {
+      clearAutoStopTimer();
+      const shouldStopRecording = hasActiveRecording.current;
+      hasActiveRecording.current = false;
+      if (shouldStopRecording) {
+        try {
+          void recorder.stop().catch(() => undefined);
+        } catch {
+          // The recorder can be released before this cleanup runs.
+        }
+      }
+      void setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(
+        () => undefined
+      );
+    };
+  }, [clearAutoStopTimer, recorder]);
+
+  const durationMs = recorderState.isRecording
+    ? Math.min(recorderState.durationMillis, prototypeConfig.recordingMaxMs)
+    : (recording?.durationMs ?? 0);
+  const playbackProgress = recording
+    ? Math.min(1, playerStatus.currentTime / Math.max(recording.durationMs / 1_000, 0.1))
+    : 0;
+
+  return {
+    permissionState,
+    canAskPermissionAgain,
+    isRequestingPermission,
+    requestPermission,
+    recording,
+    isRecording: recorderState.isRecording,
+    isPlaying: playerStatus.playing,
+    isPlaybackReady: recording !== null && playerStatus.isLoaded && player.isLoaded,
+    isBusy,
+    durationMs,
+    playbackProgress,
+    metering: recorderState.metering,
+    error,
+    startRecording,
+    stopRecording: finishRecording,
+    togglePlayback,
+    resetRecording,
+    leaveRecording,
+  };
+}

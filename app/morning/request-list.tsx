@@ -28,6 +28,7 @@ function isUserProfile(profile: UserProfile | null): profile is UserProfile {
 export default function RequestListScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
+  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
   const [candidates, setCandidates] = useState<RequestCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +40,10 @@ export default function RequestListScreen() {
     setError(null);
 
     try {
-      const requests = await morningRequestService.getAvailableRequests(currentUser.id);
+      const availableRequests = await morningRequestService.getAvailableRequests(currentUser.id);
+      const requests = availableRequests.filter(
+        (request) => !currentGiveReceiverIds.includes(request.userId)
+      );
       const profiles = (
         await Promise.all(requests.map((request) => profileService.getProfile(request.userId)))
       ).filter(isUserProfile);
@@ -61,7 +65,7 @@ export default function RequestListScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentMorningRequest, currentUser]);
+  }, [currentGiveReceiverIds, currentMorningRequest, currentUser]);
 
   useEffect(() => {
     void loadCandidates();

@@ -20,6 +20,7 @@ type PersistedAppState = {
   morningRequestDraft: MorningRequestDraft | null;
   currentMorningRequest: MorningRequest | null;
   selectedGiveRequestId: string | null;
+  currentGiveReceiverIds: string[];
   givenVoiceMessages: VoiceMessage[];
   assignedWakeVoice: VoiceMessage | null;
   wakeSession: WakeSession | null;
@@ -47,6 +48,7 @@ const initialPersistedState: PersistedAppState = {
   morningRequestDraft: null,
   currentMorningRequest: null,
   selectedGiveRequestId: null,
+  currentGiveReceiverIds: [],
   givenVoiceMessages: [],
   assignedWakeVoice: null,
   wakeSession: null,
@@ -67,14 +69,25 @@ export const useAppStore = create<AppStore>()(
           morningRequestDraft: { wakeAt: request.wakeAt },
           currentMorningRequest: request,
           selectedGiveRequestId: null,
+          currentGiveReceiverIds: [],
           assignedWakeVoice: null,
           wakeSession: null,
         }),
       selectGiveRequest: (requestId) => set({ selectedGiveRequestId: requestId }),
       completeGive: (voiceMessage) => {
         const { currentMorningRequest, currentUser } = get();
-        if (!currentMorningRequest || !currentUser) return;
+        if (
+          !currentMorningRequest ||
+          !currentUser ||
+          voiceMessage.type !== 'personal' ||
+          voiceMessage.senderId !== currentUser.id ||
+          !voiceMessage.receiverId ||
+          !voiceMessage.morningRequestId
+        ) {
+          return;
+        }
 
+        const receiverId = voiceMessage.receiverId;
         const eligibleRequest: MorningRequest = {
           ...currentMorningRequest,
           personalEligible: true,
@@ -84,6 +97,9 @@ export const useAppStore = create<AppStore>()(
         set((state) => ({
           currentMorningRequest: eligibleRequest,
           selectedGiveRequestId: null,
+          currentGiveReceiverIds: Array.from(
+            new Set([...state.currentGiveReceiverIds, receiverId])
+          ),
           givenVoiceMessages: [...state.givenVoiceMessages, voiceMessage],
           assignedWakeVoice: {
             ...mockPersonalWakeVoice,
@@ -95,6 +111,7 @@ export const useAppStore = create<AppStore>()(
       chooseCommunityWake: () => {
         const currentMorningRequest = get().currentMorningRequest;
         if (!currentMorningRequest) return;
+        if (currentMorningRequest.personalEligible) return;
 
         set({
           currentMorningRequest: {
@@ -151,6 +168,7 @@ export const useAppStore = create<AppStore>()(
         morningRequestDraft: state.morningRequestDraft,
         currentMorningRequest: state.currentMorningRequest,
         selectedGiveRequestId: state.selectedGiveRequestId,
+        currentGiveReceiverIds: state.currentGiveReceiverIds,
         givenVoiceMessages: state.givenVoiceMessages,
         assignedWakeVoice: state.assignedWakeVoice,
         wakeSession: state.wakeSession,

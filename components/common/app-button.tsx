@@ -5,7 +5,13 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/common/app-text';
 import { colors, componentSizes, radii, spacing } from '@/constants/theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'text' | 'warm' | 'inverted';
+type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'text'
+  | 'textOnDark'
+  | 'warm'
+  | 'inverted';
 
 type AppButtonProps = {
   label: string;
@@ -17,9 +23,10 @@ type AppButtonProps = {
   testID?: string;
 };
 
-function getTextTone(variant: ButtonVariant): 'light' | 'dark' | 'accent' {
+function getTextTone(variant: ButtonVariant): 'light' | 'lightMuted' | 'dark' | 'accent' {
   if (variant === 'primary') return 'light';
   if (variant === 'secondary' || variant === 'text') return 'accent';
+  if (variant === 'textOnDark') return 'lightMuted';
   return 'dark';
 }
 
@@ -34,7 +41,13 @@ export function AppButton({
 }: AppButtonProps) {
   const textTone = getTextTone(variant);
   const iconColor =
-    textTone === 'light' ? colors.textInverse : textTone === 'accent' ? colors.indigo : colors.text;
+    textTone === 'light'
+      ? colors.textInverse
+      : textTone === 'lightMuted'
+        ? colors.textInverseSecondary
+        : textTone === 'accent'
+          ? colors.indigo
+          : colors.text;
 
   return (
     <Pressable
@@ -49,6 +62,7 @@ export function AppButton({
         variant === 'primary' && styles.primary,
         variant === 'secondary' && styles.secondary,
         variant === 'text' && styles.text,
+        variant === 'textOnDark' && styles.text,
         variant === 'warm' && styles.warm,
         variant === 'inverted' && styles.inverted,
         disabled && styles.disabled,

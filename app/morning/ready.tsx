@@ -39,7 +39,7 @@ export default function TomorrowReadyScreen() {
         <AppText variant="bodyMedium" tone="light" style={styles.readyCopy}>
           {isCommunity
             ? 'みんなに向けて届けられた声で、朝を始めます。'
-            : 'あなたに届く声を待っています。'}
+            : 'あなたに向けた声を準備しました。誰から届くかは朝までのお楽しみです。'}
         </AppText>
       </View>
 
@@ -47,10 +47,18 @@ export default function TomorrowReadyScreen() {
         <AppText variant="secondary" tone="lightMuted" style={styles.footerCopy}>
           あとは、ゆっくり休んでください。
         </AppText>
+        {isCommunity ? (
+          <AppButton
+            icon="mic-outline"
+            label="誰かに声を届ける"
+            onPress={() => router.push('/morning/request-list')}
+            variant="inverted"
+          />
+        ) : null}
         <AppButton
           label="ホームに戻る"
           onPress={() => router.replace('/(tabs)')}
-          variant="inverted"
+          variant={isCommunity ? 'textOnDark' : 'inverted'}
         />
       </View>
     </Screen>
