@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
@@ -9,6 +10,7 @@ import { Avatar } from '@/components/common/avatar';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
+import { thanksService } from '@/services/thanks-service';
 import { useAppStore } from '@/store/use-app-store';
 
 type SummaryRowProps = {
@@ -36,7 +38,35 @@ function SummaryRow({ label, value, last = false }: SummaryRowProps) {
 export default function WakeCompleteScreen() {
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
+  const currentUser = useAppStore((state) => state.currentUser);
+  const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
+  const thanksMessages = useAppStore((state) => state.thanksMessages);
+  const addThanksMessages = useAppStore((state) => state.addThanksMessages);
   const sender = useVoiceSender(assignedWakeVoice);
+  const currentUserId = currentUser?.id;
+
+  useEffect(() => {
+    if (!currentUserId || wakeSession?.status !== 'completed') return;
+    const userId = currentUserId;
+
+    let isMounted = true;
+    async function receiveGiveThanks() {
+      try {
+        const messages = await thanksService.createIncomingForGives(
+          givenVoiceMessages,
+          userId
+        );
+        if (isMounted) addThanksMessages(messages);
+      } catch {
+        // Thanksは次回表示時にも再生成できるため、朝の完了体験を止めない。
+      }
+    }
+
+    void receiveGiveThanks();
+    return () => {
+      isMounted = false;
+    };
+  }, [addThanksMessages, currentUserId, givenVoiceMessages, wakeSession?.status]);
 
   if (!assignedWakeVoice || !wakeSession) {
     return <Redirect href="/morning/ready" />;
@@ -49,9 +79,20 @@ export default function WakeCompleteScreen() {
   const senderName = isPersonal
     ? `${sender?.nickname ?? '誰か'}さん`
     : 'Wake Hackのみんな';
+  const hasSentThanks = currentUser
+    ? thanksMessages.some(
+        (message) =>
+          message.senderId === currentUser.id &&
+          message.sourceVoiceMessageId === assignedWakeVoice.id
+      )
+    : false;
 
   function handleThanks() {
-    Alert.alert('ありがとう', 'ありがとうを送る機能は、次のフェーズでつながります。');
+    if (hasSentThanks) {
+      router.push(isPersonal ? '/friend/request' : '/(tabs)/connections');
+      return;
+    }
+    router.push('/wake/thanks');
   }
 
   return (
@@ -85,17 +126,23 @@ export default function WakeCompleteScreen() {
       </View>
 
       <View style={styles.actions}>
-        {isPersonal ? (
-          <AppButton
-            icon="heart-outline"
-            label="ありがとうを送る"
-            onPress={handleThanks}
-          />
-        ) : null}
+        <AppButton
+          icon="heart-outline"
+          label={
+            hasSentThanks
+              ? isPersonal
+                ? '朝のつながりを見る'
+                : 'つながりを見る'
+              : isPersonal
+                ? '声をくれた人にありがとうを送る'
+                : 'みんなの声にリアクションする'
+          }
+          onPress={handleThanks}
+        />
         <AppButton
           label="ホームに戻る"
           onPress={() => router.replace('/(tabs)')}
-          variant={isPersonal ? 'secondary' : 'primary'}
+          variant="secondary"
         />
       </View>
     </MorningScreen>

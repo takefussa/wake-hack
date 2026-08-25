@@ -19,8 +19,11 @@ export function MorningScreen({ children, contentStyle, testID }: MorningScreenP
       style={styles.root}>
       <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           bounces
           contentContainerStyle={styles.scrollContent}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={[styles.content, contentStyle]} testID={testID}>
             {children}

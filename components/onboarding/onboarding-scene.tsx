@@ -39,7 +39,7 @@ export function OnboardingScene({ scene }: OnboardingSceneProps) {
         <VoicePreview
           avatarId="sky"
           mode="dark"
-          name="Yui"
+          name="Takuma"
           voice={mockOnboardingVoice}
         />
       </View>
@@ -74,7 +74,7 @@ export function OnboardingScene({ scene }: OnboardingSceneProps) {
     <View style={[styles.stage, styles.connectionStage]}>
       <View style={styles.avatarLine} />
       <View style={styles.avatarGroup}>
-        <Avatar avatarId="sky" name="Yui" size={componentSizes.avatarLarge} />
+        <Avatar avatarId="sky" name="Takuma" size={componentSizes.avatarLarge} />
         <Avatar avatarId="luna" name="あなた" size={componentSizes.avatarLarge} />
         <Avatar avatarId="mint" name="Haruka" size={componentSizes.avatarLarge} />
       </View>

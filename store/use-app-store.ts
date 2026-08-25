@@ -46,6 +46,8 @@ type AppStore = PersistedAppState & {
   advanceWakeMission: (steps: number) => void;
   completeMission: () => void;
   addThanks: (message: ThanksMessage) => void;
+  addThanksMessages: (messages: ThanksMessage[]) => void;
+  upsertFriendship: (friendship: Friendship) => void;
   resetPrototype: () => void;
 };
 
@@ -220,6 +222,48 @@ export const useAppStore = create<AppStore>()(
       },
       addThanks: (message) =>
         set((state) => ({ thanksMessages: [message, ...state.thanksMessages] })),
+      addThanksMessages: (messages) =>
+        set((state) => {
+          const existingIds = new Set(state.thanksMessages.map((message) => message.id));
+          const uniqueMessages = messages.filter((message) => !existingIds.has(message.id));
+          return { thanksMessages: [...uniqueMessages, ...state.thanksMessages] };
+        }),
+      upsertFriendship: (friendship) =>
+        set((state) => {
+          const normalizeUserId = (userId: string) =>
+            userId === 'current-user' ? (state.currentUser?.id ?? userId) : userId;
+          const incomingUserAId = normalizeUserId(friendship.userAId);
+          const incomingUserBId = normalizeUserId(friendship.userBId);
+          const existingIndex = state.friendships.findIndex(
+            (candidate) => {
+              const candidateUserAId = normalizeUserId(candidate.userAId);
+              const candidateUserBId = normalizeUserId(candidate.userBId);
+              return (
+                candidate.id === friendship.id ||
+                (candidateUserAId === incomingUserAId &&
+                  candidateUserBId === incomingUserBId) ||
+                (candidateUserAId === incomingUserBId &&
+                  candidateUserBId === incomingUserAId)
+              );
+            }
+          );
+          if (existingIndex < 0) {
+            return { friendships: [friendship, ...state.friendships] };
+          }
+
+          const existing = state.friendships[existingIndex];
+          const nextFriendship =
+            existing.status === 'matched' && friendship.status === 'pending'
+              ? existing
+              : {
+                  ...friendship,
+                  morningCount: Math.max(existing.morningCount, friendship.morningCount),
+                  createdAt: existing.createdAt,
+                };
+          const friendships = [...state.friendships];
+          friendships[existingIndex] = nextFriendship;
+          return { friendships };
+        }),
       resetPrototype: () =>
         set({
           ...initialPersistedState,

@@ -51,3 +51,10 @@ export const voiceStyleOptions: VoiceStyle[] = [
 ];
 
 export const quickWakeTimes = ['06:30', '07:00', '07:30', '08:00'] as const;
+
+export const thanksReactionOptions = [
+  '起きられた！',
+  'ありがとう',
+  '今日も頑張れそう',
+  '元気が出た',
+] as const;

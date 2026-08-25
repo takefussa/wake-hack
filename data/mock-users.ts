@@ -3,7 +3,7 @@ import type { UserProfile } from '@/types';
 export const mockUsers: UserProfile[] = [
   {
     id: 'user-yui',
-    nickname: 'Yui',
+    nickname: 'Takuma',
     avatarId: 'sky',
     userType: '大学生',
     tags: ['一人暮らし', '朝が苦手'],

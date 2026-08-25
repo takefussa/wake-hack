@@ -46,7 +46,7 @@ export function WakeVoicePlayer({
           <Avatar
             avatarId={sender?.avatarId ?? 'sky'}
             imageUri={sender?.profileImageUri}
-            name={sender?.nickname ?? 'Yui'}
+            name={sender?.nickname ?? 'Takuma'}
             size={52}
           />
         )}
