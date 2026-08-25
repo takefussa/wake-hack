@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "wake-hack",
+    "name": "Wake Hack",
     "slug": "wake-hack",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "wakehack",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
@@ -33,10 +33,23 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#172033",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#172033"
           }
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "明日の誰かに声を届けるため、マイクへのアクセスを許可してください。"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "プロフィール画像を選ぶため、写真へのアクセスを許可してください。",
+          "cameraPermission": false
         }
       ]
     ],

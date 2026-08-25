@@ -1,53 +1,106 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+export const colors = {
+  background: '#F6F6F3',
+  surface: '#FFFFFF',
+  surfaceSubtle: '#F0F1ED',
+  navy: '#172033',
+  navyRaised: '#202A3E',
+  indigo: '#4D628B',
+  indigoPressed: '#3E5075',
+  indigoSoft: '#E7EAF0',
+  warm: '#D59B45',
+  warmPressed: '#C58A35',
+  warmSoft: '#F3E8D7',
+  morningSky: '#E5EEF2',
+  morningLight: '#FFF9EA',
+  morningBlush: '#F6E8E5',
+  text: '#1E2530',
+  textSecondary: '#66707C',
+  textTertiary: '#9299A2',
+  textInverse: '#FCFCFA',
+  textInverseSecondary: '#C7CED8',
+  border: '#DDE0DC',
+  separator: '#E7E9E5',
+  success: '#4F7864',
+  successSoft: '#E3ECE7',
+  danger: '#A85454',
+  overlay: 'rgba(16, 23, 38, 0.32)',
+  transparent: 'transparent',
+} as const;
 
-export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
-};
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+  xxxl: 48,
+} as const;
 
-export const Fonts = Platform.select({
+export const radii = {
+  card: 8,
+  button: 12,
+  input: 10,
+  chip: 8,
+  badge: 999,
+  avatar: 999,
+} as const;
+
+export const typography = {
+  screenTitle: { fontSize: 28, lineHeight: 35, fontWeight: '700' as const },
+  sectionTitle: { fontSize: 18, lineHeight: 24, fontWeight: '600' as const },
+  body: { fontSize: 16, lineHeight: 24, fontWeight: '400' as const },
+  bodyMedium: { fontSize: 16, lineHeight: 24, fontWeight: '600' as const },
+  secondary: { fontSize: 14, lineHeight: 21, fontWeight: '400' as const },
+  caption: { fontSize: 12, lineHeight: 17, fontWeight: '500' as const },
+  displayNumber: { fontSize: 40, lineHeight: 48, fontWeight: '600' as const },
+  time: { fontSize: 56, lineHeight: 62, fontWeight: '600' as const },
+} as const;
+
+export const fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
   },
   default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+    sans: 'sans-serif',
+    rounded: 'sans-serif',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', sans-serif",
   },
 });
+
+export const shadows = {
+  surface:
+    Platform.select({
+      web: { boxShadow: '0 1px 3px rgba(23, 32, 51, 0.08)' },
+      default: {
+        shadowColor: colors.navy,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 3,
+        elevation: 1,
+      },
+    }) ?? {},
+} as const;
+
+export const componentSizes = {
+  touchTarget: 44,
+  buttonHeight: 52,
+  inputHeight: 52,
+  tabIcon: 23,
+  avatar: 48,
+  avatarLarge: 72,
+  voiceControl: 56,
+  timeWheelItem: 52,
+} as const;
+
+export const layout = {
+  screenPadding: spacing.xl,
+  maxContentWidth: 520,
+  sectionGap: spacing.xxl,
+} as const;
