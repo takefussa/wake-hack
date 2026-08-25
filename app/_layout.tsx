@@ -4,8 +4,10 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
+import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
 import { LoadingScreen } from '@/components/common/loading-screen';
 import { colors } from '@/constants/theme';
+import { useAuthBootstrap } from '@/hooks/use-auth-bootstrap';
 import { useAppStore } from '@/store/use-app-store';
 
 const navigationTheme = {
@@ -23,10 +25,12 @@ const navigationTheme = {
 
 export default function RootLayout() {
   const isHydrated = useAppStore((state) => state.isHydrated);
+  const { failure, retry, status: authStatus } = useAuthBootstrap();
+  const isReady = isHydrated && authStatus === 'ready';
 
   return (
     <SafeAreaProvider>
-      {isHydrated ? (
+      {isReady ? (
         <ThemeProvider value={navigationTheme}>
           <Stack
             screenOptions={{
@@ -45,6 +49,8 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="dark" />
         </ThemeProvider>
+      ) : authStatus === 'error' ? (
+        <AuthErrorScreen failure={failure} onRetry={retry} />
       ) : (
         <LoadingScreen />
       )}

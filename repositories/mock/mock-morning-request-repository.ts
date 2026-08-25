@@ -45,7 +45,30 @@ export class MockMorningRequestRepository implements MorningRequestRepository {
     return { ...updatedRequest, schedules: [...updatedRequest.schedules] };
   }
 
+  async markPersonalEligible(id: string): Promise<MorningRequest | null> {
+    return this.updateRequest(id, { personalEligible: true });
+  }
+
+  async markCommunityReady(id: string): Promise<MorningRequest | null> {
+    return this.updateRequest(id, {
+      personalEligible: false,
+      status: 'voice_assigned',
+    });
+  }
+
   async reset(): Promise<void> {
     this.requests = createInitialRequests();
+  }
+
+  private updateRequest(
+    id: string,
+    values: Partial<MorningRequest>
+  ): MorningRequest | null {
+    const requestIndex = this.requests.findIndex((request) => request.id === id);
+    if (requestIndex < 0) return null;
+
+    const updatedRequest = { ...this.requests[requestIndex], ...values };
+    this.requests[requestIndex] = updatedRequest;
+    return { ...updatedRequest, schedules: [...updatedRequest.schedules] };
   }
 }

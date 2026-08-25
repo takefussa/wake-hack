@@ -40,7 +40,17 @@ export function useVoiceRecorder() {
   const hasActiveRecording = useRef(false);
   const isStarting = useRef(false);
   const isFinalizing = useRef(false);
+  const recordingStartedAt = useRef<number | null>(null);
+  const latestRecordingDurationMs = useRef(0);
   const autoStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!recorderState.isRecording) return;
+    latestRecordingDurationMs.current = Math.max(
+      latestRecordingDurationMs.current,
+      recorderState.durationMillis
+    );
+  }, [recorderState.durationMillis, recorderState.isRecording]);
 
   const clearAutoStopTimer = useCallback(() => {
     if (autoStopTimer.current) {
@@ -125,6 +135,15 @@ export function useVoiceRecorder() {
     clearAutoStopTimer();
 
     try {
+      const elapsedBeforeStop = recordingStartedAt.current
+        ? Date.now() - recordingStartedAt.current
+        : 0;
+      const durationBeforeStop = Math.max(
+        latestRecordingDurationMs.current,
+        elapsedBeforeStop,
+        Math.round(recorder.currentTime * 1_000)
+      );
+
       if (recorder.isRecording) {
         await recorder.stop();
       }
@@ -139,10 +158,15 @@ export function useVoiceRecorder() {
         uri,
         durationMs: Math.min(
           prototypeConfig.recordingMaxMs,
-          Math.max(status.durationMillis, Math.round(recorder.currentTime * 1_000))
+          Math.max(
+            durationBeforeStop,
+            status.durationMillis,
+            Math.round(recorder.currentTime * 1_000)
+          )
         ),
       });
       hasActiveRecording.current = false;
+      recordingStartedAt.current = null;
       await setAudioModeAsync({
         allowsRecording: false,
         playsInSilentMode: true,
@@ -171,6 +195,8 @@ export function useVoiceRecorder() {
       setIsBusy(true);
       setError(null);
       setRecording(null);
+      latestRecordingDurationMs.current = 0;
+      recordingStartedAt.current = null;
       if (player.playing) {
         player.pause();
       }
@@ -181,6 +207,7 @@ export function useVoiceRecorder() {
       });
       await recorder.prepareToRecordAsync();
       hasActiveRecording.current = true;
+      recordingStartedAt.current = Date.now();
       recorder.record({ forDuration: prototypeConfig.recordingMaxMs / 1_000 });
       autoStopTimer.current = setTimeout(() => {
         void finishRecording();
@@ -232,6 +259,8 @@ export function useVoiceRecorder() {
       // Reset remains available even if the native player has already stopped.
     }
     setRecording(null);
+    latestRecordingDurationMs.current = 0;
+    recordingStartedAt.current = null;
     setError(null);
   }, [player]);
 
@@ -248,6 +277,7 @@ export function useVoiceRecorder() {
 
     const shouldStopRecording = hasActiveRecording.current;
     hasActiveRecording.current = false;
+    recordingStartedAt.current = null;
     if (shouldStopRecording) {
       try {
         await recorder.stop();
@@ -266,6 +296,7 @@ export function useVoiceRecorder() {
       clearAutoStopTimer();
       const shouldStopRecording = hasActiveRecording.current;
       hasActiveRecording.current = false;
+      recordingStartedAt.current = null;
       if (shouldStopRecording) {
         try {
           void recorder.stop().catch(() => undefined);

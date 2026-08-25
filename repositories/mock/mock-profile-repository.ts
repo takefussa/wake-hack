@@ -3,10 +3,10 @@ import type { ProfileRepository } from '@/repositories/interfaces/profile-reposi
 import type { CreateProfileInput, UserProfile } from '@/types';
 
 export class MockProfileRepository implements ProfileRepository {
-  async create(input: CreateProfileInput): Promise<UserProfile> {
+  async create(userId: string, input: CreateProfileInput): Promise<UserProfile> {
     return {
       ...input,
-      id: `profile-${Date.now()}`,
+      id: userId,
       createdAt: new Date().toISOString(),
     };
   }
@@ -18,4 +18,6 @@ export class MockProfileRepository implements ProfileRepository {
   async update(profile: UserProfile): Promise<UserProfile> {
     return profile;
   }
+
+  async delete(): Promise<void> {}
 }

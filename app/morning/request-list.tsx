@@ -31,6 +31,9 @@ export default function RequestListScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
+  const replaceMorningRequest = useAppStore(
+    (state) => state.replaceMorningRequest
+  );
   const [candidates, setCandidates] = useState<RequestCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +46,17 @@ export default function RequestListScreen() {
     setError(null);
 
     try {
-      const availableRequests = await morningRequestService.getAvailableRequests(currentUser.id);
+      const remoteCurrentRequest =
+        await morningRequestService.ensureRemoteRequest(currentMorningRequest);
+      if (remoteCurrentRequest.id !== currentMorningRequest.id) {
+        replaceMorningRequest(remoteCurrentRequest);
+        return;
+      }
+
+      const availableRequests = await morningRequestService.getAvailableRequests(
+        currentUser.id,
+        remoteCurrentRequest.id
+      );
       const requests = availableRequests.filter(
         (request) => !currentGiveReceiverIds.includes(request.userId)
       );
@@ -52,7 +65,7 @@ export default function RequestListScreen() {
       ).filter(isUserProfile);
       const matches = rankMorningRequests(
         currentUser,
-        currentMorningRequest,
+        remoteCurrentRequest,
         requests,
         profiles
       );
@@ -68,7 +81,12 @@ export default function RequestListScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentGiveReceiverIds, currentMorningRequest, currentUser]);
+  }, [
+    currentGiveReceiverIds,
+    currentMorningRequest,
+    currentUser,
+    replaceMorningRequest,
+  ]);
 
   useEffect(() => {
     void loadCandidates();

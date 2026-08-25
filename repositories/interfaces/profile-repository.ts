@@ -1,7 +1,8 @@
 import type { CreateProfileInput, UserProfile } from '@/types';
 
 export interface ProfileRepository {
-  create(input: CreateProfileInput): Promise<UserProfile>;
+  create(userId: string, input: CreateProfileInput): Promise<UserProfile>;
   getById(id: string): Promise<UserProfile | null>;
   update(profile: UserProfile): Promise<UserProfile>;
+  delete(id: string): Promise<void>;
 }

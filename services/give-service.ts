@@ -5,7 +5,12 @@ import type { CreatePersonalVoiceInput, VoiceMessage } from '@/types';
 export class GiveService {
   async sendPersonalVoice(input: CreatePersonalVoiceInput): Promise<VoiceMessage> {
     const voiceMessage = await voiceService.createPersonalVoice(input);
-    await morningRequestService.markVoiceDelivered(input.morningRequestId);
+    if (!voiceMessage.storagePath) {
+      await morningRequestService.markPersonalEligible(
+        input.senderMorningRequestId
+      );
+      await morningRequestService.markVoiceDelivered(input.morningRequestId);
+    }
     return voiceMessage;
   }
 }

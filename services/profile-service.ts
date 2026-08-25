@@ -1,5 +1,8 @@
 import { MockProfileRepository } from '@/repositories/mock/mock-profile-repository';
 import type { ProfileRepository } from '@/repositories/interfaces/profile-repository';
+import { SupabaseProfileRepository } from '@/repositories/supabase/supabase-profile-repository';
+import { logDevelopmentError } from '@/lib/development-logger';
+import { authService } from '@/services/auth-service';
 import type { CreateProfileInput, UpdateProfileInput, UserProfile } from '@/types';
 
 function normalizeProfileInput(input: CreateProfileInput): CreateProfileInput {
@@ -12,25 +15,76 @@ function normalizeProfileInput(input: CreateProfileInput): CreateProfileInput {
 }
 
 export class ProfileService {
-  constructor(private readonly repository: ProfileRepository) {}
+  constructor(
+    private readonly repository: ProfileRepository,
+    private readonly mockRepository: ProfileRepository
+  ) {}
 
   async createProfile(input: CreateProfileInput): Promise<UserProfile> {
-    return this.repository.create(normalizeProfileInput(input));
+    try {
+      return await this.repository.create(
+        authService.getAuthenticatedUserId(),
+        normalizeProfileInput(input)
+      );
+    } catch (error) {
+      logDevelopmentError('profile.create', error);
+      throw error;
+    }
+  }
+
+  async getCurrentProfile(userId: string): Promise<UserProfile | null> {
+    try {
+      if (userId !== authService.getAuthenticatedUserId()) {
+        throw new Error('Profile user does not match the authenticated user');
+      }
+      return await this.repository.getById(userId);
+    } catch (error) {
+      logDevelopmentError('profile.getCurrent', error);
+      throw error;
+    }
   }
 
   async getProfile(id: string): Promise<UserProfile | null> {
-    return this.repository.getById(id);
+    const mockProfile = await this.mockRepository.getById(id);
+    if (mockProfile) return mockProfile;
+
+    try {
+      return await this.repository.getById(id);
+    } catch (error) {
+      logDevelopmentError('profile.get', error);
+      return null;
+    }
   }
 
   async updateProfile(
     currentProfile: UserProfile,
     input: UpdateProfileInput
   ): Promise<UserProfile> {
-    return this.repository.update({
-      ...currentProfile,
-      ...normalizeProfileInput(input),
-    });
+    try {
+      if (currentProfile.id !== authService.getAuthenticatedUserId()) {
+        throw new Error('Profile user does not match the authenticated user');
+      }
+      return await this.repository.update({
+        ...currentProfile,
+        ...normalizeProfileInput(input),
+      });
+    } catch (error) {
+      logDevelopmentError('profile.update', error);
+      throw error;
+    }
+  }
+
+  async deleteCurrentProfile(): Promise<void> {
+    try {
+      await this.repository.delete(authService.getAuthenticatedUserId());
+    } catch (error) {
+      logDevelopmentError('profile.deleteCurrent', error);
+      throw error;
+    }
   }
 }
 
-export const profileService = new ProfileService(new MockProfileRepository());
+export const profileService = new ProfileService(
+  new SupabaseProfileRepository(),
+  new MockProfileRepository()
+);

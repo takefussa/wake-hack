@@ -17,6 +17,7 @@ export default function TomorrowReadyScreen() {
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const currentUser = useAppStore((state) => state.currentUser);
+  const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const startWakeSession = useAppStore((state) => state.startWakeSession);
   const [isStartingWake, setIsStartingWake] = useState(false);
   const [wakeError, setWakeError] = useState<string | null>(null);
@@ -47,7 +48,8 @@ export default function TomorrowReadyScreen() {
     try {
       const assignment = await wakeService.assignWakeVoice(
         currentMorningRequest,
-        currentUser.id
+        currentUser.id,
+        givenVoiceMessages
       );
       const didStart = startWakeSession(assignment.voice);
       if (!didStart) {
