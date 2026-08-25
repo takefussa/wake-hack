@@ -44,6 +44,13 @@
         {
           "microphonePermission": "明日の誰かに声を届けるため、マイクへのアクセスを許可してください。"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "プロフィール画像を選ぶため、写真へのアクセスを許可してください。",
+          "cameraPermission": false
+        }
       ]
     ],
     "experiments": {

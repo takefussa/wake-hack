@@ -8,9 +8,13 @@ export type UserProfile = {
   id: string;
   nickname: string;
   avatarId: AvatarId;
+  profileImageUri?: string;
+  bio?: string;
   userType: UserType;
   tags: ProfileTag[];
   createdAt: string;
 };
 
 export type CreateProfileInput = Omit<UserProfile, 'id' | 'createdAt'>;
+
+export type UpdateProfileInput = CreateProfileInput;

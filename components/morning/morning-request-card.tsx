@@ -28,7 +28,12 @@ export function MorningRequestCard({
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       <View style={styles.header}>
         <View style={styles.person}>
-          <Avatar avatarId={user.avatarId} name={user.nickname} size={48} />
+          <Avatar
+            avatarId={user.avatarId}
+            imageUri={user.profileImageUri}
+            name={user.nickname}
+            size={48}
+          />
           <View style={styles.nameGroup}>
             <AppText variant="bodyMedium">{user.nickname}</AppText>
             <AppText variant="caption" tone="muted">

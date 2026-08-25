@@ -12,6 +12,9 @@ export const colors = {
   warm: '#D59B45',
   warmPressed: '#C58A35',
   warmSoft: '#F3E8D7',
+  morningSky: '#E5EEF2',
+  morningLight: '#FFF9EA',
+  morningBlush: '#F6E8E5',
   text: '#1E2530',
   textSecondary: '#66707C',
   textTertiary: '#9299A2',
@@ -92,6 +95,7 @@ export const componentSizes = {
   tabIcon: 23,
   avatar: 48,
   avatarLarge: 72,
+  voiceControl: 56,
   timeWheelItem: 52,
 } as const;
 

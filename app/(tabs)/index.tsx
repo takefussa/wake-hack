@@ -39,7 +39,12 @@ export default function HomeScreen() {
     <Screen contentStyle={styles.content} testID="home-screen">
       <View style={styles.topBar}>
         <AppLogo compact mode="light" />
-        <Avatar avatarId={currentUser.avatarId} name={currentUser.nickname} size={40} />
+        <Avatar
+          avatarId={currentUser.avatarId}
+          imageUri={currentUser.profileImageUri}
+          name={currentUser.nickname}
+          size={40}
+        />
       </View>
 
       <View style={styles.greeting}>

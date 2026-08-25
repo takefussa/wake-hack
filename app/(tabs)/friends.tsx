@@ -26,7 +26,12 @@ export default function FriendsScreen() {
 
           return (
             <View key={friendship.id} style={styles.friendRow}>
-              <Avatar avatarId={friend.avatarId} name={friend.nickname} size={52} />
+              <Avatar
+                avatarId={friend.avatarId}
+                imageUri={friend.profileImageUri}
+                name={friend.nickname}
+                size={52}
+              />
               <View style={styles.friendCopy}>
                 <AppText variant="bodyMedium">{friend.nickname}</AppText>
                 <AppText variant="secondary" tone="soft">
