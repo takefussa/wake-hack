@@ -925,7 +925,7 @@ Personal Voice
 ```text
 You → TakumiへGive
 
-Yui → YouへPersonal Voice
+Takuma → YouへPersonal Voice
 ```
 
 ---
@@ -1018,7 +1018,7 @@ PrototypeではHomeまたはReady画面に、
 ```text
 今日1限のあなたへ
 
-Yui
+Takuma
 大学生
 ```
 
@@ -1071,7 +1071,7 @@ audio_72.m4a
 良：
 
 ```text
-Yuiさんから
+Takumaさんから
 今日のあなたへ
 ```
 
@@ -1166,7 +1166,7 @@ GOOD MORNING ☀️
 Personal Voiceの場合：
 
 ```text
-Yuiさんの声で
+Takumaさんの声で
 朝をスタートしました
 ```
 
@@ -1242,7 +1242,7 @@ type WakeSession = {
 Personalの場合のみ表示。
 
 ```text
-Yuiさんへ
+Takumaさんへ
 ありがとうを伝えますか？
 ```
 
@@ -1360,7 +1360,7 @@ Takumi
 Wake Complete後：
 
 ```text
-またYuiさんと
+またTakumaさんと
 朝を迎えたい？
 ```
 
@@ -1381,7 +1381,7 @@ PrototypeではMockで、
 一定確率または固定のDemo Userの場合：
 
 ```text
-Yuiさんも
+Takumaさんも
 「また朝を迎えたい」
 と思っています
 ```
@@ -1424,7 +1424,7 @@ type Friendship = {
 カード：
 
 ```text
-Yui
+Takuma
 
 大学生
 
@@ -1848,7 +1848,7 @@ ConfettiやSun animationなど、
 例：
 
 ```text
-Yui
+Takuma
 大学生
 1限
 7:10
@@ -1936,7 +1936,7 @@ Takumi
 ### Wake sender
 
 ```text
-Yui
+Takuma
 
 大学生
 7:10
@@ -2275,7 +2275,7 @@ Personal Voiceがなくても
    ↓
 ⑥ 翌朝へ時間ジャンプ
    ↓
-⑦ YuiのPersonal Voice
+⑦ TakumaのPersonal Voice
    ↓
 ⑧ 50歩ミッション
    ↓
