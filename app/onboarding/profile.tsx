@@ -52,7 +52,9 @@ export default function ProfileSetupScreen() {
 
     try {
       const profile = await profileService.createProfile(input);
-      setProfile(profile);
+      if (!setProfile(profile)) {
+        throw new Error('Profile identity did not match');
+      }
       router.replace('/(tabs)');
     } catch {
       setError('プロフィールを作成できませんでした。もう一度お試しください。');

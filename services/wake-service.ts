@@ -1,5 +1,7 @@
+import { logDevelopmentError } from '@/lib/development-logger';
 import type { WakeVoiceRepository } from '@/repositories/interfaces/wake-voice-repository';
 import { MockWakeVoiceRepository } from '@/repositories/mock/mock-wake-voice-repository';
+import { SupabaseWakeVoiceRepository } from '@/repositories/supabase/supabase-wake-voice-repository';
 import type { MorningRequest, VoiceMessage } from '@/types';
 
 export type WakeVoiceAssignmentMode = 'personal' | 'community' | 'community_fallback';
@@ -10,11 +12,15 @@ export type WakeVoiceAssignment = {
 };
 
 export class WakeService {
-  constructor(private readonly repository: WakeVoiceRepository) {}
+  constructor(
+    private readonly repository: WakeVoiceRepository,
+    private readonly demoRepository: WakeVoiceRepository
+  ) {}
 
   async assignWakeVoice(
     request: MorningRequest,
-    receiverId: string
+    receiverId: string,
+    givenVoiceMessages: VoiceMessage[] = []
   ): Promise<WakeVoiceAssignment> {
     if (request.personalEligible) {
       try {
@@ -25,8 +31,25 @@ export class WakeService {
         if (personalVoice?.type === 'personal') {
           return { voice: personalVoice, mode: 'personal' };
         }
-      } catch {
+      } catch (error) {
+        logDevelopmentError('wake.findPersonal', error);
         // A missing Personal Voice must not interrupt the morning experience.
+      }
+
+      const hasMockGive = givenVoiceMessages.some(
+        (voice) =>
+          voice.type === 'personal' &&
+          voice.senderId === receiverId &&
+          !voice.storagePath
+      );
+      if (hasMockGive) {
+        const demoVoice = await this.demoRepository.findPersonalForRequest(
+          request,
+          receiverId
+        );
+        if (demoVoice?.type === 'personal') {
+          return { voice: demoVoice, mode: 'personal' };
+        }
       }
     }
 
@@ -41,4 +64,9 @@ export class WakeService {
   }
 }
 
-export const wakeService = new WakeService(new MockWakeVoiceRepository());
+const mockWakeVoiceRepository = new MockWakeVoiceRepository();
+
+export const wakeService = new WakeService(
+  new SupabaseWakeVoiceRepository(mockWakeVoiceRepository),
+  mockWakeVoiceRepository
+);

@@ -1,3 +1,4 @@
+export * from './database';
 export * from './friendship';
 export * from './morning';
 export * from './prototype';

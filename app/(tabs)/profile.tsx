@@ -11,6 +11,7 @@ import { StatTile } from '@/components/common/stat-tile';
 import { Tag } from '@/components/common/tag';
 import { colors, componentSizes, spacing } from '@/constants/theme';
 import { morningRequestService } from '@/services/morning-request-service';
+import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function ProfileScreen() {
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
     isResettingRef.current = true;
     setIsResetting(true);
     try {
+      await profileService.deleteCurrentProfile();
       await morningRequestService.resetPrototypeData();
       await resetPrototype();
       router.replace('/onboarding');
