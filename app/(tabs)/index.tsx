@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { AppLogo } from '@/components/common/app-logo';
@@ -21,10 +21,18 @@ export default function HomeScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
-  const loadDemoMorning = useAppStore((state) => state.loadDemoMorning);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
+  }
+
+  function handleMorningAction() {
+    if (!currentMorningRequest) {
+      router.push('/morning/setup');
+      return;
+    }
+
+    router.push(assignedWakeVoice ? '/morning/ready' : '/morning/give-choice');
   }
 
   return (
@@ -44,7 +52,7 @@ export default function HomeScreen() {
       </View>
 
       <NextMorningCard
-        onPrepare={loadDemoMorning}
+        onAction={handleMorningAction}
         request={currentMorningRequest}
         wakeVoice={assignedWakeVoice}
       />

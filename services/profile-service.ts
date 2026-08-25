@@ -11,6 +11,10 @@ export class ProfileService {
       nickname: input.nickname.trim(),
     });
   }
+
+  async getProfile(id: string): Promise<UserProfile | null> {
+    return this.repository.getById(id);
+  }
 }
 
 export const profileService = new ProfileService(new MockProfileRepository());

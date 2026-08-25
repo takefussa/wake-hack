@@ -3,12 +3,12 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { mockFriendships } from '@/data/mock-friends';
-import { demoMorningRequest } from '@/data/mock-requests';
 import { mockThanksMessages } from '@/data/mock-thanks';
 import { mockCommunityVoices, mockPersonalWakeVoice } from '@/data/mock-voices';
 import type {
   Friendship,
   MorningRequest,
+  MorningRequestDraft,
   ThanksMessage,
   UserProfile,
   VoiceMessage,
@@ -17,7 +17,9 @@ import type {
 
 type PersistedAppState = {
   currentUser: UserProfile | null;
+  morningRequestDraft: MorningRequestDraft | null;
   currentMorningRequest: MorningRequest | null;
+  selectedGiveRequestId: string | null;
   givenVoiceMessages: VoiceMessage[];
   assignedWakeVoice: VoiceMessage | null;
   wakeSession: WakeSession | null;
@@ -29,8 +31,9 @@ type AppStore = PersistedAppState & {
   isHydrated: boolean;
   setHydrated: (isHydrated: boolean) => void;
   setProfile: (profile: UserProfile) => void;
+  setMorningWakeTime: (wakeAt: string) => void;
   setMorningRequest: (request: MorningRequest) => void;
-  loadDemoMorning: () => void;
+  selectGiveRequest: (requestId: string) => void;
   completeGive: (voiceMessage: VoiceMessage) => void;
   chooseCommunityWake: () => void;
   startWakeSession: () => void;
@@ -41,7 +44,9 @@ type AppStore = PersistedAppState & {
 
 const initialPersistedState: PersistedAppState = {
   currentUser: null,
+  morningRequestDraft: null,
   currentMorningRequest: null,
+  selectedGiveRequestId: null,
   givenVoiceMessages: [],
   assignedWakeVoice: null,
   wakeSession: null,
@@ -56,26 +61,16 @@ export const useAppStore = create<AppStore>()(
       isHydrated: false,
       setHydrated: (isHydrated) => set({ isHydrated }),
       setProfile: (profile) => set({ currentUser: profile }),
+      setMorningWakeTime: (wakeAt) => set({ morningRequestDraft: { wakeAt } }),
       setMorningRequest: (request) =>
         set({
+          morningRequestDraft: { wakeAt: request.wakeAt },
           currentMorningRequest: request,
+          selectedGiveRequestId: null,
           assignedWakeVoice: null,
           wakeSession: null,
         }),
-      loadDemoMorning: () => {
-        const currentUser = get().currentUser;
-        if (!currentUser) return;
-
-        set({
-          currentMorningRequest: {
-            ...demoMorningRequest,
-            userId: currentUser.id,
-            createdAt: new Date().toISOString(),
-          },
-          assignedWakeVoice: null,
-          wakeSession: null,
-        });
-      },
+      selectGiveRequest: (requestId) => set({ selectedGiveRequestId: requestId }),
       completeGive: (voiceMessage) => {
         const { currentMorningRequest, currentUser } = get();
         if (!currentMorningRequest || !currentUser) return;
@@ -88,6 +83,7 @@ export const useAppStore = create<AppStore>()(
 
         set((state) => ({
           currentMorningRequest: eligibleRequest,
+          selectedGiveRequestId: null,
           givenVoiceMessages: [...state.givenVoiceMessages, voiceMessage],
           assignedWakeVoice: {
             ...mockPersonalWakeVoice,
@@ -106,6 +102,7 @@ export const useAppStore = create<AppStore>()(
             personalEligible: false,
             status: 'voice_assigned',
           },
+          selectedGiveRequestId: null,
           assignedWakeVoice: mockCommunityVoices[0],
         });
       },
@@ -151,7 +148,9 @@ export const useAppStore = create<AppStore>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state): PersistedAppState => ({
         currentUser: state.currentUser,
+        morningRequestDraft: state.morningRequestDraft,
         currentMorningRequest: state.currentMorningRequest,
+        selectedGiveRequestId: state.selectedGiveRequestId,
         givenVoiceMessages: state.givenVoiceMessages,
         assignedWakeVoice: state.assignedWakeVoice,
         wakeSession: state.wakeSession,

@@ -1,3 +1,4 @@
+import { getMockUserById } from '@/data/mock-users';
 import type { ProfileRepository } from '@/repositories/interfaces/profile-repository';
 import type { CreateProfileInput, UserProfile } from '@/types';
 
@@ -8,5 +9,9 @@ export class MockProfileRepository implements ProfileRepository {
       id: `profile-${Date.now()}`,
       createdAt: new Date().toISOString(),
     };
+  }
+
+  async getById(id: string): Promise<UserProfile | null> {
+    return getMockUserById(id) ?? null;
   }
 }

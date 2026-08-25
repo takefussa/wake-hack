@@ -49,3 +49,5 @@ export const voiceStyleOptions: VoiceStyle[] = [
   '面白く',
   '落ち着いて',
 ];
+
+export const quickWakeTimes = ['06:30', '07:00', '07:30', '08:00'] as const;

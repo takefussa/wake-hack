@@ -92,6 +92,7 @@ export const componentSizes = {
   tabIcon: 23,
   avatar: 48,
   avatarLarge: 72,
+  timeWheelItem: 52,
 } as const;
 
 export const layout = {
