@@ -1,4 +1,3 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -38,7 +37,7 @@ function DetailRow({ label, value, last = false }: DetailRowProps) {
 export default function RequestDetailScreen() {
   const params = useLocalSearchParams<{ requestId?: string | string[] }>();
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
-  const selectedGiveRequestId = useAppStore((state) => state.selectedGiveRequestId);
+  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
   const selectGiveRequest = useAppStore((state) => state.selectGiveRequest);
   const [request, setRequest] = useState<MorningRequest | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -84,7 +83,16 @@ export default function RequestDetailScreen() {
     };
   }, [requestId]);
 
-  const isSelected = request !== null && selectedGiveRequestId === request.id;
+  const hasAlreadyGiven = user !== null && currentGiveReceiverIds.includes(user.id);
+
+  function handleStartRecording() {
+    if (!request || hasAlreadyGiven) return;
+    selectGiveRequest(request.id);
+    router.push({
+      pathname: '/morning/record',
+      params: { requestId: request.id },
+    });
+  }
 
   return (
     <Screen contentStyle={styles.content} testID="request-detail-screen">
@@ -130,20 +138,11 @@ export default function RequestDetailScreen() {
             <DetailRow label="希望する声" last value={request.preferredVoiceStyle} />
           </View>
 
-          {isSelected ? (
-            <View style={styles.selectedNote}>
-              <Ionicons name="checkmark-circle" color={colors.success} size={20} />
-              <AppText variant="secondary" tone="soft">
-                {user.nickname}さんを選びました
-              </AppText>
-            </View>
-          ) : null}
-
           <AppButton
-            disabled={isSelected}
-            icon={isSelected ? 'checkmark' : 'mic-outline'}
-            label={isSelected ? 'この人を選びました' : 'この人に声を届ける'}
-            onPress={() => selectGiveRequest(request.id)}
+            disabled={hasAlreadyGiven}
+            icon={hasAlreadyGiven ? 'checkmark' : 'mic-outline'}
+            label={hasAlreadyGiven ? 'この人には届けました' : 'この人に声を届ける'}
+            onPress={handleStartRecording}
             testID="request-detail-give"
           />
         </>
@@ -194,12 +193,6 @@ const styles = StyleSheet.create({
   detailValue: {
     flex: 1,
     textAlign: 'right',
-  },
-  selectedNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
   },
   state: {
     flex: 1,

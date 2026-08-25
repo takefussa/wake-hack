@@ -38,6 +38,12 @@
             "backgroundColor": "#10142E"
           }
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "明日の誰かに声を届けるため、マイクへのアクセスを許可してください。"
+        }
       ]
     ],
     "experiments": {

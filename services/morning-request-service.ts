@@ -27,6 +27,14 @@ export class MorningRequestService {
   async getRequest(id: string): Promise<MorningRequest | null> {
     return this.repository.getById(id);
   }
+
+  async markVoiceDelivered(id: string): Promise<MorningRequest> {
+    const request = await this.repository.incrementVoiceCount(id);
+    if (!request) {
+      throw new Error('Morning request not found');
+    }
+    return request;
+  }
 }
 
 export const morningRequestService = new MorningRequestService(
