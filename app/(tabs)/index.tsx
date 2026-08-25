@@ -63,7 +63,7 @@ export default function HomeScreen() {
       />
 
       <View style={styles.voiceNote}>
-        <Avatar avatarId="sky" name="Yui" size={44} />
+        <Avatar avatarId="sky" name="Takuma" size={44} />
         <View style={styles.voiceCopy}>
           <AppText variant="secondary">声の向こうに、人がいる。</AppText>
           <AppText variant="caption" tone="muted">

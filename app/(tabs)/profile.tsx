@@ -18,6 +18,10 @@ export default function ProfileScreen() {
 
   if (!currentUser) return null;
 
+  const matchedFriendCount = friendships.filter(
+    (friendship) => friendship.status === 'matched'
+  ).length;
+
   function handleReset() {
     Alert.alert('プロトタイプをリセット', 'プロフィールと朝の状態を消して、最初から確認します。', [
       { text: 'キャンセル', style: 'cancel' },
@@ -77,7 +81,7 @@ export default function ProfileScreen() {
         <View style={styles.stats}>
           <StatTile value="12人" label="声を届けた" />
           <StatTile value="10回" label="起こしてもらった" />
-          <StatTile value={`${friendships.length}人`} label="フレンド" />
+          <StatTile value={`${matchedFriendCount}人`} label="フレンド" />
           <StatTile value="5日" label="連続起床" />
         </View>
       </View>

@@ -4,6 +4,7 @@ export const prototypeConfig = {
   wakeMissionSteps: 50,
   profileNicknameMaxLength: 12,
   profileBioMaxLength: 80,
+  thanksTextMaxLength: 120,
   nearbyWakeCount: 163,
   totalMorningCount: 1_248,
 } as const;

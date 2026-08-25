@@ -8,3 +8,5 @@ export type Friendship = {
   morningCount: number;
   createdAt: string;
 };
+
+export type CreateFriendshipInput = Pick<Friendship, 'userAId' | 'userBId' | 'morningCount'>;

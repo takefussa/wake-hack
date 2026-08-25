@@ -2,8 +2,8 @@ import type { AudioSource } from 'expo-audio';
 
 import type { VoiceMessage } from '@/types';
 
-const onboardingYuiVoice = require('../../assets/audio/onboarding-yui.wav') as number;
-const yuiWakeVoice = require('../../assets/audio/yui-wake.wav') as number;
+const onboardingHumanVoice = require('../../assets/audio/onboarding-yui.wav') as number;
+const personalWakeVoice = require('../../assets/audio/yui-wake.wav') as number;
 const communityWakeVoice = require('../../assets/audio/community-wake.wav') as number;
 
 function isPlayableUri(uri: string): boolean {
@@ -12,10 +12,10 @@ function isPlayableUri(uri: string): boolean {
 
 export function resolveVoiceSource(voice: VoiceMessage): AudioSource {
   if (voice.id === 'onboarding-voice-yui') {
-    return onboardingYuiVoice;
+    return onboardingHumanVoice;
   }
   if (voice.id === 'personal-voice-yui') {
-    return yuiWakeVoice;
+    return personalWakeVoice;
   }
   if (voice.type === 'community') {
     return communityWakeVoice;

@@ -36,6 +36,7 @@ export default function RootLayout() {
           <Stack.Screen name="profile-edit" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="morning" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="wake" options={{ animation: 'fade' }} />
+          <Stack.Screen name="friend" options={{ animation: 'slide_from_right' }} />
         </Stack>
         <StatusBar style="dark" />
       </ThemeProvider>
