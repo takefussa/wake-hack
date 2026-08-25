@@ -6,6 +6,7 @@ export type VoiceMessage = {
   receiverId?: string;
   morningRequestId?: string;
   uri: string;
+  storagePath?: string;
   durationMs: number;
   type: VoiceMessageType;
   transcript?: string;
@@ -16,6 +17,7 @@ export type CreatePersonalVoiceInput = {
   senderId: string;
   receiverId: string;
   morningRequestId: string;
+  senderMorningRequestId: string;
   uri: string;
   durationMs: number;
 };

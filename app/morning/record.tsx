@@ -86,6 +86,7 @@ export default function RecordVoiceScreen() {
   }
 
   const currentUserId = currentUser.id;
+  const currentMorningRequestId = currentMorningRequest.id;
   const hasAlreadyGiven = recipient !== null && currentGiveReceiverIds.includes(recipient.id);
   const isTooShort =
     recorder.recording !== null &&
@@ -109,11 +110,15 @@ export default function RecordVoiceScreen() {
   }
 
   async function handleSend() {
+    if (recorder.recording && isTooShort) {
+      setPageError('声は2秒以上必要です。もう一度、少し長めに録音してください。');
+      return;
+    }
+
     if (
       !request ||
       !recipient ||
       !recorder.recording ||
-      isTooShort ||
       isSendingRef.current ||
       hasAlreadyGiven
     ) {
@@ -129,6 +134,7 @@ export default function RecordVoiceScreen() {
         senderId: currentUserId,
         receiverId: recipient.id,
         morningRequestId: request.id,
+        senderMorningRequestId: currentMorningRequestId,
         uri: recorder.recording.uri,
         durationMs: recorder.recording.durationMs,
       });
@@ -208,9 +214,15 @@ export default function RecordVoiceScreen() {
                 </AppText>
               ) : null}
               <AppButton
-                disabled={isTooShort || isSending}
+                disabled={isSending}
                 icon="paper-plane-outline"
-                label={isSending ? '届けています…' : 'この声を届ける'}
+                label={
+                  isSending
+                    ? '届けています…'
+                    : isTooShort
+                      ? '2秒以上録音してください'
+                      : 'この声を届ける'
+                }
                 onPress={() => void handleSend()}
                 testID="send-personal-voice"
               />

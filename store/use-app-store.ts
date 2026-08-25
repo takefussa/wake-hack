@@ -17,12 +17,16 @@ import type {
 } from '@/types';
 
 type AppStore = PrototypePersistedState & {
+  authUserId: string | null;
   isHydrated: boolean;
+  setAuthenticatedUserId: (userId: string) => void;
+  restoreAuthenticatedProfile: (profile: UserProfile | null) => void;
   setHydrated: (isHydrated: boolean) => void;
-  setProfile: (profile: UserProfile) => void;
+  setProfile: (profile: UserProfile) => boolean;
   updateProfile: (profile: UserProfile) => boolean;
   setMorningWakeTime: (wakeAt: string) => void;
   setMorningRequest: (request: MorningRequest) => void;
+  replaceMorningRequest: (request: MorningRequest) => void;
   selectGiveRequest: (requestId: string) => void;
   completeGive: (voiceMessage: VoiceMessage) => boolean;
   chooseCommunityWake: () => void;
@@ -58,12 +62,50 @@ export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
       ...initialPersistedState,
+      authUserId: null,
       isHydrated: false,
+      setAuthenticatedUserId: (authUserId) => set({ authUserId }),
+      restoreAuthenticatedProfile: (profile) =>
+        set((state) => {
+          if (!profile) {
+            return { ...initialPersistedState };
+          }
+
+          const hasSameIdentity = state.currentUser?.id === profile.id;
+          // Phase 1のDB列にない写真URIと一言コメントは、同じ端末のStoreから補完する。
+          const restoredProfile: UserProfile = hasSameIdentity
+            ? {
+                ...profile,
+                profileImageUri: state.currentUser?.profileImageUri,
+                bio: state.currentUser?.bio,
+              }
+            : profile;
+
+          if (!hasSameIdentity) {
+            return {
+              ...initialPersistedState,
+              currentUser: restoredProfile,
+            };
+          }
+
+          return { currentUser: restoredProfile };
+        }),
       setHydrated: (isHydrated) => set({ isHydrated }),
-      setProfile: (profile) => set({ currentUser: profile }),
+      setProfile: (profile) => {
+        if (profile.id !== get().authUserId) return false;
+
+        set({ currentUser: profile });
+        return true;
+      },
       updateProfile: (profile) => {
-        const currentUser = get().currentUser;
-        if (!currentUser || currentUser.id !== profile.id) return false;
+        const { authUserId, currentUser } = get();
+        if (
+          !currentUser ||
+          currentUser.id !== profile.id ||
+          authUserId !== profile.id
+        ) {
+          return false;
+        }
 
         set({ currentUser: profile });
         return true;
@@ -78,6 +120,23 @@ export const useAppStore = create<AppStore>()(
           assignedWakeVoice: null,
           wakeSession: null,
           wakeMissionProgress: 0,
+        }),
+      replaceMorningRequest: (request) =>
+        set((state) => {
+          if (request.userId !== state.currentUser?.id) return {};
+
+          return {
+            morningRequestDraft: { wakeAt: request.wakeAt },
+            currentMorningRequest: request,
+            assignedWakeVoice: state.assignedWakeVoice
+              ? {
+                  ...state.assignedWakeVoice,
+                  morningRequestId: request.id,
+                }
+              : null,
+            wakeSession: null,
+            wakeMissionProgress: 0,
+          };
         }),
       selectGiveRequest: (requestId) => set({ selectedGiveRequestId: requestId }),
       completeGive: (voiceMessage) => {
@@ -98,7 +157,7 @@ export const useAppStore = create<AppStore>()(
         const eligibleRequest: MorningRequest = {
           ...currentMorningRequest,
           personalEligible: true,
-          status: 'voice_assigned',
+          status: voiceMessage.storagePath ? 'open' : 'voice_assigned',
         };
 
         set((state) => ({
