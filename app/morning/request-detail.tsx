@@ -111,12 +111,22 @@ export default function RequestDetailScreen() {
       {!isLoading && request && user ? (
         <>
           <View style={styles.person}>
-            <Avatar avatarId={user.avatarId} name={user.nickname} size={72} />
+            <Avatar
+              avatarId={user.avatarId}
+              imageUri={user.profileImageUri}
+              name={user.nickname}
+              size={72}
+            />
             <View style={styles.personCopy}>
               <AppText variant="sectionTitle">{user.nickname}</AppText>
               <AppText variant="secondary" tone="soft">
                 {user.userType}
               </AppText>
+              {user.bio ? (
+                <AppText variant="secondary" tone="soft">
+                  {user.bio}
+                </AppText>
+              ) : null}
             </View>
           </View>
 
@@ -161,6 +171,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   personCopy: {
+    flex: 1,
     gap: spacing.xs,
   },
   morningCard: {

@@ -1,27 +1,30 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
-import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
+import { ScreenHeader } from '@/components/common/screen-header';
 import { ProfileFields } from '@/components/profile/profile-fields';
 import { colors, spacing } from '@/constants/theme';
 import { isProfileInputValid } from '@/features/profile/profile-form';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
-import type { AvatarId, CreateProfileInput, ProfileTag, UserType } from '@/types';
+import type { AvatarId, ProfileTag, UpdateProfileInput, UserType } from '@/types';
 
-export default function ProfileSetupScreen() {
-  const setProfile = useAppStore((state) => state.setProfile);
-  const [avatarId, setAvatarId] = useState<AvatarId>('luna');
-  const [profileImageUri, setProfileImageUri] = useState<string | undefined>();
-  const [nickname, setNickname] = useState('');
-  const [bio, setBio] = useState('');
-  const [userType, setUserType] = useState<UserType | null>(null);
-  const [tags, setTags] = useState<ProfileTag[]>([]);
+export default function ProfileEditScreen() {
+  const currentUser = useAppStore((state) => state.currentUser);
+  const updateProfile = useAppStore((state) => state.updateProfile);
+  const [avatarId, setAvatarId] = useState<AvatarId>(currentUser?.avatarId ?? 'luna');
+  const [profileImageUri, setProfileImageUri] = useState<string | undefined>(
+    currentUser?.profileImageUri
+  );
+  const [nickname, setNickname] = useState(currentUser?.nickname ?? '');
+  const [bio, setBio] = useState(currentUser?.bio ?? '');
+  const [userType, setUserType] = useState<UserType | null>(currentUser?.userType ?? null);
+  const [tags, setTags] = useState<ProfileTag[]>(currentUser?.tags ?? []);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,10 +33,14 @@ export default function ProfileSetupScreen() {
     return isProfileInputValid({ avatarId, nickname, userType, tags });
   }, [avatarId, nickname, tags, userType]);
 
-  async function handleSubmit() {
-    if (!userType || !canSubmit || isSaving) return;
+  if (!currentUser) {
+    return <Redirect href="/onboarding" />;
+  }
 
-    const input: CreateProfileInput = {
+  async function handleSubmit() {
+    if (!currentUser || !userType || !canSubmit || isSaving) return;
+
+    const input: UpdateProfileInput = {
       avatarId,
       profileImageUri,
       nickname,
@@ -45,28 +52,25 @@ export default function ProfileSetupScreen() {
     setError(null);
 
     try {
-      const profile = await profileService.createProfile(input);
-      setProfile(profile);
-      router.replace('/(tabs)');
+      const profile = await profileService.updateProfile(currentUser, input);
+      if (!updateProfile(profile)) {
+        throw new Error('Profile identity did not match');
+      }
+      router.replace('/(tabs)/profile');
     } catch {
-      setError('プロフィールを作成できませんでした。もう一度お試しください。');
+      setError('プロフィールを保存できませんでした。もう一度お試しください。');
       setIsSaving(false);
     }
   }
 
   return (
-    <Screen contentStyle={styles.content} testID="profile-setup-screen">
+    <Screen contentStyle={styles.content} testID="profile-edit-screen">
       <StatusBar style="dark" />
-      <View style={styles.navigation}>
-        <IconButton icon="chevron-back" label="戻る" onPress={() => router.back()} />
-      </View>
-
-      <View style={styles.header}>
-        <AppText variant="screenTitle">プロフィールを作る</AppText>
-        <AppText variant="secondary" tone="soft">
-          本名や顔写真は使いません。朝の相手には、この情報だけが見えます。
-        </AppText>
-      </View>
+      <ScreenHeader
+        description="朝の相手に見える情報を変更できます。"
+        onBack={() => router.back()}
+        title="プロフィールを編集"
+      />
 
       <ProfileFields
         avatarId={avatarId}
@@ -91,9 +95,9 @@ export default function ProfileSetupScreen() {
 
       <AppButton
         disabled={!canSubmit || isSaving}
-        label={isSaving ? '作成しています…' : 'プロフィールを作成'}
+        label={isSaving ? '保存しています…' : '変更を保存'}
         onPress={() => void handleSubmit()}
-        testID="profile-submit"
+        testID="profile-edit-submit"
       />
     </Screen>
   );
@@ -102,12 +106,6 @@ export default function ProfileSetupScreen() {
 const styles = StyleSheet.create({
   content: {
     gap: spacing.xxl,
-  },
-  navigation: {
-    marginLeft: -spacing.md,
-  },
-  header: {
-    gap: spacing.sm,
   },
   error: {
     color: colors.danger,

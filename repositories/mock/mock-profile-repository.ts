@@ -14,4 +14,8 @@ export class MockProfileRepository implements ProfileRepository {
   async getById(id: string): Promise<UserProfile | null> {
     return getMockUserById(id) ?? null;
   }
+
+  async update(profile: UserProfile): Promise<UserProfile> {
+    return profile;
+  }
 }

@@ -52,7 +52,12 @@ export default function ConnectionsScreen() {
 
             return (
               <View key={message.id} style={styles.thanksRow}>
-                <Avatar avatarId={sender.avatarId} name={sender.nickname} size={44} />
+                <Avatar
+                  avatarId={sender.avatarId}
+                  imageUri={sender.profileImageUri}
+                  name={sender.nickname}
+                  size={44}
+                />
                 <View style={styles.thanksCopy}>
                   <View style={styles.thanksHeader}>
                     <AppText variant="bodyMedium">{sender.nickname}</AppText>

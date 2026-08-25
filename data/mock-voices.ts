@@ -1,13 +1,25 @@
 import type { VoiceMessage } from '@/types';
 
+export const mockOnboardingVoice: VoiceMessage = {
+  id: 'onboarding-voice-yui',
+  senderId: 'user-yui',
+  uri: 'mock://onboarding/yui',
+  durationMs: 9_134,
+  type: 'personal',
+  transcript:
+    'おはよう。今日は1限なんだよね。焦らなくて大丈夫。ゆっくり、一緒に始めよう。',
+  createdAt: '2026-08-25T01:00:00.000Z',
+};
+
 export const mockCommunityVoices: VoiceMessage[] = [
   {
     id: 'community-voice-1',
     senderId: 'community',
     uri: 'mock://community/01',
-    durationMs: 6_400,
+    durationMs: 6_846,
     type: 'community',
-    transcript: 'おはようございます。今日も自分のペースでいきましょう。',
+    transcript:
+      'おはようございます。今朝も無理しすぎず、自分のペースで、ゆっくり始めましょう。',
     createdAt: '2026-08-20T01:00:00.000Z',
   },
   {
@@ -54,8 +66,9 @@ export const mockPersonalWakeVoice: VoiceMessage = {
   receiverId: 'current-user',
   morningRequestId: 'request-demo-current',
   uri: 'mock://personal/yui',
-  durationMs: 8_200,
+  durationMs: 9_934,
   type: 'personal',
-  transcript: 'おはよう。今日1限なんですよね。私も朝が早いので、一緒に頑張りましょう。',
+  transcript:
+    'おはよう。今日は1限なんだよね。朝は少しつらいけど、焦らなくて大丈夫。ゆっくり、一緒に始めよう。',
   createdAt: '2026-08-25T13:10:00.000Z',
 };

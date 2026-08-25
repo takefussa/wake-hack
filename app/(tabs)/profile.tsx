@@ -4,6 +4,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
+import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
 import { StatTile } from '@/components/common/stat-tile';
 import { Tag } from '@/components/common/tag';
@@ -33,11 +34,19 @@ export default function ProfileScreen() {
 
   return (
     <Screen contentStyle={styles.content} testID="profile-screen">
-      <AppText variant="screenTitle">プロフィール</AppText>
+      <View style={styles.header}>
+        <AppText variant="screenTitle">プロフィール</AppText>
+        <IconButton
+          icon="create-outline"
+          label="プロフィールを編集"
+          onPress={() => router.push('/profile-edit')}
+        />
+      </View>
 
       <View style={styles.identity}>
         <Avatar
           avatarId={currentUser.avatarId}
+          imageUri={currentUser.profileImageUri}
           name={currentUser.nickname}
           size={componentSizes.avatarLarge}
         />
@@ -48,6 +57,12 @@ export default function ProfileScreen() {
           </AppText>
         </View>
       </View>
+
+      {currentUser.bio ? (
+        <AppText variant="body" style={styles.bio}>
+          {currentUser.bio}
+        </AppText>
+      ) : null}
 
       {currentUser.tags.length > 0 ? (
         <View style={styles.tags}>
@@ -94,6 +109,13 @@ const styles = StyleSheet.create({
   content: {
     gap: spacing.xxl,
   },
+  header: {
+    minHeight: componentSizes.touchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.lg,
+  },
   identity: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -101,6 +123,9 @@ const styles = StyleSheet.create({
   },
   identityCopy: {
     gap: spacing.xs,
+  },
+  bio: {
+    maxWidth: 360,
   },
   tags: {
     flexDirection: 'row',

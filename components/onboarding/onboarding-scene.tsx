@@ -7,6 +7,7 @@ import { VoicePreview } from '@/components/common/voice-preview';
 import { Waveform } from '@/components/common/waveform';
 import { colors, componentSizes, spacing } from '@/constants/theme';
 import type { OnboardingSceneType } from '@/data/onboarding-pages';
+import { mockOnboardingVoice } from '@/data/mock-voices';
 
 type OnboardingSceneProps = {
   scene: OnboardingSceneType;
@@ -35,7 +36,12 @@ export function OnboardingScene({ scene }: OnboardingSceneProps) {
             07:00
           </AppText>
         </View>
-        <VoicePreview avatarId="sky" duration="0:08" mode="dark" name="Yui" />
+        <VoicePreview
+          avatarId="sky"
+          mode="dark"
+          name="Yui"
+          voice={mockOnboardingVoice}
+        />
       </View>
     );
   }

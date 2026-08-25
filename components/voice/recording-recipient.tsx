@@ -14,7 +14,12 @@ type RecordingRecipientProps = {
 export function RecordingRecipient({ request, user }: RecordingRecipientProps) {
   return (
     <View style={styles.container}>
-      <Avatar avatarId={user.avatarId} name={user.nickname} size={52} />
+      <Avatar
+        avatarId={user.avatarId}
+        imageUri={user.profileImageUri}
+        name={user.nickname}
+        size={52}
+      />
       <View style={styles.copy}>
         <View style={styles.nameRow}>
           <AppText variant="bodyMedium">{user.nickname}さんへ</AppText>

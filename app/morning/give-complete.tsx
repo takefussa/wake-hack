@@ -75,7 +75,12 @@ export default function GiveCompleteScreen() {
             <View style={styles.completeIcon}>
               <Ionicons name="checkmark" color={colors.textInverse} size={30} />
             </View>
-            <Avatar avatarId={recipient.avatarId} name={recipient.nickname} size={72} />
+            <Avatar
+              avatarId={recipient.avatarId}
+              imageUri={recipient.profileImageUri}
+              name={recipient.nickname}
+              size={72}
+            />
             <View style={styles.copy}>
               <AppText variant="screenTitle" style={styles.centeredText}>
                 声を届けました

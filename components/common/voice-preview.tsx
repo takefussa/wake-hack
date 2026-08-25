@@ -1,54 +1,85 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { Waveform } from '@/components/common/waveform';
 import { colors, componentSizes, radii, spacing } from '@/constants/theme';
-import type { AvatarId } from '@/types';
+import { useVoicePlayer } from '@/hooks/use-voice-player';
+import type { AvatarId, VoiceMessage } from '@/types';
 
 type VoicePreviewProps = {
   avatarId: AvatarId;
   name: string;
-  duration: string;
+  voice: VoiceMessage;
   mode?: 'light' | 'dark';
 };
 
-export function VoicePreview({ avatarId, name, duration, mode = 'light' }: VoicePreviewProps) {
+function formatDuration(seconds: number): string {
+  const rounded = Math.max(0, Math.round(seconds));
+  return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, '0')}`;
+}
+
+export function VoicePreview({ avatarId, name, voice, mode = 'light' }: VoicePreviewProps) {
   const isDark = mode === 'dark';
+  const player = useVoicePlayer(voice);
 
   return (
-    <View style={[styles.container, isDark ? styles.dark : styles.light]}>
-      <Avatar avatarId={avatarId} name={name} size={44} />
-      <View style={styles.voice}>
-        <View style={styles.meta}>
-          <AppText variant="secondary" tone={isDark ? 'light' : 'dark'}>
-            {name}さんから
-          </AppText>
-          <AppText variant="caption" tone={isDark ? 'lightMuted' : 'muted'}>
-            {duration}
-          </AppText>
+    <View style={styles.wrapper}>
+      <View style={[styles.container, isDark ? styles.dark : styles.light]}>
+        <Avatar avatarId={avatarId} name={name} size={44} />
+        <View style={styles.voice}>
+          <View style={styles.meta}>
+            <AppText variant="secondary" tone={isDark ? 'light' : 'dark'}>
+              {name}さんから
+            </AppText>
+            <AppText variant="caption" tone={isDark ? 'lightMuted' : 'muted'}>
+              {formatDuration(player.durationSeconds)}
+            </AppText>
+          </View>
+          <Waveform
+            color={isDark ? colors.textInverse : colors.indigo}
+            mutedColor={isDark ? colors.navyRaised : colors.border}
+            height={28}
+            progress={player.progress}
+          />
         </View>
-        <Waveform
-          color={isDark ? colors.textInverse : colors.indigo}
-          mutedColor={isDark ? colors.navyRaised : colors.border}
-          height={28}
-          progress={0.64}
-        />
+        <Pressable
+          accessibilityLabel={player.isPlaying ? '声を一時停止' : '声を再生'}
+          accessibilityRole="button"
+          disabled={!player.isReady}
+          onPress={() => void player.togglePlayback()}
+          style={({ pressed }) => [
+            styles.play,
+            isDark && styles.playDark,
+            !player.isReady && styles.disabled,
+            pressed && player.isReady && styles.pressed,
+          ]}>
+          {!player.isReady ? (
+            <ActivityIndicator color={isDark ? colors.navy : colors.textInverse} size="small" />
+          ) : (
+            <Ionicons
+              name={player.isPlaying ? 'pause' : 'play'}
+              size={18}
+              color={isDark ? colors.navy : colors.textInverse}
+              style={!player.isPlaying ? styles.playIcon : undefined}
+            />
+          )}
+        </Pressable>
       </View>
-      <View style={[styles.play, isDark && styles.playDark]}>
-        <Ionicons
-          name="play"
-          size={18}
-          color={isDark ? colors.navy : colors.textInverse}
-          style={styles.playIcon}
-        />
-      </View>
+      {player.error ? (
+        <AppText variant="caption" style={styles.error}>
+          {player.error}
+        </AppText>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    gap: spacing.sm,
+  },
   container: {
     minHeight: 88,
     padding: spacing.lg,
@@ -88,5 +119,14 @@ const styles = StyleSheet.create({
   },
   playIcon: {
     marginLeft: 2,
+  },
+  disabled: {
+    opacity: 0.48,
+  },
+  pressed: {
+    opacity: 0.76,
+  },
+  error: {
+    color: colors.warmSoft,
   },
 });
