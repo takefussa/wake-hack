@@ -4,6 +4,7 @@ import type { ThanksMessage } from './thanks';
 import type { UserProfile } from './user';
 import type { VoiceMessage } from './voice';
 import type { WakeSession } from './wake';
+import type { WeeklyWakePlan } from './weekly-schedule';
 
 export type PrototypePersistedState = {
   currentUser: UserProfile | null;
@@ -17,4 +18,5 @@ export type PrototypePersistedState = {
   wakeMissionProgress: number;
   thanksMessages: ThanksMessage[];
   friendships: Friendship[];
+  weeklyWakePlan: WeeklyWakePlan;
 };

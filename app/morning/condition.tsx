@@ -13,6 +13,7 @@ import { colors, spacing } from '@/constants/theme';
 import { demoMorningDefaults } from '@/data/demo-scenario';
 import { toggleSchedule } from '@/features/morning/morning-request-form';
 import { goBackOrReplace } from '@/features/navigation/go-back';
+import { getTomorrowDayOfWeek } from '@/features/schedule/weekly-wake-plan';
 import { morningRequestService } from '@/services/morning-request-service';
 import { useAppStore } from '@/store/use-app-store';
 import type { MoodType, ScheduleType, VoiceStyle } from '@/types';
@@ -21,8 +22,9 @@ export default function TomorrowConditionScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const morningRequestDraft = useAppStore((state) => state.morningRequestDraft);
   const setMorningRequest = useAppStore((state) => state.setMorningRequest);
+  const weeklyWakePlan = useAppStore((state) => state.weeklyWakePlan);
   const [schedules, setSchedules] = useState<ScheduleType[]>([
-    ...demoMorningDefaults.schedules,
+    ...(weeklyWakePlan[getTomorrowDayOfWeek()]?.schedules ?? demoMorningDefaults.schedules),
   ]);
   const [mood, setMood] = useState<MoodType | null>(demoMorningDefaults.mood);
   const [voiceStyle, setVoiceStyle] = useState<VoiceStyle | null>(
@@ -59,7 +61,7 @@ export default function TomorrowConditionScreen() {
         preferredVoiceStyle: voiceStyle,
       });
       setMorningRequest(request);
-      router.push('/morning/give-choice');
+      router.replace('/(tabs)');
     } catch {
       setError('明日の朝を保存できませんでした。もう一度お試しください。');
       isSavingRef.current = false;
@@ -73,7 +75,6 @@ export default function TomorrowConditionScreen() {
       <ScreenHeader
         description={`${morningRequestDraft.wakeAt}の朝について、今の気持ちを少しだけ教えてください。`}
         onBack={() => goBackOrReplace('/morning/setup')}
-        stepLabel="明日の朝 2 / 2"
         title="どんな朝になりそう？"
       />
 

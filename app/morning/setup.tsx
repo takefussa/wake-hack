@@ -13,6 +13,7 @@ import { quickWakeTimes } from '@/constants/options';
 import { spacing } from '@/constants/theme';
 import { demoMorningDefaults } from '@/data/demo-scenario';
 import { goBackOrReplace } from '@/features/navigation/go-back';
+import { getTomorrowDayOfWeek } from '@/features/schedule/weekly-wake-plan';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useAppStore } from '@/store/use-app-store';
 
@@ -20,11 +21,13 @@ export default function MorningSetupScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const morningRequestDraft = useAppStore((state) => state.morningRequestDraft);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
+  const weeklyWakePlan = useAppStore((state) => state.weeklyWakePlan);
   const setMorningWakeTime = useAppStore((state) => state.setMorningWakeTime);
   const runOnce = useTapLock();
   const [wakeAt, setWakeAt] = useState(
     morningRequestDraft?.wakeAt ??
       currentMorningRequest?.wakeAt ??
+      weeklyWakePlan[getTomorrowDayOfWeek()]?.wakeAt ??
       demoMorningDefaults.wakeAt
   );
 
@@ -32,10 +35,10 @@ export default function MorningSetupScreen() {
     return <Redirect href="/onboarding" />;
   }
 
-  function handleNext() {
+  function handleSave() {
     runOnce(() => {
       setMorningWakeTime(wakeAt);
-      router.push('/morning/condition');
+      router.replace('/(tabs)');
     });
   }
 
@@ -45,7 +48,6 @@ export default function MorningSetupScreen() {
       <ScreenHeader
         description="明日、声を届けてほしい時刻を選びます。"
         onBack={() => goBackOrReplace('/(tabs)')}
-        stepLabel="明日の朝 1 / 2"
         title="何時に起きますか？"
       />
 
@@ -70,7 +72,7 @@ export default function MorningSetupScreen() {
         </View>
       </View>
 
-      <AppButton label="次へ" onPress={handleNext} testID="morning-setup-next" />
+      <AppButton label="保存する" onPress={handleSave} testID="morning-setup-save" />
     </Screen>
   );
 }

@@ -28,13 +28,13 @@ export default function TomorrowReadyScreen() {
     return <Redirect href="/morning/setup" />;
   }
   if (!assignedWakeVoice) {
-    return <Redirect href="/morning/give-choice" />;
+    return <Redirect href="/(tabs)" />;
   }
   if (
     assignedWakeVoice.receiverId !== currentUser.id ||
     assignedWakeVoice.morningRequestId !== currentMorningRequest.id
   ) {
-    return <Redirect href="/morning/give-choice" />;
+    return <Redirect href="/(tabs)" />;
   }
 
   const isCommunity = assignedWakeVoice.type === 'community';

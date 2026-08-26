@@ -23,6 +23,8 @@ type ProfileFieldsProps = {
   onBioChange: (bio: string) => void;
   onUserTypeChange: (userType: UserType) => void;
   onTagsChange: (tags: ProfileTag[]) => void;
+  /** 'onboarding' hides the optional tags/bio fields, deferring them to profile editing later. */
+  variant?: 'onboarding' | 'full';
 };
 
 export function ProfileFields({
@@ -38,6 +40,7 @@ export function ProfileFields({
   onBioChange,
   onUserTypeChange,
   onTagsChange,
+  variant = 'full',
 }: ProfileFieldsProps) {
   return (
     <>
@@ -92,50 +95,54 @@ export function ProfileFields({
         </View>
       </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeading}>
-          <AppText variant="sectionTitle">朝について</AppText>
-          <AppText variant="caption" tone="muted">
-            任意・複数選択
-          </AppText>
-        </View>
-        <View style={styles.chips}>
-          {profileTagOptions.map((tag) => (
-            <ChoiceChip
-              key={tag}
-              label={tag}
-              onPress={() => onTagsChange(toggleProfileTag(tags, tag))}
-              selected={tags.includes(tag)}
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.labelRow}>
-          <View style={styles.fieldLabel}>
-            <AppText variant="sectionTitle">一言コメント</AppText>
-            <AppText variant="caption" tone="muted">
-              任意
-            </AppText>
+      {variant === 'full' ? (
+        <>
+          <View style={styles.section}>
+            <View style={styles.sectionHeading}>
+              <AppText variant="sectionTitle">朝について</AppText>
+              <AppText variant="caption" tone="muted">
+                任意・複数選択
+              </AppText>
+            </View>
+            <View style={styles.chips}>
+              {profileTagOptions.map((tag) => (
+                <ChoiceChip
+                  key={tag}
+                  label={tag}
+                  onPress={() => onTagsChange(toggleProfileTag(tags, tag))}
+                  selected={tags.includes(tag)}
+                />
+              ))}
+            </View>
           </View>
-          <AppText variant="caption" tone="muted">
-            {bio.length}/{prototypeConfig.profileBioMaxLength}
-          </AppText>
-        </View>
-        <TextInput
-          accessibilityLabel="一言コメント"
-          maxLength={prototypeConfig.profileBioMaxLength}
-          multiline
-          onChangeText={onBioChange}
-          placeholder="例：朝は苦手だけど、ゆっくり頑張ります。"
-          placeholderTextColor={colors.textTertiary}
-          selectionColor={colors.indigo}
-          style={[styles.input, styles.bioInput]}
-          textAlignVertical="top"
-          value={bio}
-        />
-      </View>
+
+          <View style={styles.section}>
+            <View style={styles.labelRow}>
+              <View style={styles.fieldLabel}>
+                <AppText variant="sectionTitle">一言コメント</AppText>
+                <AppText variant="caption" tone="muted">
+                  任意
+                </AppText>
+              </View>
+              <AppText variant="caption" tone="muted">
+                {bio.length}/{prototypeConfig.profileBioMaxLength}
+              </AppText>
+            </View>
+            <TextInput
+              accessibilityLabel="一言コメント"
+              maxLength={prototypeConfig.profileBioMaxLength}
+              multiline
+              onChangeText={onBioChange}
+              placeholder="例：朝は苦手だけど、ゆっくり頑張ります。"
+              placeholderTextColor={colors.textTertiary}
+              selectionColor={colors.indigo}
+              style={[styles.input, styles.bioInput]}
+              textAlignVertical="top"
+              value={bio}
+            />
+          </View>
+        </>
+      ) : null}
     </>
   );
 }

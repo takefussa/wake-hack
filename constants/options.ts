@@ -1,5 +1,6 @@
 import type {
   AvatarId,
+  DayOfWeek,
   MoodType,
   ProfileTag,
   ScheduleType,
@@ -51,6 +52,18 @@ export const voiceStyleOptions: VoiceStyle[] = [
 ];
 
 export const quickWakeTimes = ['06:30', '07:00', '07:30', '08:00'] as const;
+
+export const daysOfWeek: DayOfWeek[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+export const dayOfWeekLabels: Record<DayOfWeek, string> = {
+  sun: '日',
+  mon: '月',
+  tue: '火',
+  wed: '水',
+  thu: '木',
+  fri: '金',
+  sat: '土',
+};
 
 export const thanksReactionOptions = [
   '起きられた！',

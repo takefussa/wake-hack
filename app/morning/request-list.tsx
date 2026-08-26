@@ -1,6 +1,5 @@
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -11,86 +10,15 @@ import { ScreenHeader } from '@/components/common/screen-header';
 import { MorningRequestCard } from '@/components/morning/morning-request-card';
 import { spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
+import { useMorningRequestCandidates } from '@/hooks/use-morning-request-candidates';
 import { useTapLock } from '@/hooks/use-tap-lock';
-import { rankMorningRequests } from '@/services/matching-service';
-import type { MorningRequestMatch } from '@/services/matching-service';
-import { morningRequestService } from '@/services/morning-request-service';
-import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
-import type { UserProfile } from '@/types';
-
-type RequestCandidate = MorningRequestMatch & {
-  user: UserProfile;
-};
-
-function isUserProfile(profile: UserProfile | null): profile is UserProfile {
-  return profile !== null;
-}
 
 export default function RequestListScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
-  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
-  const replaceMorningRequest = useAppStore(
-    (state) => state.replaceMorningRequest
-  );
-  const [candidates, setCandidates] = useState<RequestCandidate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { candidates, isLoading, error, reload } = useMorningRequestCandidates();
   const runOnce = useTapLock();
-
-  const loadCandidates = useCallback(async () => {
-    if (!currentUser || !currentMorningRequest) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const remoteCurrentRequest =
-        await morningRequestService.ensureRemoteRequest(currentMorningRequest);
-      if (remoteCurrentRequest.id !== currentMorningRequest.id) {
-        replaceMorningRequest(remoteCurrentRequest);
-        return;
-      }
-
-      const availableRequests = await morningRequestService.getAvailableRequests(
-        currentUser.id,
-        remoteCurrentRequest.id
-      );
-      const requests = availableRequests.filter(
-        (request) => !currentGiveReceiverIds.includes(request.userId)
-      );
-      const profiles = (
-        await Promise.all(requests.map((request) => profileService.getProfile(request.userId)))
-      ).filter(isUserProfile);
-      const matches = rankMorningRequests(
-        currentUser,
-        remoteCurrentRequest,
-        requests,
-        profiles
-      );
-
-      setCandidates(
-        matches.flatMap((match) => {
-          const user = profiles.find((profile) => profile.id === match.request.userId);
-          return user ? [{ ...match, user }] : [];
-        })
-      );
-    } catch {
-      setError('朝リクエストを読み込めませんでした。');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    currentGiveReceiverIds,
-    currentMorningRequest,
-    currentUser,
-    replaceMorningRequest,
-  ]);
-
-  useEffect(() => {
-    void loadCandidates();
-  }, [loadCandidates]);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -100,9 +28,7 @@ export default function RequestListScreen() {
     return <Redirect href="/morning/setup" />;
   }
 
-  const backDestination = currentMorningRequest.personalEligible
-    ? '/morning/ready'
-    : '/morning/give-choice';
+  const backDestination = currentMorningRequest.personalEligible ? '/morning/ready' : '/(tabs)';
 
   return (
     <Screen contentStyle={styles.content} testID="request-list-screen">
@@ -118,7 +44,7 @@ export default function RequestListScreen() {
       {!isLoading && error ? (
         <View style={styles.state}>
           <AppText variant="bodyMedium">{error}</AppText>
-          <AppButton label="もう一度読み込む" onPress={() => void loadCandidates()} variant="secondary" />
+          <AppButton label="もう一度読み込む" onPress={() => void reload()} variant="secondary" />
         </View>
       ) : null}
 

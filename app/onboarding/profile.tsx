@@ -25,7 +25,7 @@ export default function ProfileSetupScreen() {
   const [userType, setUserType] = useState<UserType | null>(
     demoProfileDefaults.userType
   );
-  const [tags, setTags] = useState<ProfileTag[]>([...demoProfileDefaults.tags]);
+  const [tags, setTags] = useState<ProfileTag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isSavingRef = useRef(false);
@@ -94,7 +94,12 @@ export default function ProfileSetupScreen() {
         profileImageUri={profileImageUri}
         tags={tags}
         userType={userType}
+        variant="onboarding"
       />
+
+      <AppText variant="caption" tone="muted">
+        朝についての詳細や一言コメントは、あとでプロフィールから追加できます。
+      </AppText>
 
       {error ? (
         <AppText variant="secondary" style={styles.error}>

@@ -218,7 +218,6 @@ wake-hack/
 │  ├─ morning/
 │  │  ├─ setup.tsx
 │  │  ├─ condition.tsx
-│  │  ├─ give-choice.tsx
 │  │  ├─ request-list.tsx
 │  │  ├─ request-detail.tsx
 │  │  ├─ record.tsx
@@ -2298,3 +2297,45 @@ Wake Hackの
 > **1対1の小さなつながり + 大勢と朝を迎えている感覚**
 
 の両方をデモで伝える。
+
+---
+
+# 81. 実装時の仕様変更履歴
+
+Prototype v0.1の実装を進める中で、当初の本仕様書の記述から以下の変更を行った。該当箇所を参照する際は、本仕様書の元の記述よりもここでの記述を優先する。
+
+## 81.1 Alarm / Record Voice のビジュアルデザイン（Screen 09, Screen 11）
+
+第60〜61章の「丸みのあるカード」中心のUI方針に加えて、Alarm画面（`app/wake/alarm.tsx`）とRecord Voice画面（`app/morning/record.tsx`）は、ラジカセ（カセットデッキ）を模したスキューモーフィックなUI（本体・スピーカーグリル・カセット窓・物理ボタン風の操作部）に変更した。共通の見た目は `components/wake/boombox-shell.tsx` にまとめている。
+
+## 81.2 Profile Setup（Screen 02）の簡略化
+
+初回登録画面で必須とする項目を「プロフィール画像」「ニックネーム」「属性」のみに絞った。タグ（一人暮らし・朝が苦手など）と一言コメントは初回登録画面から外し、`(tabs)/profile` 画面の「属性・特徴を編集」から `profile-edit` 画面へ遷移することで、あとから追加設定できるようにした（`components/profile/profile-fields.tsx` の `variant="onboarding"`）。
+
+## 81.3 Home画面（Screen 03）の再構成
+
+「次の朝の状況を表示する単一カード＋CTAボタン」という構成から、以下の構成に変更した。
+
+- 画面上部：「何時に起きるか」「どんな朝になりそうか？」を、それぞれ独立してタップ・変更できる設定項目として常時表示する（`components/home/morning-settings-card.tsx`）。
+- 画面下部：「明日の誰か」（他ユーザーの朝リクエスト一覧）を、Request List画面（Screen 07）へ遷移しなくてもHome画面上にタイムラインとして常時表示する（`components/home/tomorrow-someone-timeline.tsx`）。
+
+また、朝リクエストが未作成の場合でも、81.4で追加した「定期的な起床スケジュール」に登録があれば、その内容を「（初期値）」として表示する。
+
+## 81.4 定期的な起床スケジュール機能（新規追加）
+
+本仕様書には存在しない新機能として、曜日（日〜土）ごとに「いつもの起床時刻」と「予定の傾向（1限など）」を登録できる画面（`app/profile-weekly-schedule.tsx`、`app/profile-weekly-schedule-day.tsx`）をプロフィール配下に追加した。
+
+翌日にあたる曜日に登録内容がある場合、その内容がMorning Setup（Screen 04）・Tomorrow Condition（Screen 05）の初期値、およびHome画面の「明日の設定」表示に自動で反映される。
+
+このデータは現時点では端末内のローカル状態（Zustand永続化、`weeklyWakePlan`）にのみ保存しており、`profiles`テーブル（Supabase、第4章参照）には含まれていない。複数端末間で同期する場合は、別途データベース設計・マイグレーションが必要になる。
+
+## 81.5 Give Choice画面（Screen 06）の廃止
+
+Morning Setup → Tomorrow Condition の完了後は、Give Choice画面（「誰かに声を届ける」／「今日は届けない」の選択画面）を経由せず、そのままHome画面へ戻る動線に変更した（`app/morning/give-choice.tsx` を削除）。
+
+これに伴い、
+
+- 「今日は届けない」を選び、Give（録音）をせずにCommunity Voiceだけで朝を迎える導線は、UI上から一旦削除した。関連するストアアクション`chooseCommunityWake`も削除済み。
+- 「誰かに声を届ける」は、Home画面の「明日の誰か」タイムライン（81.3）から直接候補を選ぶ形に統合した。Request List画面自体は、Record画面などの戻り先として引き続き存在する。
+
+Community VoiceのデータモデルやWakeフォールバックの仕組み自体（第18章・第38章）はコード上に残しているが、現状はUIから明示的に選択する手段がない。この導線が必要になった場合は、Home画面や朝リクエスト作成後の適切な場所に再設計のうえ追加する。

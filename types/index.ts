@@ -6,3 +6,4 @@ export * from './thanks';
 export * from './user';
 export * from './voice';
 export * from './wake';
+export * from './weekly-schedule';

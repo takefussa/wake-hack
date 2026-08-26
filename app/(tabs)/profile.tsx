@@ -7,6 +7,7 @@ import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
+import { SettingsRow } from '@/components/common/settings-row';
 import { StatTile } from '@/components/common/stat-tile';
 import { Tag } from '@/components/common/tag';
 import { colors, componentSizes, spacing } from '@/constants/theme';
@@ -97,6 +98,21 @@ export default function ProfileScreen() {
           ))}
         </View>
       ) : null}
+
+      <View style={styles.section}>
+        <AppText variant="sectionTitle">設定</AppText>
+        <SettingsRow
+          label="属性・特徴を編集"
+          onPress={() => router.push('/profile-edit')}
+          testID="edit-attributes"
+          value={currentUser.userType}
+        />
+        <SettingsRow
+          label="定期的な起床スケジュール"
+          onPress={() => router.push('/profile-weekly-schedule')}
+          testID="edit-weekly-schedule"
+        />
+      </View>
 
       <View style={styles.section}>
         <AppText variant="sectionTitle">朝の記録</AppText>

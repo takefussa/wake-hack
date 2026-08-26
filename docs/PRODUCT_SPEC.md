@@ -489,6 +489,8 @@ Personal Voiceを1本確保
 朝活したい
 ```
 
+> **実装メモ：** 現在のプロトタイプでは、初回登録画面では「アイコン」「ニックネーム」「属性」のみを設定し、任意タグは初回登録後にプロフィール編集から設定する形にしている。詳細は `docs/IMPLEMENTATION_SPEC.md` の「81.2 Profile Setup（Screen 02）の簡略化」を参照。
+
 ## 原則取得しないもの
 
 - 本名
@@ -662,6 +664,8 @@ Takumi
 みんなから届いたCommunity Voiceで
 朝を始めます ☀️
 ```
+
+> **実装メモ：** 現在のプロトタイプでは、この選択を行うGive Choice画面自体をUIから削除している。詳細は `docs/IMPLEMENTATION_SPEC.md` の「81.5 Give Choice画面（Screen 06）の廃止」を参照。
 
 ---
 

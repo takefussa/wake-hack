@@ -3,17 +3,20 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { prototypeConfig } from '@/constants/config';
-import { mockCommunityVoices, mockPersonalWakeVoice } from '@/data/mock-voices';
+import { mockPersonalWakeVoice } from '@/data/mock-voices';
 import { getPrototypeStateRepair } from '@/features/prototype/repair-persisted-state';
+import { createEmptyWeeklyWakePlan } from '@/features/schedule/weekly-wake-plan';
 import { bindWakeVoice } from '@/features/wake/bind-wake-voice';
 import { createDemoWokeAt } from '@/features/wake/create-demo-woke-at';
 import type {
+  DayOfWeek,
   Friendship,
   MorningRequest,
   PrototypePersistedState,
   ThanksMessage,
   UserProfile,
   VoiceMessage,
+  WeeklyWakePlanEntry,
 } from '@/types';
 
 type AppStore = PrototypePersistedState & {
@@ -29,7 +32,6 @@ type AppStore = PrototypePersistedState & {
   replaceMorningRequest: (request: MorningRequest) => void;
   selectGiveRequest: (requestId: string) => void;
   completeGive: (voiceMessage: VoiceMessage) => boolean;
-  chooseCommunityWake: () => void;
   startWakeSession: (voiceMessage: VoiceMessage) => boolean;
   cancelWakeSession: () => void;
   startWakeMission: () => void;
@@ -38,6 +40,7 @@ type AppStore = PrototypePersistedState & {
   addThanks: (message: ThanksMessage) => void;
   addThanksMessages: (messages: ThanksMessage[]) => void;
   upsertFriendship: (friendship: Friendship) => void;
+  setWeeklyWakePlanDay: (day: DayOfWeek, entry: WeeklyWakePlanEntry | null) => void;
   repairPersistedState: () => void;
   resetPrototype: () => Promise<void>;
 };
@@ -56,6 +59,7 @@ const initialPersistedState: PrototypePersistedState = {
   wakeMissionProgress: 0,
   thanksMessages: [],
   friendships: [],
+  weeklyWakePlan: createEmptyWeeklyWakePlan(),
 };
 
 export const useAppStore = create<AppStore>()(
@@ -174,27 +178,6 @@ export const useAppStore = create<AppStore>()(
           ),
         }));
         return true;
-      },
-      chooseCommunityWake: () => {
-        const { currentMorningRequest, currentUser } = get();
-        if (!currentMorningRequest || !currentUser) return;
-        if (currentMorningRequest.personalEligible) return;
-
-        const communityVoice = mockCommunityVoices[0];
-
-        set({
-          currentMorningRequest: {
-            ...currentMorningRequest,
-            personalEligible: false,
-            status: 'voice_assigned',
-          },
-          selectedGiveRequestId: null,
-          assignedWakeVoice: bindWakeVoice(
-            communityVoice,
-            currentMorningRequest.id,
-            currentUser.id
-          ),
-        });
       },
       startWakeSession: (voiceMessage) => {
         const { currentMorningRequest, currentUser } = get();
@@ -320,6 +303,8 @@ export const useAppStore = create<AppStore>()(
           friendships[existingIndex] = nextFriendship;
           return { friendships };
         }),
+      setWeeklyWakePlanDay: (day, entry) =>
+        set((state) => ({ weeklyWakePlan: { ...state.weeklyWakePlan, [day]: entry } })),
       repairPersistedState: () => set((state) => getPrototypeStateRepair(state)),
       resetPrototype: async () => {
         try {
@@ -348,6 +333,7 @@ export const useAppStore = create<AppStore>()(
         wakeMissionProgress: state.wakeMissionProgress,
         thanksMessages: state.thanksMessages,
         friendships: state.friendships,
+        weeklyWakePlan: state.weeklyWakePlan,
       }),
       onRehydrateStorage: (state) => () => {
         state.repairPersistedState();
