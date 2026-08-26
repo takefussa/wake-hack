@@ -5,6 +5,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { prototypeConfig } from '@/constants/config';
 import { mockCommunityVoices, mockPersonalWakeVoice } from '@/data/mock-voices';
 import { getPrototypeStateRepair } from '@/features/prototype/repair-persisted-state';
+import { addMinutesToTime } from '@/features/wake/add-minutes-to-time';
 import { bindWakeVoice } from '@/features/wake/bind-wake-voice';
 import { createDemoWokeAt } from '@/features/wake/create-demo-woke-at';
 import type {
@@ -32,6 +33,7 @@ type AppStore = PrototypePersistedState & {
   chooseCommunityWake: () => void;
   startWakeSession: (voiceMessage: VoiceMessage) => boolean;
   cancelWakeSession: () => void;
+  snoozeWakeSession: (minutes: number) => void;
   startWakeMission: () => void;
   advanceWakeMission: (steps: number) => void;
   completeMission: () => void;
@@ -230,6 +232,17 @@ export const useAppStore = create<AppStore>()(
         set({
           wakeSession: null,
           wakeMissionProgress: 0,
+        });
+      },
+      snoozeWakeSession: (minutes) => {
+        const wakeSession = get().wakeSession;
+        if (!wakeSession || wakeSession.status !== 'ringing') return;
+
+        set({
+          wakeSession: {
+            ...wakeSession,
+            alarmAt: addMinutesToTime(wakeSession.alarmAt, minutes),
+          },
         });
       },
       startWakeMission: () => {

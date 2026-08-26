@@ -29,6 +29,25 @@ export const colors = {
   transparent: 'transparent',
 } as const;
 
+export const boombox = {
+  body: '#565C64',
+  bodyLight: '#666D76',
+  bodyDark: '#3E434A',
+  bodyDarkest: '#2C3036',
+  deck: '#33373D',
+  grille: '#484D54',
+  grilleLine: '#63696F',
+  screenBorder: '#20242A',
+  cassetteWindow: '#EDEFF1',
+  reel: '#B9BFC6',
+  buttonPrimary: '#E7A199',
+  buttonPrimaryPressed: '#D98A81',
+  buttonSecondary: '#AECBE8',
+  buttonSecondaryPressed: '#93B4D6',
+  rec: '#E24A3F',
+  recIdle: '#5A5F66',
+} as const;
+
 export const spacing = {
   xs: 4,
   sm: 8,

@@ -14,6 +14,7 @@ type WakeVoicePlayerProps = {
   sender: UserProfile | null;
   autoPlay?: boolean;
   onPlayerReady?: (stopPlayback: () => void) => void;
+  variant?: 'card' | 'flat';
 };
 
 function formatSeconds(seconds: number): string {
@@ -27,6 +28,7 @@ export function WakeVoicePlayer({
   sender,
   autoPlay = false,
   onPlayerReady,
+  variant = 'card',
 }: WakeVoicePlayerProps) {
   const player = useVoicePlayer(voice, autoPlay);
   const isCommunity = voice.type === 'community';
@@ -36,7 +38,7 @@ export function WakeVoicePlayer({
   }, [onPlayerReady, player.stopPlayback]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, variant === 'flat' && styles.containerFlat]}>
       <View style={styles.senderRow}>
         {isCommunity ? (
           <View style={styles.communityAvatar}>
@@ -119,6 +121,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     gap: spacing.xl,
     ...shadows.surface,
+  },
+  containerFlat: {
+    padding: 0,
+    borderRadius: 0,
+    backgroundColor: colors.transparent,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   senderRow: {
     flexDirection: 'row',

@@ -5,7 +5,7 @@ import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Waveform } from '@/components/common/waveform';
 import { prototypeConfig } from '@/constants/config';
-import { colors, fonts, radii, spacing } from '@/constants/theme';
+import { colors, componentSizes, fonts, radii, spacing } from '@/constants/theme';
 import { formatRecordingDuration } from '@/features/voice/format-duration';
 import type { LocalVoiceRecording, MicrophonePermissionState } from '@/hooks/use-voice-recorder';
 
@@ -17,17 +17,13 @@ type VoiceRecorderPanelProps = {
   isRecording: boolean;
   isPlaying: boolean;
   isPlaybackReady: boolean;
-  isBusy: boolean;
   durationMs: number;
   playbackProgress: number;
   metering?: number;
   error: string | null;
   onRequestPermission: () => void;
   onOpenSettings: () => void;
-  onStart: () => void;
-  onStop: () => void;
   onTogglePlayback: () => void;
-  onReset: () => void;
 };
 
 const waveformLevels = [8, 18, 28, 14, 36, 24, 10, 32, 20, 40, 16, 30, 12, 24, 34];
@@ -40,17 +36,13 @@ export function VoiceRecorderPanel({
   isRecording,
   isPlaying,
   isPlaybackReady,
-  isBusy,
   durationMs,
   playbackProgress,
   metering,
   error,
   onRequestPermission,
   onOpenSettings,
-  onStart,
-  onStop,
   onTogglePlayback,
-  onReset,
 }: VoiceRecorderPanelProps) {
   if (permissionState === 'checking') {
     return (
@@ -100,94 +92,84 @@ export function VoiceRecorderPanel({
         ? playbackProgress
         : 1
       : 0;
-  const actionLabel = isRecording
-    ? '録音を停止'
-    : recording
-      ? !isPlaybackReady
-        ? '再生を準備中'
-        : isPlaying
-        ? '再生を一時停止'
-        : '録音を再生'
-      : '録音を開始';
-  const actionIcon = isRecording ? 'stop' : recording ? (isPlaying ? 'pause' : 'play') : 'mic';
-  const stateLabel = isRecording
-    ? '録音しています'
-    : recording
-      ? !isPlaybackReady
-        ? '再生を準備しています'
-        : isPlaying
-        ? '再生しています'
-        : '録音できました'
-      : 'タップして録音';
-  const handleAction = isRecording ? onStop : recording ? onTogglePlayback : onStart;
+  const maxSeconds = Math.round(prototypeConfig.recordingMaxMs / 1_000);
+  const isIdle = !isRecording && !recording;
 
   return (
     <View style={styles.panel}>
-      <View style={styles.heading}>
-        <AppText variant="caption" tone="lightMuted">
-          この人の明日の朝へ
-        </AppText>
-        <AppText variant="displayNumber" tone="light" style={styles.time}>
+      {isIdle ? (
+        <View style={styles.prompt}>
+          <AppText tone="muted" variant="caption">
+            今日のおだい
+          </AppText>
+          <AppText style={styles.centeredText} variant="bodyMedium">
+            語尾をのばして録音
+          </AppText>
+          <View style={styles.hintBubble}>
+            <Ionicons color={colors.indigo} name="mic-outline" size={14} />
+            <AppText tone="accent" variant="caption">
+              Let&apos;s say!!
+            </AppText>
+          </View>
+        </View>
+      ) : null}
+
+      <View style={styles.timerRow}>
+        {isRecording ? <View style={styles.recDot} /> : null}
+        <AppText tone="dark" style={styles.time} variant="displayNumber">
           {formatRecordingDuration(durationMs)}
         </AppText>
-        <AppText variant="caption" tone="lightMuted">
-          最大10秒
-        </AppText>
       </View>
+      <AppText tone="muted" variant="caption">
+        最大{maxSeconds}秒
+      </AppText>
 
       <Waveform
-        color={isRecording ? colors.warm : colors.textInverse}
-        height={48}
+        color={isRecording ? colors.warm : colors.indigo}
+        height={40}
         levels={levels}
-        mutedColor={colors.navyRaised}
+        mutedColor={colors.surfaceSubtle}
         progress={progress}
       />
 
-      <View style={styles.controlGroup}>
+      {recording && !isRecording ? (
         <Pressable
-          accessibilityLabel={actionLabel}
+          accessibilityLabel={isPlaying ? '再生を一時停止' : '録音を再生'}
           accessibilityRole="button"
-          disabled={isBusy || (recording !== null && !isPlaybackReady)}
-          onPress={handleAction}
+          disabled={!isPlaybackReady}
+          onPress={onTogglePlayback}
           style={({ pressed }) => [
-            styles.recordButton,
-            isRecording && styles.recordButtonActive,
-            (isBusy || (recording !== null && !isPlaybackReady)) &&
-              styles.recordButtonDisabled,
-            pressed && !isBusy && isPlaybackReady && styles.recordButtonPressed,
+            styles.playButton,
+            !isPlaybackReady && styles.disabled,
+            pressed && isPlaybackReady && styles.pressed,
           ]}>
-          {isBusy || (recording !== null && !isPlaybackReady) ? (
-            <ActivityIndicator color={colors.navy} />
+          {!isPlaybackReady ? (
+            <ActivityIndicator color={colors.textInverse} />
           ) : (
             <Ionicons
-              color={isRecording ? colors.textInverse : colors.navy}
-              name={actionIcon}
-              size={30}
-              style={actionIcon === 'play' ? styles.playIcon : undefined}
+              color={colors.textInverse}
+              name={isPlaying ? 'pause' : 'play'}
+              size={20}
+              style={!isPlaying ? styles.playIcon : undefined}
             />
           )}
         </Pressable>
-        <AppText variant="secondary" tone="lightMuted">
-          {stateLabel}
-        </AppText>
-      </View>
-
-      {recording && !isRecording ? (
-        <Pressable
-          accessibilityLabel="録り直す"
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={onReset}
-          style={({ pressed }) => [styles.retakeButton, pressed && styles.retakeButtonPressed]}>
-          <Ionicons color={colors.textInverseSecondary} name="refresh" size={18} />
-          <AppText variant="secondary" tone="lightMuted">
-            録り直す
-          </AppText>
-        </Pressable>
       ) : null}
 
+      <AppText tone="muted" variant="caption">
+        {isRecording
+          ? '録音しています'
+          : recording
+            ? !isPlaybackReady
+              ? '再生を準備しています'
+              : isPlaying
+                ? '再生しています'
+                : '録音できました'
+            : 'タップして録音'}
+      </AppText>
+
       {error ? (
-        <AppText variant="caption" style={styles.errorLight}>
+        <AppText variant="caption" style={styles.error}>
           {error}
         </AppText>
       ) : null}
@@ -197,61 +179,59 @@ export function VoiceRecorderPanel({
 
 const styles = StyleSheet.create({
   panel: {
-    padding: spacing.xl,
-    borderRadius: radii.card,
-    backgroundColor: colors.navy,
-    gap: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  heading: {
+  prompt: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  hintBubble: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.badge,
+    backgroundColor: colors.indigoSoft,
+  },
+  timerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  recDot: {
+    width: 10,
+    height: 10,
+    borderRadius: radii.avatar,
+    backgroundColor: colors.danger,
   },
   time: {
     fontFamily: fonts?.rounded,
   },
-  controlGroup: {
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  recordButton: {
-    width: 76,
-    height: 76,
+  playButton: {
+    width: componentSizes.voiceControl,
+    height: componentSizes.voiceControl,
     borderRadius: radii.avatar,
-    backgroundColor: colors.textInverse,
+    backgroundColor: colors.indigo,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  recordButtonActive: {
-    backgroundColor: colors.warm,
-  },
-  recordButtonDisabled: {
-    opacity: 0.62,
-  },
-  recordButtonPressed: {
-    transform: [{ scale: 0.96 }],
   },
   playIcon: {
-    marginLeft: spacing.xs,
+    marginLeft: 2,
   },
-  retakeButton: {
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
+  disabled: {
+    opacity: 0.48,
   },
-  retakeButtonPressed: {
-    opacity: 0.68,
+  pressed: {
+    opacity: 0.78,
+  },
+  centeredText: {
+    textAlign: 'center',
   },
   permissionState: {
-    minHeight: 330,
-    padding: spacing.xl,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    minHeight: 280,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xl,
@@ -268,16 +248,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  centeredText: {
-    maxWidth: 300,
-    textAlign: 'center',
-  },
   error: {
     color: colors.danger,
-    textAlign: 'center',
-  },
-  errorLight: {
-    color: colors.warmSoft,
     textAlign: 'center',
   },
 });

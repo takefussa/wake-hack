@@ -3,9 +3,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { IconButton } from '@/components/common/icon-button';
+import { BoomboxShell } from '@/components/wake/boombox-shell';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { WakeVoicePlayer } from '@/components/wake/wake-voice-player';
 import { colors, fonts, spacing } from '@/constants/theme';
@@ -20,6 +20,7 @@ export default function WakeAlarmScreen() {
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
   const cancelWakeSession = useAppStore((state) => state.cancelWakeSession);
+  const snoozeWakeSession = useAppStore((state) => state.snoozeWakeSession);
   const startWakeMission = useAppStore((state) => state.startWakeMission);
   const sender = useVoiceSender(assignedWakeVoice);
   const runOnce = useTapLock();
@@ -68,6 +69,13 @@ export default function WakeAlarmScreen() {
     });
   }
 
+  function handleSnooze() {
+    runOnce(() => {
+      stopPlaybackRef.current();
+      snoozeWakeSession(5);
+    });
+  }
+
   return (
     <MorningScreen contentStyle={styles.content} testID="wake-alarm-screen">
       <StatusBar style="dark" />
@@ -76,41 +84,48 @@ export default function WakeAlarmScreen() {
         <IconButton icon="chevron-back" label="朝の準備に戻る" onPress={handleBack} />
       </View>
 
-      <View style={styles.timeSection}>
-        <AppText variant="caption" tone="soft">
-          おはようございます
-        </AppText>
-        <AppText variant="time" style={styles.time}>
-          {wakeSession.alarmAt}
-        </AppText>
-        <AppText variant="secondary" tone="soft">
-          今日は {currentMorningRequest.schedules.join('・')}
-        </AppText>
-      </View>
+      <BoomboxShell
+        cassetteLabel={isCommunity ? 'A  by Wake Hack' : `A  by ${senderName}`}
+        primaryButton={{
+          label: 'おきた!!',
+          sublabel: 'ストップ',
+          onPress: handleWakeUp,
+          testID: 'start-wake-mission',
+        }}
+        secondaryButton={{
+          label: 'まだねる',
+          sublabel: '5分後',
+          onPress: handleSnooze,
+          testID: 'snooze-wake-session',
+        }}
+        testID="wake-alarm-boombox">
+        <View style={styles.timeSection}>
+          <AppText variant="caption" tone="soft">
+            おはようございます
+          </AppText>
+          <AppText variant="time" style={styles.time}>
+            {wakeSession.alarmAt}
+          </AppText>
+          <AppText variant="secondary" tone="soft">
+            今日は {currentMorningRequest.schedules.join('・')}
+          </AppText>
+        </View>
 
-      <View style={styles.voiceSection}>
-        <AppText variant="sectionTitle" style={styles.centeredText}>
-          {isCommunity
-            ? 'Wake Hackのみんなから'
-            : `${senderName}さんから、あなたの朝へ`}
-        </AppText>
-        <WakeVoicePlayer
-          autoPlay
-          onPlayerReady={handlePlayerReady}
-          sender={sender}
-          voice={assignedWakeVoice}
-        />
-      </View>
-
-      <View style={styles.footer}>
-        <AppButton
-          icon="sunny-outline"
-          label="起きる"
-          onPress={handleWakeUp}
-          testID="start-wake-mission"
-          variant="warm"
-        />
-      </View>
+        <View style={styles.voiceSection}>
+          <AppText variant="sectionTitle" style={styles.centeredText}>
+            {isCommunity
+              ? 'Wake Hackのみんなから'
+              : `${senderName}さんから、あなたの朝へ`}
+          </AppText>
+          <WakeVoicePlayer
+            autoPlay
+            onPlayerReady={handlePlayerReady}
+            sender={sender}
+            variant="flat"
+            voice={assignedWakeVoice}
+          />
+        </View>
+      </BoomboxShell>
     </MorningScreen>
   );
 }
@@ -118,7 +133,7 @@ export default function WakeAlarmScreen() {
 const styles = StyleSheet.create({
   content: {
     justifyContent: 'space-between',
-    gap: spacing.xxxl,
+    gap: spacing.xxl,
   },
   navigation: {
     minHeight: 44,
@@ -138,8 +153,5 @@ const styles = StyleSheet.create({
   },
   centeredText: {
     textAlign: 'center',
-  },
-  footer: {
-    paddingTop: spacing.lg,
   },
 });

@@ -10,6 +10,7 @@ import { Screen } from '@/components/common/screen';
 import { ScreenHeader } from '@/components/common/screen-header';
 import { RecordingRecipient } from '@/components/voice/recording-recipient';
 import { VoiceRecorderPanel } from '@/components/voice/voice-recorder-panel';
+import { BoomboxShell } from '@/components/wake/boombox-shell';
 import { prototypeConfig } from '@/constants/config';
 import { colors, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
@@ -179,26 +180,43 @@ export default function RecordVoiceScreen() {
       {!isLoading && request && recipient && !hasAlreadyGiven ? (
         <>
           <RecordingRecipient request={request} user={recipient} />
-          <VoiceRecorderPanel
-            canAskPermissionAgain={recorder.canAskPermissionAgain}
-            durationMs={recorder.durationMs}
-            error={recorder.error}
-            isBusy={recorder.isBusy}
-            isPlaying={recorder.isPlaying}
-            isPlaybackReady={recorder.isPlaybackReady}
+          <BoomboxShell
+            cassetteLabel={`A  by ${currentUser.nickname}`}
             isRecording={recorder.isRecording}
-            isRequestingPermission={recorder.isRequestingPermission}
-            metering={recorder.metering}
-            onOpenSettings={() => void handleOpenSettings()}
-            onRequestPermission={() => void recorder.requestPermission()}
-            onReset={recorder.resetRecording}
-            onStart={() => void recorder.startRecording()}
-            onStop={() => void recorder.stopRecording()}
-            onTogglePlayback={() => void recorder.togglePlayback()}
-            permissionState={recorder.permissionState}
-            playbackProgress={recorder.playbackProgress}
-            recording={recorder.recording}
-          />
+            primaryButton={{
+              label: 'スタート/ストップ',
+              sublabel: '録音',
+              onPress: () =>
+                void (recorder.isRecording ? recorder.stopRecording() : recorder.startRecording()),
+              disabled:
+                recorder.permissionState !== 'granted' ||
+                recorder.isBusy ||
+                recorder.recording !== null,
+              testID: 'toggle-recording',
+            }}
+            secondaryButton={{
+              label: 'やり直し',
+              onPress: recorder.resetRecording,
+              disabled: recorder.isBusy || recorder.isRecording || recorder.recording === null,
+              testID: 'reset-recording',
+            }}>
+            <VoiceRecorderPanel
+              canAskPermissionAgain={recorder.canAskPermissionAgain}
+              durationMs={recorder.durationMs}
+              error={recorder.error}
+              isPlaying={recorder.isPlaying}
+              isPlaybackReady={recorder.isPlaybackReady}
+              isRecording={recorder.isRecording}
+              isRequestingPermission={recorder.isRequestingPermission}
+              metering={recorder.metering}
+              onOpenSettings={() => void handleOpenSettings()}
+              onRequestPermission={() => void recorder.requestPermission()}
+              onTogglePlayback={() => void recorder.togglePlayback()}
+              permissionState={recorder.permissionState}
+              playbackProgress={recorder.playbackProgress}
+              recording={recorder.recording}
+            />
+          </BoomboxShell>
 
           {pageError ? (
             <AppText variant="secondary" style={styles.error}>
