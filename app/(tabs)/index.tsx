@@ -1,21 +1,137 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import type { PropsWithChildren } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppLogo } from '@/components/common/app-logo';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
-import { Screen } from '@/components/common/screen';
 import { Waveform } from '@/components/common/waveform';
-import { NextMorningCard } from '@/components/home/next-morning-card';
-import { colors, spacing } from '@/constants/theme';
+import { fonts, shadows, spacing } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useAppStore } from '@/store/use-app-store';
+import type { MorningRequest, UserProfile, VoiceMessage } from '@/types';
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 11) return 'おはようございます';
-  if (hour < 18) return 'こんにちは';
-  return 'こんばんは';
+function NotebookBackground({ children }: PropsWithChildren) {
+  return (
+    <SafeAreaView edges={['top']} style={styles.safeArea} testID="home-screen">
+      <View pointerEvents="none" style={styles.paperLines}>
+        {Array.from({ length: 24 }, (_, index) => <View key={index} style={styles.paperLine} />)}
+      </View>
+      <View pointerEvents="none" style={styles.marginLine} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {children}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function HomeHeader({ user }: { user: UserProfile }) {
+  return (
+    <View style={styles.header}>
+      <View>
+        <AppText style={styles.eyebrow}>GOOD MORNING RADIO</AppText>
+        <AppText style={styles.headerTitle}>おはよう、{user.nickname}さん</AppText>
+      </View>
+      <View style={styles.avatarFrame}>
+        <Avatar avatarId={user.avatarId} imageUri={user.profileImageUri} name={user.nickname} size={44} />
+      </View>
+    </View>
+  );
+}
+
+function MemoNote({ children }: PropsWithChildren) {
+  return (
+    <View style={styles.memoWrap}>
+      <View style={styles.tape} />
+      <View style={styles.memo}>
+        <AppText style={styles.memoText}>{children}</AppText>
+        <View style={styles.memoUnderline} />
+      </View>
+    </View>
+  );
+}
+
+type BoomboxCardProps = {
+  request: MorningRequest | null;
+  wakeVoice: VoiceMessage | null;
+  onPress: () => void;
+};
+
+function BoomboxCard({ request, wakeVoice, onPress }: BoomboxCardProps) {
+  const isReady = wakeVoice !== null;
+  const buttonLabel = !request
+    ? '明日の朝をセットする'
+    : isReady ? '準備した内容を見る' : 'リクエストを確認する';
+
+  return (
+    <View style={styles.boomboxShadow}>
+      <View style={styles.boombox}>
+        <View style={styles.boomboxTop}>
+          <View>
+            <AppText style={styles.brand}>WAKE RADIO</AppText>
+            <AppText style={styles.modelNumber}>WR-07 / TOMORROW</AppText>
+          </View>
+          <View style={styles.knobs}><View style={styles.knob} /><View style={styles.knob} /></View>
+        </View>
+
+        <View style={styles.boomboxBody}>
+          <View style={styles.speaker}>
+            <View style={styles.speakerInner}><Ionicons color="#C99658" name="sunny" size={34} /></View>
+          </View>
+          <View style={styles.displayPanel}>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusLight, isReady && styles.statusLightReady]} />
+              <AppText style={styles.statusText}>
+                {!request ? 'NOT SET' : isReady ? 'VOICE READY' : 'WAITING FOR VOICE'}
+              </AppText>
+            </View>
+            <AppText style={styles.time}>{request?.wakeAt ?? '--:--'}</AppText>
+            <AppText numberOfLines={1} style={styles.schedule}>
+              {request ? request.schedules.join(' ・ ') : '明日の予定を録音しよう'}
+            </AppText>
+            <View style={styles.waveformBox}>
+              <Waveform color={isReady ? '#E6A451' : '#8B927B'} height={25} levels={[6, 12, 20, 9, 16, 23, 11, 18, 7, 14, 21, 9]} />
+            </View>
+          </View>
+        </View>
+
+        <Pressable accessibilityRole="button" onPress={onPress}
+          style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}>
+          <View style={styles.playButton}><Ionicons color="#FFF8E8" name="play" size={17} /></View>
+          <AppText style={styles.actionLabel}>{buttonLabel}</AppText>
+          <Ionicons color="#FFF8E8" name="arrow-forward" size={19} />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function CassetteTimeline() {
+  const steps = [
+    { icon: 'moon-outline' as const, label: '夜', copy: '気持ちを預ける' },
+    { icon: 'mic-outline' as const, label: '声', copy: '誰かの声が届く' },
+    { icon: 'sunny-outline' as const, label: '朝', copy: '声と一緒に起きる' },
+  ];
+  return (
+    <View style={styles.timeline}>
+      <View style={styles.timelineTitleRow}>
+        <View style={styles.titleRule} /><AppText style={styles.timelineTitle}>HOW IT WORKS</AppText><View style={styles.titleRule} />
+      </View>
+      <View style={styles.timelineTrack} />
+      <View style={styles.timelineSteps}>
+        {steps.map((step, index) => (
+          <View key={step.label} style={styles.timelineStep}>
+            <View style={styles.cassetteReel}><View style={styles.reelCenter}>
+              <Ionicons color="#4C584B" name={step.icon} size={18} />
+            </View></View>
+            <AppText style={styles.stepNumber}>0{index + 1} / {step.label}</AppText>
+            <AppText style={styles.stepCopy}>{step.copy}</AppText>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 export default function HomeScreen() {
@@ -24,9 +140,7 @@ export default function HomeScreen() {
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const runOnce = useTapLock();
 
-  if (!currentUser) {
-    return <Redirect href="/onboarding" />;
-  }
+  if (!currentUser) return <Redirect href="/onboarding" />;
 
   function handleMorningAction() {
     runOnce(() => {
@@ -34,82 +148,66 @@ export default function HomeScreen() {
         router.push('/morning/setup');
         return;
       }
-
       router.push(assignedWakeVoice ? '/morning/ready' : '/morning/give-choice');
     });
   }
 
   return (
-    <Screen contentStyle={styles.content} testID="home-screen">
-      <View style={styles.topBar}>
-        <AppLogo compact mode="light" />
-        <Avatar
-          avatarId={currentUser.avatarId}
-          imageUri={currentUser.profileImageUri}
-          name={currentUser.nickname}
-          size={40}
-        />
-      </View>
-
-      <View style={styles.greeting}>
-        <AppText variant="screenTitle">
-          {getGreeting()}、{currentUser.nickname}さん
-        </AppText>
-        <AppText variant="secondary" tone="soft">
-          明日の朝を、少しだけ整えておきましょう。
-        </AppText>
-      </View>
-
-      <NextMorningCard
-        onAction={handleMorningAction}
-        request={currentMorningRequest}
-        wakeVoice={assignedWakeVoice}
-      />
-
-      <View style={styles.voiceNote}>
-        <Avatar avatarId="sky" size={44} />
-        <View style={styles.voiceCopy}>
-          <AppText variant="secondary">声の向こうに、人がいる。</AppText>
-          <AppText variant="caption" tone="muted">
-            あなたの明日に向けて、誰かが短い声を残します。
-          </AppText>
-          <View style={styles.wave}>
-            <Waveform color={colors.indigo} height={22} levels={[5, 12, 19, 8, 16, 6, 13]} />
-          </View>
-        </View>
-      </View>
-    </Screen>
+    <NotebookBackground>
+      <HomeHeader user={currentUser} />
+      <MemoNote>明日の朝も、いい日にしよう</MemoNote>
+      <BoomboxCard request={currentMorningRequest} wakeVoice={assignedWakeVoice} onPress={handleMorningAction} />
+      <CassetteTimeline />
+    </NotebookBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    gap: spacing.xxl,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  greeting: {
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  voiceNote: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.xl,
-    borderTopWidth: 1,
-    borderTopColor: colors.separator,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  voiceCopy: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  wave: {
-    width: 96,
-    marginTop: spacing.sm,
-  },
+  safeArea: { flex: 1, backgroundColor: '#F5EEDC' },
+  paperLines: { ...StyleSheet.absoluteFillObject, top: 48 },
+  paperLine: { height: 32, borderBottomWidth: 1, borderBottomColor: 'rgba(92,135,144,0.16)' },
+  marginLine: { position: 'absolute', top: 0, bottom: 0, left: 28, width: 1, backgroundColor: 'rgba(194,94,74,0.28)' },
+  content: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.xxl },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg },
+  eyebrow: { color: '#A2543D', fontSize: 10, lineHeight: 14, fontWeight: '800', letterSpacing: 1.7 },
+  headerTitle: { color: '#344239', fontFamily: fonts?.rounded, fontSize: 23, lineHeight: 32, fontWeight: '700', marginTop: 2 },
+  avatarFrame: { padding: 3, borderWidth: 1.5, borderColor: '#687867', borderRadius: 26, backgroundColor: '#FFF9E9', transform: [{ rotate: '2deg' }] },
+  memoWrap: { alignSelf: 'center', width: '92%', transform: [{ rotate: '-1.5deg' }] },
+  tape: { position: 'absolute', zIndex: 1, top: -10, left: '37%', width: 78, height: 22, backgroundColor: 'rgba(218,190,126,0.55)', transform: [{ rotate: '2deg' }] },
+  memo: { paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, backgroundColor: '#FFF6C9', ...shadows.surface },
+  memoText: { color: '#4E5142', fontFamily: fonts?.rounded, fontSize: 19, lineHeight: 28, fontWeight: '700', textAlign: 'center' },
+  memoUnderline: { alignSelf: 'center', width: 176, height: 2, marginTop: 5, backgroundColor: 'rgba(181,87,61,0.42)' },
+  boomboxShadow: { borderRadius: 18, backgroundColor: '#B07943', paddingBottom: 6, transform: [{ rotate: '0.4deg' }], ...shadows.surface },
+  boombox: { padding: spacing.lg, borderWidth: 2, borderColor: '#404A40', borderRadius: 18, backgroundColor: '#687463', gap: spacing.lg },
+  boomboxTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  brand: { color: '#FFF5D9', fontSize: 12, lineHeight: 16, fontWeight: '900', letterSpacing: 1.8 },
+  modelNumber: { color: '#CED1B9', fontSize: 8, lineHeight: 12, fontWeight: '600', letterSpacing: 1 },
+  knobs: { flexDirection: 'row', gap: spacing.md },
+  knob: { width: 21, height: 21, borderWidth: 3, borderColor: '#30382F', borderRadius: 11, backgroundColor: '#D6C493' },
+  boomboxBody: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  speaker: { width: 92, height: 92, padding: 8, borderWidth: 2, borderColor: '#30382F', borderRadius: 46, backgroundColor: '#465047' },
+  speakerInner: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#8F987D', borderRadius: 40, backgroundColor: '#343C37' },
+  displayPanel: { flex: 1, minHeight: 126, padding: spacing.md, borderWidth: 2, borderColor: '#30382F', borderRadius: 6, backgroundColor: '#27322D' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  statusLight: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D18A55' },
+  statusLightReady: { backgroundColor: '#A8CE8A' },
+  statusText: { color: '#C3C9A8', fontSize: 8, lineHeight: 11, fontWeight: '700', letterSpacing: 1 },
+  time: { color: '#F3D685', fontFamily: fonts?.rounded, fontSize: 35, lineHeight: 41, fontWeight: '700', letterSpacing: 2 },
+  schedule: { color: '#D7DBC3', fontSize: 10, lineHeight: 14, fontWeight: '600' },
+  waveformBox: { marginTop: spacing.sm, overflow: 'hidden' },
+  actionButton: { minHeight: 52, paddingHorizontal: spacing.md, borderRadius: 9, backgroundColor: '#B6533D', flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  actionButtonPressed: { backgroundColor: '#98432F', transform: [{ translateY: 1 }] },
+  playButton: { width: 31, height: 31, borderWidth: 1, borderColor: '#F4D7B1', borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  actionLabel: { flex: 1, color: '#FFF8E8', fontSize: 15, lineHeight: 21, fontWeight: '700' },
+  timeline: { position: 'relative', paddingTop: spacing.sm },
+  timelineTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xl },
+  titleRule: { flex: 1, height: 1, backgroundColor: '#9C9A7A' },
+  timelineTitle: { color: '#8B5948', fontSize: 10, lineHeight: 14, fontWeight: '800', letterSpacing: 1.8 },
+  timelineTrack: { position: 'absolute', top: 69, left: '16%', right: '16%', height: 2, backgroundColor: '#A29A79' },
+  timelineSteps: { flexDirection: 'row', justifyContent: 'space-between' },
+  timelineStep: { width: '31%', alignItems: 'center' },
+  cassetteReel: { width: 54, height: 54, padding: 6, borderWidth: 2, borderColor: '#6D765F', borderRadius: 27, backgroundColor: '#E5D8B6' },
+  reelCenter: { flex: 1, borderWidth: 1, borderColor: '#8E947C', borderRadius: 20, backgroundColor: '#F8EED3', alignItems: 'center', justifyContent: 'center' },
+  stepNumber: { color: '#9C513D', fontSize: 9, lineHeight: 13, fontWeight: '800', letterSpacing: 1, marginTop: spacing.sm },
+  stepCopy: { color: '#4E594D', fontSize: 11, lineHeight: 16, fontWeight: '600', textAlign: 'center', marginTop: 2 },
 });
