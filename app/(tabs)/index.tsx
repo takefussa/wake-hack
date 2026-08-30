@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
 import type { PropsWithChildren } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,8 +31,8 @@ function HomeHeader({ user }: { user: UserProfile }) {
   return (
     <View style={styles.header}>
       <View>
-        <AppText style={styles.eyebrow}>GOOD MORNING RADIO</AppText>
-        <AppText style={styles.headerTitle}>おはよう、{user.nickname}さん</AppText>
+        <AppText style={styles.eyebrow}>オキタ！</AppText>
+        <AppText style={styles.headerTitle}>こんばんは、{user.nickname}さん</AppText>
       </View>
       <View style={styles.avatarFrame}>
         <Avatar avatarId={user.avatarId} imageUri={user.profileImageUri} name={user.nickname} size={44} />
@@ -58,19 +59,53 @@ type BoomboxCardProps = {
   onPress: () => void;
 };
 
+function getWakeDayDisplay(request: MorningRequest | null, now: Date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const valueOf = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value);
+  const today = new Date(Date.UTC(valueOf('year'), valueOf('month') - 1, valueOf('day')));
+  const currentMinutes = valueOf('hour') * 60 + valueOf('minute');
+  const [wakeHours = 0, wakeMinutes = 0] = request?.wakeAt.split(':').map(Number) ?? [];
+  const isToday = request !== null && wakeHours * 60 + wakeMinutes > currentMinutes;
+
+  if (!isToday) today.setUTCDate(today.getUTCDate() + 1);
+
+  return {
+    dateLabel: today
+      .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+      .toUpperCase(),
+    relativeDayLabel: isToday ? 'TODAY' : 'TOMORROW',
+  };
+}
+
 function BoomboxCard({ request, wakeVoice, onPress }: BoomboxCardProps) {
+  const [now, setNow] = useState(() => new Date());
   const isReady = wakeVoice !== null;
+  const { dateLabel, relativeDayLabel } = getWakeDayDisplay(request, now);
   const buttonLabel = !request
     ? '明日の朝をセットする'
     : isReady ? '準備した内容を見る' : 'リクエストを確認する';
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <View style={styles.boomboxShadow}>
       <View style={styles.boombox}>
         <View style={styles.boomboxTop}>
           <View>
-            <AppText style={styles.brand}>WAKE RADIO</AppText>
-            <AppText style={styles.modelNumber}>WR-07 / TOMORROW</AppText>
+            <AppText style={styles.brand}>オキル予定</AppText>
+            <AppText style={styles.modelNumber}>{dateLabel} / {relativeDayLabel}</AppText>
           </View>
           <View style={styles.knobs}><View style={styles.knob} /><View style={styles.knob} /></View>
         </View>
@@ -155,7 +190,7 @@ export default function HomeScreen() {
   return (
     <NotebookBackground>
       <HomeHeader user={currentUser} />
-      <MemoNote>明日の朝も、いい日にしよう</MemoNote>
+      <MemoNote>明日も、いい朝にしよう</MemoNote>
       <BoomboxCard request={currentMorningRequest} wakeVoice={assignedWakeVoice} onPress={handleMorningAction} />
       <CassetteTimeline />
     </NotebookBackground>
