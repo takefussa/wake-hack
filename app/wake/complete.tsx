@@ -112,7 +112,7 @@ export default function WakeCompleteScreen() {
   const isPersonal = assignedWakeVoice.type === 'personal';
   const senderName = isPersonal
     ? `${sender?.nickname ?? '誰か'}さん`
-    : 'Wake Hackのみんな';
+    : 'オキタ！のみんな';
   const hasSentThanks = currentUser
     ? thanksMessages.some(
         (message) =>

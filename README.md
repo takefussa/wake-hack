@@ -1,4 +1,4 @@
-# Wake Hack
+# オキタ！（Okita!）
 
 Tornado2026向けのExpo / React Nativeプロトタイプです。
 

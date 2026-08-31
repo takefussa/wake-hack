@@ -1,4 +1,5 @@
 import { moodOptions, scheduleOptions, voiceStyleOptions } from '@/constants/options';
+import { logDevelopmentError } from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { MorningRequestRepository } from '@/repositories/interfaces/morning-request-repository';
 import { authService } from '@/services/auth-service';
@@ -78,6 +79,19 @@ function mapMorningRequestRow(row: MorningRequestRow): MorningRequest {
   };
 }
 
+function tryMapMorningRequestRow(row: MorningRequestRow): MorningRequest | null {
+  try {
+    return mapMorningRequestRow(row);
+  } catch (error) {
+    logDevelopmentError('morningRequest.mapRow', error);
+    return null;
+  }
+}
+
+function isMorningRequest(request: MorningRequest | null): request is MorningRequest {
+  return request !== null;
+}
+
 export class SupabaseMorningRequestRepository
   implements MorningRequestRepository
 {
@@ -117,7 +131,7 @@ export class SupabaseMorningRequestRepository
       .limit(24);
 
     if (error) throw error;
-    return data.map(mapMorningRequestRow);
+    return data.map(tryMapMorningRequestRow).filter(isMorningRequest);
   }
 
   async getById(id: string): Promise<MorningRequest | null> {

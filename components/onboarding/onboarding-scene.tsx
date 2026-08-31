@@ -267,7 +267,6 @@ const styles = StyleSheet.create({
   smallLabel: {
     color: '#30463E',
     fontSize: 15,
-    fontWeight: '700',
     letterSpacing: 2,
   },
 
@@ -295,7 +294,6 @@ const styles = StyleSheet.create({
     color: '#30463E',
     fontSize: 72,
     lineHeight: 80,
-    fontWeight: '500',
     letterSpacing: 2,
   },
 
@@ -378,7 +376,6 @@ const styles = StyleSheet.create({
   voiceName: {
     color: '#30463E',
     fontSize: 16,
-    fontWeight: '700',
   },
 
   voiceDivider: {
@@ -465,7 +462,6 @@ const styles = StyleSheet.create({
     color: '#30463E',
     fontSize: 30,
     lineHeight: 39,
-    fontWeight: '700',
     letterSpacing: 2,
   },
 
@@ -481,7 +477,6 @@ const styles = StyleSheet.create({
     color: '#30463E',
     fontSize: 54,
     lineHeight: 62,
-    fontWeight: '500',
     letterSpacing: 2,
   },
 
@@ -544,7 +539,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#30463E',
     fontSize: 17,
-    fontWeight: '600',
   },
 
   recordWave: {
@@ -557,7 +551,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
     color: '#30463E',
     fontSize: 16,
-    fontWeight: '600',
   },
 
   speechBubble: {
@@ -624,7 +617,6 @@ const styles = StyleSheet.create({
   receiverInitial: {
     color: '#8A5047',
     fontSize: 30,
-    fontWeight: '500',
   },
 
   receiverMemo: {
@@ -663,7 +655,6 @@ const styles = StyleSheet.create({
   nameTagText: {
     color: '#30463E',
     fontSize: 13,
-    fontWeight: '700',
   },
 
   connectionStage: {
@@ -780,7 +771,6 @@ const styles = StyleSheet.create({
     color: '#30463E',
     fontSize: 17,
     lineHeight: 27,
-    fontWeight: '700',
     textAlign: 'center',
   },
 });
