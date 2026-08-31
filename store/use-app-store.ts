@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { prototypeConfig } from '@/constants/config';
 import { mockCommunityVoices, mockPersonalWakeVoice } from '@/data/mock-voices';
 import { getPrototypeStateRepair } from '@/features/prototype/repair-persisted-state';
 import { bindWakeVoice } from '@/features/wake/bind-wake-voice';
@@ -32,9 +31,7 @@ type AppStore = PrototypePersistedState & {
   chooseCommunityWake: () => void;
   startWakeSession: (voiceMessage: VoiceMessage) => boolean;
   cancelWakeSession: () => void;
-  startWakeMission: () => void;
-  advanceWakeMission: (steps: number) => void;
-  completeMission: () => void;
+  completeWakeSession: () => void;
   addThanks: (message: ThanksMessage) => void;
   addThanksMessages: (messages: ThanksMessage[]) => void;
   upsertFriendship: (friendship: Friendship) => void;
@@ -53,7 +50,6 @@ const initialPersistedState: PrototypePersistedState = {
   givenVoiceMessages: [],
   assignedWakeVoice: null,
   wakeSession: null,
-  wakeMissionProgress: 0,
   thanksMessages: [],
   friendships: [],
 };
@@ -119,7 +115,6 @@ export const useAppStore = create<AppStore>()(
           currentGiveReceiverIds: [],
           assignedWakeVoice: null,
           wakeSession: null,
-          wakeMissionProgress: 0,
         }),
       replaceMorningRequest: (request) =>
         set((state) => {
@@ -135,7 +130,6 @@ export const useAppStore = create<AppStore>()(
                 }
               : null,
             wakeSession: null,
-            wakeMissionProgress: 0,
           };
         }),
       selectGiveRequest: (requestId) => set({ selectedGiveRequestId: requestId }),
@@ -216,58 +210,26 @@ export const useAppStore = create<AppStore>()(
             morningRequestId: currentMorningRequest.id,
             voiceMessageId: voiceMessage.id,
             alarmAt: currentMorningRequest.wakeAt,
-            missionCompleted: false,
             status: 'ringing',
           },
-          wakeMissionProgress: 0,
         });
         return true;
       },
       cancelWakeSession: () => {
         const wakeSession = get().wakeSession;
-        if (!wakeSession || wakeSession.status !== 'ringing') return;
+        if (!wakeSession || wakeSession.status === 'completed') return;
 
         set({
           wakeSession: null,
-          wakeMissionProgress: 0,
         });
       },
-      startWakeMission: () => {
-        const wakeSession = get().wakeSession;
+      completeWakeSession: () => {
+        const { currentMorningRequest, wakeSession } = get();
         if (!wakeSession || wakeSession.status !== 'ringing') return;
 
         set({
           wakeSession: {
             ...wakeSession,
-            status: 'mission',
-          },
-        });
-      },
-      advanceWakeMission: (steps) => {
-        const { wakeMissionProgress, wakeSession } = get();
-        if (!wakeSession || wakeSession.status !== 'mission' || steps <= 0) return;
-
-        set({
-          wakeMissionProgress: Math.min(
-            prototypeConfig.wakeMissionSteps,
-            wakeMissionProgress + steps
-          ),
-        });
-      },
-      completeMission: () => {
-        const { currentMorningRequest, wakeMissionProgress, wakeSession } = get();
-        if (
-          !wakeSession ||
-          wakeSession.status !== 'mission' ||
-          wakeMissionProgress < prototypeConfig.wakeMissionSteps
-        ) {
-          return;
-        }
-
-        set({
-          wakeSession: {
-            ...wakeSession,
-            missionCompleted: true,
             status: 'completed',
             wokeAt: createDemoWokeAt(wakeSession.alarmAt),
           },
@@ -345,7 +307,6 @@ export const useAppStore = create<AppStore>()(
         givenVoiceMessages: state.givenVoiceMessages,
         assignedWakeVoice: state.assignedWakeVoice,
         wakeSession: state.wakeSession,
-        wakeMissionProgress: state.wakeMissionProgress,
         thanksMessages: state.thanksMessages,
         friendships: state.friendships,
       }),

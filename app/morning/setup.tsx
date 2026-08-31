@@ -104,20 +104,6 @@ export default function MorningSetupScreen() {
           <View style={styles.redUnderline} />
         </View>
 
-        <View style={styles.descriptionPaper}>
-          <View style={styles.descriptionRow}>
-            <Ionicons
-              name="alarm-outline"
-              size={19}
-              color="#30463E"
-            />
-
-            <AppText style={styles.description}>
-              明日、声を届けてほしい時刻を選びます。
-            </AppText>
-          </View>
-        </View>
-
         <View style={styles.timePaper}>
           <View style={styles.blueTape} />
 
@@ -132,17 +118,6 @@ export default function MorningSetupScreen() {
             />
           </View>
 
-          <View style={styles.minuteNote}>
-            <Ionicons
-              name="bulb-outline"
-              size={16}
-              color="#C69D38"
-            />
-
-            <AppText style={styles.minuteNoteText}>
-              数字を上下にスクロールして設定できます
-            </AppText>
-          </View>
         </View>
 
         <View style={styles.quickPaper}>
@@ -246,13 +221,14 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingTop: 4,
-    paddingBottom: 24,
+    paddingBottom: 16,
   },
 
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
+    marginTop: 14,
     marginLeft: 2,
     marginBottom: 8,
   },
@@ -264,6 +240,7 @@ const styles = StyleSheet.create({
 
   stepTape: {
     alignSelf: 'flex-start',
+    marginTop: 4,
     marginLeft: 34,
     marginBottom: 2,
     paddingHorizontal: 16,
@@ -299,31 +276,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#EE9D95',
   },
 
-  descriptionPaper: {
-    alignSelf: 'center',
-    marginTop: 5,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    backgroundColor: '#FFFDF7',
-  },
-
-  descriptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-  },
-
-  description: {
-    color: '#30463E',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
   timePaper: {
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 14,
+    marginTop: 20,
+    paddingHorizontal: 12,
+    paddingTop: 20,
+    paddingBottom: 18,
     backgroundColor: '#FCF8EA',
     borderWidth: 1,
     borderColor: '#C7BBA4',
@@ -351,9 +308,9 @@ const styles = StyleSheet.create({
 
   timeLabel: {
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
     color: '#30463E',
-    fontSize: 17,
+    fontSize: 18,
   },
 
   timeWheelContainer: {
@@ -362,29 +319,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  minuteNote: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-
-    backgroundColor: '#FFFDF8',
-
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#C8BDA8',
-  },
-
-  minuteNoteText: {
-    color: '#5C625C',
-    fontSize: 12,
-  },
-
   quickPaper: {
-    marginTop: 14,
+    marginTop: 12,
     paddingHorizontal: 14,
     paddingTop: 13,
     paddingBottom: 14,
@@ -423,7 +359,7 @@ const styles = StyleSheet.create({
     width: '30%',
     flexGrow: 1,
     minWidth: 88,
-    minHeight: 48,
+    minHeight: 44,
 
     alignItems: 'center',
     justifyContent: 'center',
@@ -465,10 +401,10 @@ const styles = StyleSheet.create({
   },
 
   nextButton: {
-    marginTop: 14,
+    marginTop: 12,
     marginHorizontal: 20,
 
-    minHeight: 60,
+    minHeight: 56,
     paddingHorizontal: 24,
 
     flexDirection: 'row',
