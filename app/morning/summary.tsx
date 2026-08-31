@@ -143,7 +143,7 @@ export default function MorningSummaryScreen() {
           onPress={() =>
             runOnce(() =>
               router.replace(
-                assignedWakeVoice ? '/(tabs)' : '/(tabs)/timeline'
+                assignedWakeVoice ? '/(tabs)' : '/(tabs)/connections'
               )
             )
           }

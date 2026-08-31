@@ -1,4 +1,3 @@
-import { prototypeConfig } from '@/constants/config';
 import { mockPersonalWakeVoice } from '@/data/mock-voices';
 import { bindWakeVoice } from '@/features/wake/bind-wake-voice';
 import { createDemoWokeAt } from '@/features/wake/create-demo-woke-at';
@@ -22,7 +21,6 @@ export function getPrototypeStateRepair(
       givenVoiceMessages: [],
       assignedWakeVoice: null,
       wakeSession: null,
-      wakeMissionProgress: 0,
       thanksMessages: [],
       friendships: [],
     };
@@ -35,7 +33,6 @@ export function getPrototypeStateRepair(
       currentGiveReceiverIds: [],
       assignedWakeVoice: null,
       wakeSession: null,
-      wakeMissionProgress: 0,
     };
   }
 
@@ -47,7 +44,6 @@ export function getPrototypeStateRepair(
       currentGiveReceiverIds: [],
       assignedWakeVoice: null,
       wakeSession: null,
-      wakeMissionProgress: 0,
     };
   }
 
@@ -65,7 +61,6 @@ export function getPrototypeStateRepair(
       currentMorningRequest: normalizedRequest,
       assignedWakeVoice: restoredPersonalVoice,
       wakeSession: null,
-      wakeMissionProgress: 0,
     };
   }
 
@@ -96,7 +91,6 @@ export function getPrototypeStateRepair(
       currentMorningRequest: normalizedRequest,
       assignedWakeVoice: null,
       wakeSession: null,
-      wakeMissionProgress: 0,
     };
   }
 
@@ -105,7 +99,6 @@ export function getPrototypeStateRepair(
     return {
       currentMorningRequest: normalizedRequest,
       assignedWakeVoice: normalizedVoice,
-      wakeMissionProgress: 0,
     };
   }
   const session: WakeSession =
@@ -122,30 +115,23 @@ export function getPrototypeStateRepair(
       currentMorningRequest: normalizedRequest,
       assignedWakeVoice: normalizedVoice,
       wakeSession: null,
-      wakeMissionProgress: 0,
     };
   }
 
-  const progress =
-    session.status === 'mission' || session.status === 'completed'
-      ? Math.min(prototypeConfig.wakeMissionSteps, Math.max(0, state.wakeMissionProgress))
-      : 0;
+  const hasLegacyMissionStatus = (session.status as string) === 'mission';
   const normalizedSession: WakeSession =
     session.status === 'completed'
       ? {
           ...session,
-          missionCompleted: true,
           wokeAt: session.wokeAt ?? createDemoWokeAt(session.alarmAt),
         }
-      : session;
+      : hasLegacyMissionStatus
+        ? { ...session, status: 'ringing' }
+        : session;
 
   return {
     currentMorningRequest: normalizedRequest,
     assignedWakeVoice: normalizedVoice,
     wakeSession: normalizedSession,
-    wakeMissionProgress:
-      normalizedSession.status === 'completed'
-        ? prototypeConfig.wakeMissionSteps
-        : progress,
   };
 }
