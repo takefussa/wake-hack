@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -14,6 +14,8 @@ import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function TomorrowReadyScreen() {
+  const params = useLocalSearchParams<{ requestId?: string | string[] }>();
+  const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const currentUser = useAppStore((state) => state.currentUser);
@@ -38,6 +40,16 @@ export default function TomorrowReadyScreen() {
   }
 
   const isCommunity = assignedWakeVoice.type === 'community';
+
+  function handleBack() {
+    runOnce(() => {
+      if (requestId) {
+        router.replace({ pathname: '/morning/give-complete', params: { requestId } });
+        return;
+      }
+      router.replace('/(tabs)');
+    });
+  }
 
   async function handleStartWake() {
     if (isStartingWakeRef.current || !currentMorningRequest || !currentUser) return;
@@ -70,9 +82,9 @@ export default function TomorrowReadyScreen() {
         <View style={styles.navigation}>
           <IconButton
             icon="chevron-back"
-            label="ホームに戻る"
+            label="戻る"
             mode="dark"
-            onPress={() => runOnce(() => router.replace('/(tabs)'))}
+            onPress={handleBack}
           />
         </View>
         <View style={styles.heroContent}>
@@ -113,6 +125,13 @@ export default function TomorrowReadyScreen() {
           onPress={() => void handleStartWake()}
           testID="start-wake-demo"
           variant="warm"
+        />
+        <AppButton
+          icon="home-outline"
+          label="ホーム画面に戻る"
+          onPress={() => runOnce(() => router.replace('/(tabs)'))}
+          testID="back-to-home"
+          variant="textOnDark"
         />
         {isCommunity ? (
           <AppButton
