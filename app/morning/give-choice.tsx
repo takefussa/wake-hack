@@ -53,7 +53,7 @@ export default function GiveChoiceScreen() {
   }
 
   function handleGive() {
-    runOnce(() => router.replace('/(tabs)/timeline'));
+    runOnce(() => router.replace('/(tabs)/connections'));
   }
 
   return (

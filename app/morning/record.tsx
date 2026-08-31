@@ -106,7 +106,7 @@ export default function RecordVoiceScreen() {
 
     isLeavingRef.current = true;
     await recorder.leaveRecording();
-    goBackOrReplace('/morning/request-list');
+    goBackOrReplace('/(tabs)/connections');
   }
 
   async function handleSend() {
@@ -170,7 +170,7 @@ export default function RecordVoiceScreen() {
           </AppText>
           <AppButton
             label="一覧に戻る"
-            onPress={() => goBackOrReplace('/morning/request-list')}
+            onPress={() => goBackOrReplace('/(tabs)/connections')}
             variant="secondary"
           />
         </View>

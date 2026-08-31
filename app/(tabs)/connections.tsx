@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -14,33 +15,24 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { fontFamilyName } from '@/constants/theme';
+import { useTapLock } from '@/hooks/use-tap-lock';
+import { rankMorningRequests } from '@/services/matching-service';
+import type { MorningRequestMatch } from '@/services/matching-service';
+import { morningRequestService } from '@/services/morning-request-service';
+import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
+import type { UserProfile } from '@/types';
 
 type TimelineMode = 'personal' | 'community';
 
-const personalDemo = [
-  {
-    id: '1',
-    name: 'Takumi',
-    time: '07:00',
-    detail: '明日は発表があります',
-    type: '大学生',
-  },
-  {
-    id: '2',
-    name: 'Haruka',
-    time: '06:30',
-    detail: '朝からバイト。ちょっと憂うつです',
-    type: '大学生',
-  },
-  {
-    id: '3',
-    name: 'Sora',
-    time: '07:30',
-    detail: '明日は大事な試験があります',
-    type: '高校生',
-  },
-];
+type RequestCandidate = MorningRequestMatch & {
+  user: UserProfile;
+};
+
+function isUserProfile(profile: UserProfile | null): profile is UserProfile {
+  return profile !== null;
+}
 
 const communityDemo = [
   {
@@ -59,11 +51,64 @@ const communityDemo = [
 
 export default function ConnectionsScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
+  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
+  const replaceMorningRequest = useAppStore((state) => state.replaceMorningRequest);
   const { width } = useWindowDimensions();
 
   const horizontalRef = useRef<ScrollView>(null);
+  const runOnce = useTapLock();
 
   const [mode, setMode] = useState<TimelineMode>('personal');
+  const [candidates, setCandidates] = useState<RequestCandidate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadCandidates = useCallback(async () => {
+    if (!currentUser || !currentMorningRequest) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const remoteCurrentRequest =
+        await morningRequestService.ensureRemoteRequest(currentMorningRequest);
+      if (remoteCurrentRequest.id !== currentMorningRequest.id) {
+        replaceMorningRequest(remoteCurrentRequest);
+        return;
+      }
+
+      const availableRequests = await morningRequestService.getAvailableRequests(
+        currentUser.id,
+        remoteCurrentRequest.id
+      );
+      const requests = availableRequests.filter(
+        (request) => !currentGiveReceiverIds.includes(request.userId)
+      );
+      const profiles = (
+        await Promise.all(requests.map((request) => profileService.getProfile(request.userId)))
+      ).filter(isUserProfile);
+      const matches = rankMorningRequests(currentUser, remoteCurrentRequest, requests, profiles);
+
+      setCandidates(
+        matches.flatMap((match) => {
+          const user = profiles.find((profile) => profile.id === match.request.userId);
+          return user ? [{ ...match, user }] : [];
+        })
+      );
+    } catch {
+      setError('朝リクエストを読み込めませんでした。');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentGiveReceiverIds, currentMorningRequest, currentUser, replaceMorningRequest]);
+
+  useEffect(() => {
+    void loadCandidates();
+  }, [loadCandidates]);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -215,108 +260,201 @@ export default function ConnectionsScreen() {
               </AppText>
             </View>
 
-            {personalDemo.map((person, index) => (
-              <View
-                key={person.id}
-                style={[
-                  styles.personCard,
-                  index % 2 === 0
-                    ? styles.cardRotateLeft
-                    : styles.cardRotateRight,
-                ]}
-              >
-                <View style={styles.cardTape} />
+            {!currentMorningRequest ? (
+              <View style={styles.stateCard}>
+                <AppText style={styles.stateTitle}>
+                  明日の朝を設定すると表示されます
+                </AppText>
 
-                <View style={styles.personHeader}>
-                  <View style={styles.avatar}>
-                    <AppText style={styles.avatarText}>
-                      {person.name.charAt(0)}
-                    </AppText>
-                  </View>
-
-                  <View style={styles.personInfo}>
-                    <AppText style={styles.personName}>
-                      {person.name}
-                    </AppText>
-
-                    <View style={styles.personMeta}>
-                      <AppText style={styles.personType}>
-                        {person.type}
-                      </AppText>
-
-                      <View style={styles.dot} />
-
-                      <Ionicons
-                        name="alarm-outline"
-                        size={15}
-                        color="#687169"
-                      />
-
-                      <AppText style={styles.wakeTime}>
-                        {person.time}
-                      </AppText>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.tomorrowNote}>
-                  <AppText style={styles.noteLabel}>
-                    明日のこと
-                  </AppText>
-
-                  <AppText style={styles.noteText}>
-                    「{person.detail}」
-                  </AppText>
-                </View>
+                <AppText style={styles.stateText}>
+                  起きる時間や気分を登録すると、声を届けられる相手がここに並びます。
+                </AppText>
 
                 <Pressable
                   style={({ pressed }) => [
-                    styles.personalVoiceButton,
+                    styles.stateButton,
                     pressed && styles.pressed,
                   ]}
-                  onPress={() => {
-                    // TODO:
-                    // パーソナルボイス録音画面へ遷移
-                  }}
+                  onPress={() =>
+                    runOnce(() => router.push('/morning/setup'))
+                  }
                 >
-                  <Ionicons
-                    name="mic"
-                    size={21}
-                    color="#30463E"
-                  />
+                  <AppText style={styles.stateButtonText}>
+                    明日の朝を設定する
+                  </AppText>
+                </Pressable>
+              </View>
+            ) : null}
 
-                  <View style={styles.voiceButtonCopy}>
-                    <AppText style={styles.voiceButtonText}>
-                      {person.name}さんを起こす
+            {currentMorningRequest && isLoading ? (
+              <View style={styles.stateCard}>
+                <ActivityIndicator color="#30463E" />
+
+                <AppText style={styles.stateText}>
+                  あなたに近い朝を探しています
+                </AppText>
+              </View>
+            ) : null}
+
+            {currentMorningRequest && !isLoading && error ? (
+              <View style={styles.stateCard}>
+                <AppText style={styles.stateTitle}>{error}</AppText>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.stateButton,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => void loadCandidates()}
+                >
+                  <AppText style={styles.stateButtonText}>
+                    もう一度読み込む
+                  </AppText>
+                </Pressable>
+              </View>
+            ) : null}
+
+            {currentMorningRequest &&
+            !isLoading &&
+            !error &&
+            candidates.length === 0 ? (
+              <View style={styles.stateCard}>
+                <AppText style={styles.stateTitle}>
+                  今は個別の朝リクエストがありません
+                </AppText>
+
+                <AppText style={styles.stateText}>
+                  少し時間を置くか、今日はみんなに向けた声で朝を迎えられます。
+                </AppText>
+              </View>
+            ) : null}
+
+            {currentMorningRequest &&
+              !isLoading &&
+              !error &&
+              candidates.map(({ request, user, commonPoints }, index) => (
+                <View
+                  key={request.id}
+                  style={[
+                    styles.personCard,
+                    index % 2 === 0
+                      ? styles.cardRotateLeft
+                      : styles.cardRotateRight,
+                  ]}
+                >
+                  <View style={styles.cardTape} />
+
+                  <View style={styles.personHeader}>
+                    <View style={styles.avatar}>
+                      <AppText style={styles.avatarText}>
+                        {user.nickname.charAt(0)}
+                      </AppText>
+                    </View>
+
+                    <View style={styles.personInfo}>
+                      <AppText style={styles.personName}>
+                        {user.nickname}
+                      </AppText>
+
+                      <View style={styles.personMeta}>
+                        <AppText style={styles.personType}>
+                          {user.userType}
+                        </AppText>
+
+                        <View style={styles.dot} />
+
+                        <Ionicons
+                          name="alarm-outline"
+                          size={15}
+                          color="#687169"
+                        />
+
+                        <AppText style={styles.wakeTime}>
+                          {request.wakeAt}
+                        </AppText>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.tomorrowNote}>
+                    <AppText style={styles.noteLabel}>
+                      明日のこと
                     </AppText>
 
-                    <AppText style={styles.voiceButtonSubtext}>
-                      この人だけに声を届ける
+                    <AppText style={styles.noteText}>
+                      「{request.schedules.join('・')}」
                     </AppText>
                   </View>
 
-                  <Ionicons
-                    name="chevron-forward"
-                    size={21}
-                    color="#30463E"
-                  />
-                </Pressable>
+                  {commonPoints.length > 0 ? (
+                    <View style={styles.commonPoints}>
+                      <AppText style={styles.noteLabel}>
+                        あなたとの共通点
+                      </AppText>
+
+                      <AppText style={styles.commonPointsText}>
+                        {commonPoints.join('・')}
+                      </AppText>
+                    </View>
+                  ) : null}
+
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.personalVoiceButton,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() =>
+                      runOnce(() =>
+                        router.push({
+                          pathname: '/morning/request-detail',
+                          params: { requestId: request.id },
+                        })
+                      )
+                    }
+                  >
+                    <Ionicons
+                      name="mic"
+                      size={21}
+                      color="#30463E"
+                    />
+
+                    <View style={styles.voiceButtonCopy}>
+                      <AppText style={styles.voiceButtonText}>
+                        {user.nickname}さんを起こす
+                      </AppText>
+
+                      <AppText style={styles.voiceButtonSubtext}>
+                        この人だけに声を届ける
+                      </AppText>
+                    </View>
+
+                    <Ionicons
+                      name="chevron-forward"
+                      size={21}
+                      color="#30463E"
+                    />
+                  </Pressable>
+                </View>
+              ))}
+
+            {currentMorningRequest &&
+            !isLoading &&
+            !error &&
+            candidates.length > 0 ? (
+              <View style={styles.bottomMessage}>
+                <Ionicons
+                  name="heart-outline"
+                  size={18}
+                  color="#D98E87"
+                />
+
+                <AppText style={styles.bottomMessageText}>
+                  名前を呼んで、その人のための
+                  {'\n'}
+                  「おはよう」を届けよう。
+                </AppText>
               </View>
-            ))}
-
-            <View style={styles.bottomMessage}>
-              <Ionicons
-                name="heart-outline"
-                size={18}
-                color="#D98E87"
-              />
-
-              <AppText style={styles.bottomMessageText}>
-                名前を呼んで、その人のための
-                {'\n'}
-                「おはよう」を届けよう。
-              </AppText>
-            </View>
+            ) : null}
           </ScrollView>
         </View>
 
@@ -492,13 +630,14 @@ const styles = StyleSheet.create({
   },
 
   title: {
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 29,
-    fontWeight: '900',
   },
 
   subtitle: {
     marginTop: 3,
+    fontFamily: fontFamilyName,
     color: '#6B716C',
     fontSize: 13,
   },
@@ -541,14 +680,14 @@ const styles = StyleSheet.create({
   },
 
   modeText: {
+    fontFamily: fontFamilyName,
     color: '#777B77',
     fontSize: 15,
-    fontWeight: '600',
   },
 
   modeTextActive: {
+    fontFamily: fontFamilyName,
     color: '#30463E',
-    fontWeight: '900',
   },
 
   marker: {
@@ -611,17 +750,85 @@ const styles = StyleSheet.create({
   },
 
   introTitle: {
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 18,
-    fontWeight: '900',
   },
 
   introText: {
     marginTop: 7,
 
+    fontFamily: fontFamilyName,
     color: '#687169',
     fontSize: 13,
     lineHeight: 20,
+  },
+
+  stateCard: {
+    minHeight: 220,
+
+    marginHorizontal: 8,
+    marginBottom: 18,
+
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+
+    backgroundColor: '#FFFDF7',
+
+    borderWidth: 1,
+    borderColor: '#D4C7B2',
+  },
+
+  stateTitle: {
+    textAlign: 'center',
+
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 16,
+  },
+
+  stateText: {
+    textAlign: 'center',
+
+    fontFamily: fontFamilyName,
+    color: '#6B716C',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+
+  stateButton: {
+    marginTop: 8,
+
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+
+    backgroundColor: '#B9DAE8',
+
+    borderWidth: 1,
+    borderColor: '#7FB4C9',
+  },
+
+  stateButtonText: {
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 14,
+  },
+
+  commonPoints: {
+    marginTop: 12,
+  },
+
+  commonPointsText: {
+    marginTop: 5,
+
+    fontFamily: fontFamilyName,
+    color: '#59645D',
+    fontSize: 13,
+    lineHeight: 19,
   },
 
   personCard: {
@@ -687,9 +894,9 @@ const styles = StyleSheet.create({
   },
 
   avatarText: {
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 19,
-    fontWeight: '900',
   },
 
   personInfo: {
@@ -697,9 +904,9 @@ const styles = StyleSheet.create({
   },
 
   personName: {
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 18,
-    fontWeight: '900',
   },
 
   personMeta: {
@@ -711,6 +918,7 @@ const styles = StyleSheet.create({
   },
 
   personType: {
+    fontFamily: fontFamilyName,
     color: '#717770',
     fontSize: 12,
   },
@@ -723,9 +931,9 @@ const styles = StyleSheet.create({
   },
 
   wakeTime: {
+    fontFamily: fontFamilyName,
     color: '#59645D',
     fontSize: 12,
-    fontWeight: '700',
   },
 
   tomorrowNote: {
@@ -740,18 +948,18 @@ const styles = StyleSheet.create({
   },
 
   noteLabel: {
+    fontFamily: fontFamilyName,
     color: '#887548',
     fontSize: 11,
-    fontWeight: '800',
   },
 
   noteText: {
     marginTop: 5,
 
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 15,
     lineHeight: 22,
-    fontWeight: '700',
   },
 
   personalVoiceButton: {
@@ -776,14 +984,15 @@ const styles = StyleSheet.create({
   },
 
   voiceButtonText: {
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 15,
-    fontWeight: '900',
   },
 
   voiceButtonSubtext: {
     marginTop: 2,
 
+    fontFamily: fontFamilyName,
     color: '#68736D',
     fontSize: 10,
   },
@@ -805,6 +1014,7 @@ const styles = StyleSheet.create({
   bottomMessageText: {
     textAlign: 'center',
 
+    fontFamily: fontFamilyName,
     color: '#767A76',
     fontSize: 12,
     lineHeight: 19,
@@ -839,9 +1049,9 @@ const styles = StyleSheet.create({
   communityTitle: {
     marginTop: 8,
 
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 19,
-    fontWeight: '900',
   },
 
   communityDescription: {
@@ -849,6 +1059,7 @@ const styles = StyleSheet.create({
 
     textAlign: 'center',
 
+    fontFamily: fontFamilyName,
     color: '#6D736E',
     fontSize: 13,
     lineHeight: 20,
@@ -873,9 +1084,9 @@ const styles = StyleSheet.create({
   },
 
   communityRecordText: {
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 15,
-    fontWeight: '900',
   },
 
   communityHint: {
@@ -901,6 +1112,7 @@ const styles = StyleSheet.create({
   communityHintText: {
     textAlign: 'center',
 
+    fontFamily: fontFamilyName,
     color: '#766B66',
     fontSize: 12,
     lineHeight: 18,
@@ -915,9 +1127,9 @@ const styles = StyleSheet.create({
   },
 
   communitySectionTitle: {
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 19,
-    fontWeight: '900',
   },
 
   pinkUnderline: {
@@ -960,17 +1172,17 @@ const styles = StyleSheet.create({
   },
 
   smallAvatarText: {
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 13,
-    fontWeight: '900',
   },
 
   communityName: {
     marginLeft: 9,
 
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 14,
-    fontWeight: '800',
   },
 
   communityVoicePaper: {
@@ -1017,6 +1229,7 @@ const styles = StyleSheet.create({
   },
 
   voiceDuration: {
+    fontFamily: fontFamilyName,
     color: '#66726C',
     fontSize: 11,
   },
@@ -1024,9 +1237,9 @@ const styles = StyleSheet.create({
   communityVoiceText: {
     marginTop: 10,
 
+    fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 14,
-    fontWeight: '600',
   },
 
   likeRow: {
@@ -1041,8 +1254,8 @@ const styles = StyleSheet.create({
   },
 
   likeNumber: {
+    fontFamily: fontFamilyName,
     color: '#9A6D6D',
     fontSize: 12,
-    fontWeight: '700',
   },
 });
