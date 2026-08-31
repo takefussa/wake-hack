@@ -77,6 +77,23 @@ export default function ProfileEditScreen() {
       />
 
       <ProfileFields
+        step={1}
+        avatarId={avatarId}
+        bio={bio}
+        nickname={nickname}
+        onAvatarChange={setAvatarId}
+        onBioChange={setBio}
+        onNicknameChange={setNickname}
+        onProfileImageChange={setProfileImageUri}
+        onTagsChange={setTags}
+        onUserTypeChange={setUserType}
+        profileImageUri={profileImageUri}
+        tags={tags}
+        userType={userType}
+      />
+
+      <ProfileFields
+        step={2}
         avatarId={avatarId}
         bio={bio}
         nickname={nickname}

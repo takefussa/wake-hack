@@ -1,31 +1,56 @@
-import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
+import {
+  Keyboard,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
 import { ChoiceChip } from '@/components/common/choice-chip';
 import { AvatarPicker } from '@/components/profile/avatar-picker';
 import { ProfilePhotoPicker } from '@/components/profile/profile-photo-picker';
 import { prototypeConfig } from '@/constants/config';
-import { profileTagOptions, userTypeOptions } from '@/constants/options';
-import { colors, componentSizes, fonts, radii, spacing } from '@/constants/theme';
+import {
+  profileTagOptions,
+  userTypeOptions,
+} from '@/constants/options';
+import {
+  colors,
+  fonts,
+} from '@/constants/theme';
 import { toggleProfileTag } from '@/features/profile/profile-form';
-import type { AvatarId, ProfileTag, UserType } from '@/types';
+import type {
+  AvatarId,
+  ProfileTag,
+  UserType,
+} from '@/types';
 
 type ProfileFieldsProps = {
+  step: 1 | 2;
+
   avatarId: AvatarId;
   profileImageUri?: string;
   nickname: string;
   bio: string;
   userType: UserType | null;
   tags: ProfileTag[];
+
   onAvatarChange: (avatarId: AvatarId) => void;
-  onProfileImageChange: (profileImageUri?: string) => void;
+  onProfileImageChange: (
+    profileImageUri?: string
+  ) => void;
   onNicknameChange: (nickname: string) => void;
   onBioChange: (bio: string) => void;
-  onUserTypeChange: (userType: UserType) => void;
-  onTagsChange: (tags: ProfileTag[]) => void;
+  onUserTypeChange: (
+    userType: UserType
+  ) => void;
+  onTagsChange: (
+    tags: ProfileTag[]
+  ) => void;
 };
 
 export function ProfileFields({
+  step,
   avatarId,
   profileImageUri,
   nickname,
@@ -39,145 +64,471 @@ export function ProfileFields({
   onUserTypeChange,
   onTagsChange,
 }: ProfileFieldsProps) {
-  return (
-    <>
-      <View style={styles.section}>
-        <AppText variant="sectionTitle">プロフィール画像</AppText>
-        <ProfilePhotoPicker
-          avatarId={avatarId}
-          imageUri={profileImageUri}
-          name={nickname || 'あなた'}
-          onChange={onProfileImageChange}
-        />
-        <AppText variant="caption" tone="muted">
-          写真を使わない場合のアイコン
-        </AppText>
-        <AvatarPicker value={avatarId} onChange={onAvatarChange} />
-      </View>
+  if (step === 1) {
+    return (
+      <View style={styles.page}>
+        {/* 写真 */}
+        <View style={styles.paperSection}>
+          <View style={styles.blueTape} />
 
-      <View style={styles.section}>
-        <View style={styles.labelRow}>
-          <AppText variant="sectionTitle">ニックネーム</AppText>
-          <AppText variant="caption" tone="muted">
-            {nickname.length}/{prototypeConfig.profileNicknameMaxLength}
+          <View style={styles.headingRow}>
+            <AppText style={styles.sectionTitle}>
+              プロフィール画像
+            </AppText>
+
+            <AppText style={styles.optional}>
+              任意
+            </AppText>
+          </View>
+
+          <View style={styles.profileImageRow}>
+            <ProfilePhotoPicker
+              avatarId={avatarId}
+              imageUri={profileImageUri}
+              name={nickname || 'あなた'}
+              onChange={onProfileImageChange}
+            />
+
+            <View style={styles.avatarCandidates}>
+              <AvatarPicker
+                value={avatarId}
+                onChange={onAvatarChange}
+              />
+              <AppText style={styles.avatarHint}>アイコン候補</AppText>
+            </View>
+          </View>
+        </View>
+
+        {/* ニックネーム */}
+        <View style={styles.section}>
+          <View style={styles.labelRow}>
+            <View style={styles.titleWithRequired}>
+              <AppText style={styles.sectionTitle}>
+                ニックネーム
+              </AppText>
+
+              <View style={styles.requiredBadge}>
+                <AppText
+                  style={styles.requiredBadgeText}
+                >
+                  必須
+                </AppText>
+              </View>
+            </View>
+
+            <AppText style={styles.counter}>
+              {nickname.length}/
+              {
+                prototypeConfig.profileNicknameMaxLength
+              }
+            </AppText>
+          </View>
+
+          <View style={styles.inputPaper}>
+            <TextInput
+              accessibilityLabel="ニックネーム"
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={
+                prototypeConfig.profileNicknameMaxLength
+              }
+              onChangeText={onNicknameChange}
+              onSubmitEditing={Keyboard.dismiss}
+              placeholder="例：Takuma"
+              placeholderTextColor={
+                colors.textTertiary
+              }
+              returnKeyType="done"
+              selectionColor="#7898A7"
+              style={styles.input}
+              value={nickname}
+            />
+          </View>
+
+          <AppText style={styles.helper}>
+            朝の相手に表示される名前です。
           </AppText>
         </View>
-        <TextInput
-          accessibilityLabel="ニックネーム"
-          autoCapitalize="none"
-          autoCorrect={false}
-          maxLength={prototypeConfig.profileNicknameMaxLength}
-          onChangeText={onNicknameChange}
-          onSubmitEditing={Keyboard.dismiss}
-          placeholder="例：Ryo"
-          placeholderTextColor={colors.textTertiary}
-          returnKeyType="done"
-          selectionColor={colors.indigo}
-          style={styles.input}
-          value={nickname}
-        />
-      </View>
 
-      <View style={styles.section}>
-        <AppText variant="sectionTitle">あなたについて</AppText>
-        <View style={styles.chips}>
-          {userTypeOptions.map((option) => (
-            <ChoiceChip
-              key={option}
-              label={option}
-              onPress={() => onUserTypeChange(option)}
-              selected={userType === option}
-            />
-          ))}
+        {/* 属性 */}
+        <View style={styles.section}>
+          <View style={styles.titleWithRequired}>
+            <AppText style={styles.sectionTitle}>
+              あなたについて
+            </AppText>
+
+            <View style={styles.requiredBadge}>
+              <AppText
+                style={styles.requiredBadgeText}
+              >
+                必須
+              </AppText>
+            </View>
+          </View>
+
+          <AppText style={styles.helper}>
+            近いものをひとつ選んでください。
+          </AppText>
+
+          <View style={styles.chips}>
+            {userTypeOptions.map((option) => (
+              <ChoiceChip
+                key={option}
+                label={option}
+                onPress={() =>
+                  onUserTypeChange(option)
+                }
+                selected={
+                  userType === option
+                }
+              />
+            ))}
+          </View>
         </View>
       </View>
+    );
+  }
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeading}>
-          <AppText variant="sectionTitle">朝について</AppText>
-          <AppText variant="caption" tone="muted">
+  return (
+    <View style={styles.page}>
+      {/* タグ */}
+      <View style={styles.paperSection}>
+        <View style={styles.pinkTape} />
+
+        <View style={styles.headingRow}>
+          <AppText style={styles.sectionTitle}>
+            朝について
+          </AppText>
+
+          <AppText style={styles.optional}>
             任意・複数選択
           </AppText>
         </View>
+
+        <AppText style={styles.helper}>
+          相手が声をかけるヒントになります。
+        </AppText>
+
         <View style={styles.chips}>
           {profileTagOptions.map((tag) => (
             <ChoiceChip
               key={tag}
               label={tag}
-              onPress={() => onTagsChange(toggleProfileTag(tags, tag))}
+              onPress={() =>
+                onTagsChange(
+                  toggleProfileTag(tags, tag)
+                )
+              }
               selected={tags.includes(tag)}
             />
           ))}
         </View>
       </View>
 
+      {/* bio */}
       <View style={styles.section}>
         <View style={styles.labelRow}>
-          <View style={styles.fieldLabel}>
-            <AppText variant="sectionTitle">一言コメント</AppText>
-            <AppText variant="caption" tone="muted">
+          <View style={styles.headingRow}>
+            <AppText style={styles.sectionTitle}>
+              一言
+            </AppText>
+
+            <AppText style={styles.optional}>
               任意
             </AppText>
           </View>
-          <AppText variant="caption" tone="muted">
-            {bio.length}/{prototypeConfig.profileBioMaxLength}
+
+          <AppText style={styles.counter}>
+            {bio.length}/
+            {prototypeConfig.profileBioMaxLength}
           </AppText>
         </View>
-        <TextInput
-          accessibilityLabel="一言コメント"
-          maxLength={prototypeConfig.profileBioMaxLength}
-          multiline
-          onChangeText={onBioChange}
-          placeholder="例：朝は苦手だけど、ゆっくり頑張ります。"
-          placeholderTextColor={colors.textTertiary}
-          selectionColor={colors.indigo}
-          style={[styles.input, styles.bioInput]}
-          textAlignVertical="top"
-          value={bio}
-        />
+
+        <View style={styles.bioPaper}>
+          <TextInput
+            accessibilityLabel="一言コメント"
+            maxLength={
+              prototypeConfig.profileBioMaxLength
+            }
+            multiline
+            onChangeText={onBioChange}
+            placeholder={
+              '例：朝は苦手だけど、\nゆっくり頑張ります。'
+            }
+            placeholderTextColor={
+              colors.textTertiary
+            }
+            selectionColor="#7898A7"
+            style={[styles.input, styles.bioInput]}
+            textAlignVertical="top"
+            value={bio}
+          />
+        </View>
+
+        <AppText style={styles.helper}>
+          自分のことを少しだけ書いておくと、
+          声を届けやすくなります。
+        </AppText>
       </View>
-    </>
+
+      {/* 小さいメモ */}
+      <View style={styles.note}>
+        <AppText style={styles.noteEmoji}>
+          ✎
+        </AppText>
+
+        <AppText style={styles.noteText}>
+          ここで入力した内容は、
+          あとからプロフィールで変更できます。
+        </AppText>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  page: {
+    gap: 22,
+  },
+
   section: {
-    gap: spacing.lg,
+    gap: 12,
   },
-  sectionHeading: {
-    gap: spacing.xs,
+
+  paperSection: {
+    position: 'relative',
+
+    paddingHorizontal: 18,
+    paddingTop: 20,
+    paddingBottom: 18,
+
+    gap: 14,
+
+    backgroundColor: '#FCFAF5',
+
+    borderWidth: 1,
+    borderColor: '#87919A',
+
+    shadowColor: '#5F6974',
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    shadowOffset: {
+      width: 1,
+      height: 2,
+    },
+
+    elevation: 1,
+
+    transform: [{ rotate: '-0.25deg' }],
   },
+
+  blueTape: {
+    position: 'absolute',
+
+    top: -7,
+    left: 26,
+
+    width: 72,
+    height: 16,
+    backgroundColor: '#C7DCE6',
+
+    opacity: 0.72,
+
+    transform: [{ rotate: '-4deg' }],
+  },
+
+  pinkTape: {
+    position: 'absolute',
+
+    top: -7,
+    right: 28,
+
+    width: 72,
+    height: 16,
+
+    backgroundColor: '#EBCBD2',
+
+    opacity: 0.75,
+
+    transform: [{ rotate: '4deg' }],
+  },
+
+  headingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+
+    gap: 9,
+  },
+
   labelRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+
+    gap: 12,
   },
-  fieldLabel: {
+
+  titleWithRequired: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.sm,
+    alignItems: 'center',
+
+    gap: 9,
   },
+
+  sectionTitle: {
+    color: '#3E4959',
+
+    fontSize: 17,
+    fontWeight: '900',
+    fontFamily: fonts?.handwritten,
+    letterSpacing: 0.7,
+  },
+
+  requiredBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+
+    borderRadius: 5,
+
+    backgroundColor: '#EBCBD2',
+  },
+
+  requiredBadgeText: {
+    color: '#6D4F59',
+
+    fontSize: 9,
+    fontWeight: '800',
+  },
+
+  optional: {
+    color: '#747C87',
+
+    fontSize: 10,
+    fontWeight: '600',
+  },
+
+  counter: {
+    color: '#747C87',
+
+    fontSize: 10,
+  },
+
+  helper: {
+    color: '#626C78',
+
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: fonts?.handwritten,
+  },
+
+  profileImageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+
+    gap: 18,
+  },
+
+  avatarCandidates: {
+    alignItems: 'center',
+
+    gap: 6,
+
+    marginTop: 0,
+    marginRight: 4,
+  },
+
+  avatarHint: {
+    color: '#7B838D',
+
+    fontSize: 9,
+    fontWeight: '600',
+  },
+
+  inputPaper: {
+    backgroundColor: '#FCFAF5',
+
+    borderWidth: 1.5,
+    borderColor: '#87919A',
+
+    shadowColor: '#5F6974',
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    shadowOffset: {
+      width: 1,
+      height: 2,
+    },
+  },
+
+  input: {
+    minHeight: 50,
+
+    paddingHorizontal: 16,
+
+    color: '#3E4959',
+
+    fontFamily: fonts?.handwritten,
+    fontSize: 15,
+
+    backgroundColor: 'transparent',
+  },
+
+  bioPaper: {
+    backgroundColor: '#FCFAF5',
+
+    borderWidth: 1.5,
+    borderColor: '#87919A',
+
+    transform: [{ rotate: '0.25deg' }],
+  },
+
+  bioInput: {
+    minHeight: 108,
+
+    paddingTop: 13,
+    paddingBottom: 13,
+
+    lineHeight: 21,
+  },
+
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+
+    gap: 10,
   },
-  input: {
-    minHeight: componentSizes.inputHeight,
-    borderRadius: radii.input,
+
+  note: {
+    marginHorizontal: 8,
+
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+
+    flexDirection: 'row',
+    alignItems: 'center',
+
+    gap: 9,
+
+    backgroundColor: '#F7F5EF',
+
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    color: colors.text,
-    fontFamily: fonts?.sans,
-    fontSize: 16,
-    letterSpacing: 0,
+    borderStyle: 'dashed',
+    borderColor: '#A5ADB5',
   },
-  bioInput: {
-    minHeight: 96,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+
+  noteEmoji: {
+    color: '#66717E',
+
+    fontSize: 16,
+  },
+
+  noteText: {
+    flex: 1,
+
+    color: '#596573',
+
+    fontSize: 10,
+    lineHeight: 15,
+    fontFamily: fonts?.handwritten,
   },
 });

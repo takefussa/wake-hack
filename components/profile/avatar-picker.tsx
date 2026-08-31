@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/common/avatar';
 import { avatarOptions } from '@/constants/options';
@@ -12,11 +12,8 @@ type AvatarPickerProps = {
 
 export function AvatarPicker({ value, onChange }: AvatarPickerProps) {
   return (
-    <ScrollView
-      horizontal
-      contentContainerStyle={styles.container}
-      showsHorizontalScrollIndicator={false}>
-      {avatarOptions.map((avatar) => (
+    <View style={styles.container}>
+      {avatarOptions.slice(0, 4).map((avatar) => (
         <Pressable
           accessibilityRole="radio"
           accessibilityLabel={avatar.label}
@@ -24,18 +21,19 @@ export function AvatarPicker({ value, onChange }: AvatarPickerProps) {
           key={avatar.id}
           onPress={() => onChange(avatar.id)}
           style={({ pressed }) => pressed && styles.pressed}>
-          <Avatar avatarId={avatar.id} size={56} selected={value === avatar.id} />
+          <Avatar avatarId={avatar.id} size={42} selected={value === avatar.id} />
         </Pressable>
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    width: 96,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
-    paddingVertical: spacing.xs,
-    paddingRight: spacing.xl,
   },
   pressed: {
     opacity: 0.72,
