@@ -1,11 +1,11 @@
-import { avatarOptions, profileTagOptions, userTypeOptions } from '@/constants/options';
+import { avatarOptions, lifeRhythmOptions, userTypeOptions } from '@/constants/options';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { ProfileRepository } from '@/repositories/interfaces/profile-repository';
 import type {
   AvatarId,
   CreateProfileInput,
+  LifeRhythm,
   ProfileRow,
-  ProfileTag,
   UserProfile,
   UserType,
 } from '@/types';
@@ -21,8 +21,8 @@ function isUserType(value: string): value is UserType {
   return userTypeOptions.some((option) => option === value);
 }
 
-function isProfileTag(value: string): value is ProfileTag {
-  return profileTagOptions.some((option) => option === value);
+function isLifeRhythm(value: string): value is LifeRhythm {
+  return lifeRhythmOptions.some((option) => option === value);
 }
 
 function mapProfileRow(row: ProfileRow): UserProfile {
@@ -31,7 +31,7 @@ function mapProfileRow(row: ProfileRow): UserProfile {
     nickname: row.nickname,
     avatarId: isAvatarId(row.avatar_id) ? row.avatar_id : 'luna',
     userType: isUserType(row.user_type) ? row.user_type : 'その他',
-    tags: row.tags.filter(isProfileTag),
+    tags: row.tags.filter(isLifeRhythm),
     createdAt: row.created_at,
   };
 }

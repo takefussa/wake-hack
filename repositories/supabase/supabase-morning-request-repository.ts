@@ -1,9 +1,11 @@
 import { moodOptions, scheduleOptions, voiceStyleOptions } from '@/constants/options';
+import { logDevelopmentError } from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { MorningRequestRepository } from '@/repositories/interfaces/morning-request-repository';
 import { authService } from '@/services/auth-service';
 import type {
   MoodType,
+  CreateMorningRequestInput,
   MorningRequest,
   MorningRequestRow,
   MorningRequestStatus,
@@ -22,7 +24,10 @@ const requestStatuses: MorningRequestStatus[] = [
 ];
 
 function isSchedule(value: string): value is ScheduleType {
-  return scheduleOptions.some((option) => option === value);
+  return (
+    scheduleOptions.some((option) => option === value) ||
+    (value.startsWith('その他：') && value.slice('その他：'.length).trim().length > 0)
+  );
 }
 
 function isMood(value: string): value is MoodType {
@@ -78,6 +83,19 @@ function mapMorningRequestRow(row: MorningRequestRow): MorningRequest {
   };
 }
 
+function tryMapMorningRequestRow(row: MorningRequestRow): MorningRequest | null {
+  try {
+    return mapMorningRequestRow(row);
+  } catch (error) {
+    logDevelopmentError('morningRequest.mapRow', error);
+    return null;
+  }
+}
+
+function isMorningRequest(request: MorningRequest | null): request is MorningRequest {
+  return request !== null;
+}
+
 export class SupabaseMorningRequestRepository
   implements MorningRequestRepository
 {
@@ -105,6 +123,30 @@ export class SupabaseMorningRequestRepository
     return mapMorningRequestRow(data);
   }
 
+  async update(
+    id: string,
+    input: CreateMorningRequestInput
+  ): Promise<MorningRequest | null> {
+    const userId = authService.getAuthenticatedUserId();
+    const now = new Date().toISOString();
+    const { data, error } = await getSupabaseClient()
+      .from('morning_requests')
+      .update({
+        wake_at: toNextMorningIso(input.wakeAt),
+        schedules: input.schedules,
+        mood: input.mood,
+        preferred_voice_style: input.preferredVoiceStyle,
+        updated_at: now,
+      })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select(morningRequestColumns)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ? mapMorningRequestRow(data) : null;
+  }
+
   async getAvailableRequests(userId: string): Promise<MorningRequest[]> {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
@@ -117,7 +159,7 @@ export class SupabaseMorningRequestRepository
       .limit(24);
 
     if (error) throw error;
-    return data.map(mapMorningRequestRow);
+    return data.map(tryMapMorningRequestRow).filter(isMorningRequest);
   }
 
   async getById(id: string): Promise<MorningRequest | null> {

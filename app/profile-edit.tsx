@@ -13,7 +13,7 @@ import { goBackOrReplace } from '@/features/navigation/go-back';
 import { isProfileInputValid } from '@/features/profile/profile-form';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
-import type { AvatarId, ProfileTag, UpdateProfileInput, UserType } from '@/types';
+import type { AvatarId, LifeRhythm, UpdateProfileInput, UserType } from '@/types';
 
 export default function ProfileEditScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
@@ -25,7 +25,7 @@ export default function ProfileEditScreen() {
   const [nickname, setNickname] = useState(currentUser?.nickname ?? '');
   const [bio, setBio] = useState(currentUser?.bio ?? '');
   const [userType, setUserType] = useState<UserType | null>(currentUser?.userType ?? null);
-  const [tags, setTags] = useState<ProfileTag[]>(currentUser?.tags ?? []);
+  const [tags, setTags] = useState<LifeRhythm[]>(currentUser?.tags ?? []);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isSavingRef = useRef(false);
@@ -77,6 +77,23 @@ export default function ProfileEditScreen() {
       />
 
       <ProfileFields
+        step={1}
+        avatarId={avatarId}
+        bio={bio}
+        nickname={nickname}
+        onAvatarChange={setAvatarId}
+        onBioChange={setBio}
+        onNicknameChange={setNickname}
+        onProfileImageChange={setProfileImageUri}
+        onTagsChange={setTags}
+        onUserTypeChange={setUserType}
+        profileImageUri={profileImageUri}
+        tags={tags}
+        userType={userType}
+      />
+
+      <ProfileFields
+        step={2}
         avatarId={avatarId}
         bio={bio}
         nickname={nickname}

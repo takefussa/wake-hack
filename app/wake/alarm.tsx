@@ -91,7 +91,7 @@ export default function WakeAlarmScreen() {
       <View style={styles.voiceSection}>
         <AppText variant="sectionTitle" style={styles.centeredText}>
           {isCommunity
-            ? 'Wake Hackのみんなから'
+            ? 'オキタ！のみんなから'
             : `${senderName}さんから、あなたの朝へ`}
         </AppText>
         <WakeVoicePlayer

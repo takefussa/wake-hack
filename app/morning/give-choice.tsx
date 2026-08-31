@@ -53,7 +53,7 @@ export default function GiveChoiceScreen() {
   }
 
   function handleGive() {
-    runOnce(() => router.push('/morning/request-list'));
+    runOnce(() => router.replace('/(tabs)/connections'));
   }
 
   return (
