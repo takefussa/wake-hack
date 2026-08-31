@@ -14,7 +14,6 @@ export type PrototypePersistedState = {
   givenVoiceMessages: VoiceMessage[];
   assignedWakeVoice: VoiceMessage | null;
   wakeSession: WakeSession | null;
-  wakeMissionProgress: number;
   thanksMessages: ThanksMessage[];
   friendships: Friendship[];
 };
