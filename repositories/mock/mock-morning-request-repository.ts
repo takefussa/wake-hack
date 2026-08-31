@@ -1,6 +1,6 @@
 import { mockMorningRequests } from '@/data/mock-requests';
 import type { MorningRequestRepository } from '@/repositories/interfaces/morning-request-repository';
-import type { MorningRequest } from '@/types';
+import type { CreateMorningRequestInput, MorningRequest } from '@/types';
 
 function createInitialRequests(): MorningRequest[] {
   return mockMorningRequests.map((request) => ({
@@ -20,6 +20,13 @@ export class MockMorningRequestRepository implements MorningRequestRepository {
       this.requests.push(request);
     }
     return { ...request, schedules: [...request.schedules] };
+  }
+
+  async update(
+    id: string,
+    input: CreateMorningRequestInput
+  ): Promise<MorningRequest | null> {
+    return this.patchRequest(id, input);
   }
 
   async getAvailableRequests(userId: string): Promise<MorningRequest[]> {
@@ -46,11 +53,11 @@ export class MockMorningRequestRepository implements MorningRequestRepository {
   }
 
   async markPersonalEligible(id: string): Promise<MorningRequest | null> {
-    return this.updateRequest(id, { personalEligible: true });
+    return this.patchRequest(id, { personalEligible: true });
   }
 
   async markCommunityReady(id: string): Promise<MorningRequest | null> {
-    return this.updateRequest(id, {
+    return this.patchRequest(id, {
       personalEligible: false,
       status: 'voice_assigned',
     });
@@ -60,7 +67,7 @@ export class MockMorningRequestRepository implements MorningRequestRepository {
     this.requests = createInitialRequests();
   }
 
-  private updateRequest(
+  private patchRequest(
     id: string,
     values: Partial<MorningRequest>
   ): MorningRequest | null {
