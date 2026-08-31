@@ -20,7 +20,7 @@ export default function WakeAlarmScreen() {
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
   const cancelWakeSession = useAppStore((state) => state.cancelWakeSession);
-  const startWakeMission = useAppStore((state) => state.startWakeMission);
+  const completeWakeSession = useAppStore((state) => state.completeWakeSession);
   const sender = useVoiceSender(assignedWakeVoice);
   const runOnce = useTapLock();
   const stopPlaybackRef = useRef<() => void>(() => undefined);
@@ -42,9 +42,6 @@ export default function WakeAlarmScreen() {
   ) {
     return <Redirect href="/morning/ready" />;
   }
-  if (wakeSession.status === 'mission') {
-    return <Redirect href="/wake/mission" />;
-  }
   if (wakeSession.status === 'completed') {
     return <Redirect href="/wake/complete" />;
   }
@@ -55,8 +52,8 @@ export default function WakeAlarmScreen() {
   function handleWakeUp() {
     runOnce(() => {
       stopPlaybackRef.current();
-      startWakeMission();
-      router.replace('/wake/mission');
+      completeWakeSession();
+      router.replace('/wake/complete');
     });
   }
 

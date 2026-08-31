@@ -7,6 +7,8 @@ export type ScheduleType =
   | '仕事'
   | '朝活'
   | '旅行'
+  | 'その他'
+  | `その他：${string}`
   | '特にない';
 
 export type MoodType = '少し憂鬱' | '緊張している' | '疲れている' | '普通' | '楽しみ';

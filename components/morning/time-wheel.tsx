@@ -3,7 +3,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
-import { colors, componentSizes, fonts, radii, spacing } from '@/constants/theme';
+import { componentSizes, fonts, radii, spacing } from '@/constants/theme';
 
 const visibleRows = 5;
 const itemHeight = componentSizes.timeWheelItem;
@@ -77,7 +77,10 @@ function WheelColumn({ accessibilityLabel, items, value, onChange }: WheelColumn
             <AppText
               variant="displayNumber"
               tone={selected ? 'dark' : 'muted'}
-              style={styles.wheelNumber}>
+              style={[
+                styles.wheelNumber,
+                selected && styles.wheelNumberSelected,
+              ]}>
               {item}
             </AppText>
           </Pressable>
@@ -121,27 +124,29 @@ export function TimeWheel({ value, onChange }: TimeWheelProps) {
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     height: wheelHeight,
     borderRadius: radii.card,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: '#FCF8EA',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-evenly',
     overflow: 'hidden',
   },
   selection: {
     position: 'absolute',
     top: wheelPadding,
-    left: spacing.xl,
-    right: spacing.xl,
+    left: spacing.md,
+    right: spacing.md,
     height: itemHeight,
     borderRadius: radii.input,
-    backgroundColor: colors.indigoSoft,
+    backgroundColor: '#DCE8ED',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#A8C4CF',
   },
   wheel: {
-    width: 84,
+    width: 100,
     height: wheelHeight,
     flexGrow: 0,
   },
@@ -155,11 +160,15 @@ const styles = StyleSheet.create({
   },
   wheelNumber: {
     fontFamily: fonts?.rounded,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 34,
+    lineHeight: 42,
+    color: '#8A918B',
+  },
+  wheelNumberSelected: {
+    color: '#263F36',
   },
   colon: {
-    width: 28,
+    width: 32,
     height: itemHeight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -167,7 +176,7 @@ const styles = StyleSheet.create({
   },
   colonText: {
     fontFamily: fonts?.rounded,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 34,
+    lineHeight: 42,
   },
 });

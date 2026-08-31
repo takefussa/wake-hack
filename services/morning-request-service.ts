@@ -38,6 +38,31 @@ export class MorningRequestService {
     }
   }
 
+  async updateRequest(
+    request: MorningRequest,
+    input: CreateMorningRequestInput
+  ): Promise<MorningRequest> {
+    if (!isSupabaseUuid(request.id)) {
+      return {
+        ...request,
+        ...input,
+        schedules: [...input.schedules],
+      };
+    }
+
+    try {
+      const updatedRequest = await this.repository.update(request.id, input);
+
+      if (!updatedRequest) {
+        throw new Error('Morning request not found');
+      }
+      return updatedRequest;
+    } catch (error) {
+      logDevelopmentError('morningRequest.update', error);
+      throw error;
+    }
+  }
+
   async getAvailableRequests(
     userId: string,
     currentRequestId?: string

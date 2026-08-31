@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +23,12 @@ import { goBackOrReplace } from '@/features/navigation/go-back';
 import { morningRequestService } from '@/services/morning-request-service';
 import { useAppStore } from '@/store/use-app-store';
 import type { MoodType, ScheduleType, VoiceStyle } from '@/types';
+
+const customSchedulePrefix = 'その他：';
+
+function isCustomSchedule(schedule: ScheduleType) {
+  return schedule.startsWith(customSchedulePrefix);
+}
 
 type PaperChoiceProps = {
   label: string;
@@ -66,10 +73,21 @@ export default function TomorrowConditionScreen() {
   const morningRequestDraft = useAppStore((state) => state.morningRequestDraft);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const setMorningRequest = useAppStore((state) => state.setMorningRequest);
+  const replaceMorningRequest = useAppStore((state) => state.replaceMorningRequest);
 
-  const [schedules, setSchedules] = useState<ScheduleType[]>([
-    ...(currentMorningRequest?.schedules ?? demoMorningDefaults.schedules),
-  ]);
+  const savedSchedules =
+    currentMorningRequest?.schedules ?? demoMorningDefaults.schedules;
+  const [schedules, setSchedules] = useState<ScheduleType[]>(() =>
+    savedSchedules.map((schedule) =>
+      isCustomSchedule(schedule) ? 'その他' : schedule
+    )
+  );
+  const [customSchedule, setCustomSchedule] = useState(
+    () =>
+      savedSchedules
+        .find(isCustomSchedule)
+        ?.slice(customSchedulePrefix.length) ?? ''
+  );
 
   const [mood, setMood] = useState<MoodType | null>(
     currentMorningRequest?.mood ?? demoMorningDefaults.mood
@@ -96,6 +114,7 @@ export default function TomorrowConditionScreen() {
 
   const canSubmit =
     schedules.length > 0 &&
+    (!schedules.includes('その他') || customSchedule.trim().length > 0) &&
     mood !== null &&
     voiceStyle !== null;
 
@@ -107,15 +126,29 @@ export default function TomorrowConditionScreen() {
     setError(null);
 
     try {
-      const request = await morningRequestService.createRequest(currentUserId, {
+      const normalizedSchedules = schedules.map((schedule) =>
+        schedule === 'その他'
+          ? `${customSchedulePrefix}${customSchedule.trim()}` as ScheduleType
+          : schedule
+      );
+      const input = {
         wakeAt,
-        schedules,
+        schedules: normalizedSchedules,
         mood,
         preferredVoiceStyle: voiceStyle,
-      });
+      };
 
-      setMorningRequest(request);
-      router.push('/morning/give-choice');
+      const request = currentMorningRequest
+        ? await morningRequestService.updateRequest(currentMorningRequest, input)
+        : await morningRequestService.createRequest(currentUserId, input);
+
+      if (currentMorningRequest) {
+        replaceMorningRequest(request);
+        router.replace('/morning/summary');
+      } else {
+        setMorningRequest(request);
+        router.replace('/morning/summary');
+      }
     } catch {
       setError(
         '明日の朝を保存できませんでした。もう一度お試しください。'
@@ -141,15 +174,35 @@ export default function TomorrowConditionScreen() {
 
       <ScrollView
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        style={styles.scroll}
       >
-        <Pressable
-          onPress={() => goBackOrReplace('/morning/setup')}
-          style={styles.backButton}
-        >
-          <Ionicons name="chevron-back" size={25} color="#30463E" />
-          <AppText style={styles.backText}>戻る</AppText>
-        </Pressable>
+        <View style={styles.topNavigation}>
+          <Pressable
+            hitSlop={10}
+            onPress={() => goBackOrReplace('/morning/setup')}
+            style={styles.backButton}
+          >
+            <Ionicons name="chevron-back" size={25} color="#30463E" />
+            <AppText style={styles.backText}>戻る</AppText>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSaving}
+            hitSlop={10}
+            onPress={() => void handleSubmit()}
+            style={({ pressed }) => [
+              styles.skipButton,
+              isSaving && styles.submitDisabled,
+              pressed && styles.pressed,
+            ]}
+            testID="condition-skip"
+          >
+            <AppText style={styles.skipText}>スキップ</AppText>
+          </Pressable>
+        </View>
 
         <View style={[styles.stepTape, styles.pinkStep]}>
           <AppText style={styles.stepText}>明日の朝　2 / 2</AppText>
@@ -198,6 +251,24 @@ export default function TomorrowConditionScreen() {
               />
             ))}
           </View>
+
+          {schedules.includes('その他') ? (
+            <View style={styles.customSchedulePaper}>
+              <AppText style={styles.customScheduleLabel}>
+                その他の予定
+              </AppText>
+              <TextInput
+                maxLength={40}
+                onChangeText={setCustomSchedule}
+                placeholder="例：病院、部活、友達と約束"
+                placeholderTextColor="#979B91"
+                returnKeyType="done"
+                style={styles.customScheduleInput}
+                testID="custom-schedule-input"
+                value={customSchedule}
+              />
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.sectionPaper}>
@@ -251,6 +322,9 @@ export default function TomorrowConditionScreen() {
           </View>
         ) : null}
 
+      </ScrollView>
+
+      <View style={styles.submitFooter}>
         <Pressable
           disabled={!canSubmit || isSaving}
           onPress={() => void handleSubmit()}
@@ -262,14 +336,18 @@ export default function TomorrowConditionScreen() {
           testID="condition-submit"
         >
           <AppText style={styles.submitText}>
-            {isSaving ? '保存しています…' : '明日の朝を決める'}
+            {isSaving
+              ? '保存しています…'
+              : currentMorningRequest
+                ? '編集を確定する'
+                : '明日の朝を決める'}
           </AppText>
 
           {!isSaving ? (
             <Ionicons name="arrow-forward" size={28} color="#30463E" />
           ) : null}
         </Pressable>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -300,20 +378,44 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 28,
     paddingTop: 12,
-    paddingBottom: 44,
+    paddingBottom: 28,
+  },
+
+  scroll: {
+    flex: 1,
+  },
+
+  topNavigation: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
 
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginBottom: 20,
     marginLeft: -8,
   },
 
   backText: {
     color: '#30463E',
     fontSize: 17,
+  },
+
+  skipButton: {
+    minHeight: 36,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  skipText: {
+    color: '#30463E',
+    fontSize: 14,
+    borderBottomWidth: 2,
+    borderBottomColor: '#EDB7B0',
   },
 
   stepTape: {
@@ -498,6 +600,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  customSchedulePaper: {
+    marginTop: 14,
+    padding: 12,
+    backgroundColor: '#F5F2DC',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#A9B593',
+  },
+
+  customScheduleLabel: {
+    marginBottom: 7,
+    color: '#566259',
+    fontSize: 13,
+  },
+
+  customScheduleInput: {
+    minHeight: 48,
+    paddingHorizontal: 13,
+    color: '#30463E',
+    fontSize: 16,
+    fontFamily: 'Tegaki851',
+    backgroundColor: '#FFFDF7',
+    borderWidth: 1,
+    borderColor: '#B9B5A5',
+  },
+
   errorPaper: {
     marginTop: 20,
     marginHorizontal: 15,
@@ -520,10 +648,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
+  submitFooter: {
+    paddingHorizontal: 28,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: 'rgba(247, 240, 222, 0.97)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(166, 151, 125, 0.42)',
+  },
+
   submitButton: {
-    marginTop: 24,
-    marginHorizontal: 16,
-    minHeight: 72,
+    minHeight: 62,
     paddingHorizontal: 28,
     flexDirection: 'row',
     alignItems: 'center',
