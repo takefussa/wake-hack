@@ -3,7 +3,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
-import { colors, componentSizes, fonts, radii, spacing } from '@/constants/theme';
+import { componentSizes, fonts, radii, spacing } from '@/constants/theme';
 
 const visibleRows = 5;
 const itemHeight = componentSizes.timeWheelItem;
