@@ -64,18 +64,19 @@ function PaperChoice({
 export default function TomorrowConditionScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const morningRequestDraft = useAppStore((state) => state.morningRequestDraft);
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const setMorningRequest = useAppStore((state) => state.setMorningRequest);
 
   const [schedules, setSchedules] = useState<ScheduleType[]>([
-    ...demoMorningDefaults.schedules,
+    ...(currentMorningRequest?.schedules ?? demoMorningDefaults.schedules),
   ]);
 
   const [mood, setMood] = useState<MoodType | null>(
-    demoMorningDefaults.mood
+    currentMorningRequest?.mood ?? demoMorningDefaults.mood
   );
 
   const [voiceStyle, setVoiceStyle] = useState<VoiceStyle | null>(
-    demoMorningDefaults.preferredVoiceStyle
+    currentMorningRequest?.preferredVoiceStyle ?? demoMorningDefaults.preferredVoiceStyle
   );
 
   const [isSaving, setIsSaving] = useState(false);

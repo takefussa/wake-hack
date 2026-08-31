@@ -84,9 +84,7 @@ function BoomboxCard({ request, wakeVoice, onPress }: BoomboxCardProps) {
   const [now, setNow] = useState(() => new Date());
   const isReady = wakeVoice !== null;
   const { dateLabel, relativeDayLabel } = getWakeDayDisplay(request, now);
-  const buttonLabel = !request
-    ? '明日の朝をセットする'
-    : isReady ? '準備した内容を見る' : 'リクエストを確認する';
+  const buttonLabel = isReady ? '準備した内容を見る' : '明日の朝をセットする';
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000);
@@ -173,11 +171,11 @@ export default function HomeScreen() {
 
   function handleMorningAction() {
     runOnce(() => {
-      if (!currentMorningRequest) {
-        router.push('/morning/setup');
+      if (assignedWakeVoice) {
+        router.push('/morning/ready');
         return;
       }
-      router.push(assignedWakeVoice ? '/morning/ready' : '/morning/give-choice');
+      router.push('/morning/setup');
     });
   }
 
