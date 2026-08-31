@@ -39,10 +39,14 @@ function isUserProfile(profile: UserProfile | null): profile is UserProfile {
 
 // cassette 画像比率(880x561)から算出したカード1件分の高さの目安
 const CASSETTE_ASPECT_RATIO = 880 / 561;
-const CASSETTE_MARGIN_BOTTOM = 18;
+const CASSETTE_MARGIN_BOTTOM = 1;
 const PAGE_CONTENT_HORIZONTAL_PADDING = 24;
 const PAGE_CONTENT_BASE_BOTTOM_PADDING = 120;
-const CASSETTE_MIN_SCALE = 0.85;
+const CASSETTE_MIN_SCALE = 0.7;
+const CASSETTE_MIN_OPACITY = 0.4;
+// 焦点からこの割合(0〜1)までは等倍/不透明度を保ち、そこから先で端に向けて縮小・かすませる
+const CASSETTE_SCALE_PLATEAU_RATIO = 0.3;
+const CASSETTE_OPACITY_PLATEAU_RATIO = 0.6;
 
 function VoiceOptionsPanel({ options }: { options: readonly string[] }) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -130,18 +134,40 @@ export default function ConnectionsScreen() {
       personalViewportHeight - cassetteItemHeight - personalContentTopPadding
     );
 
-  function getCassetteScale(index: number) {
+  function getCassetteFocusInputRange(index: number) {
     const cardCenter =
       personalContentTopPadding + index * cassetteItemHeight + cassetteHeight / 2;
     const focusScrollY = cardCenter - screenCenterInViewport;
 
+    return [
+      focusScrollY - cassetteItemHeight,
+      focusScrollY,
+      focusScrollY + cassetteItemHeight,
+    ];
+  }
+
+  function getCassettePlateauInputRange(index: number, plateauRatio: number) {
+    const [rangeStart, focusScrollY, rangeEnd] = getCassetteFocusInputRange(index);
+    const plateauBefore =
+      focusScrollY - (focusScrollY - rangeStart) * plateauRatio;
+    const plateauAfter =
+      focusScrollY + (rangeEnd - focusScrollY) * plateauRatio;
+
+    return [rangeStart, plateauBefore, plateauAfter, rangeEnd];
+  }
+
+  function getCassetteScale(index: number) {
     return personalScrollY.interpolate({
-      inputRange: [
-        focusScrollY - cassetteItemHeight,
-        focusScrollY,
-        focusScrollY + cassetteItemHeight,
-      ],
-      outputRange: [CASSETTE_MIN_SCALE, 1, CASSETTE_MIN_SCALE],
+      inputRange: getCassettePlateauInputRange(index, CASSETTE_SCALE_PLATEAU_RATIO),
+      outputRange: [CASSETTE_MIN_SCALE, 1, 1, CASSETTE_MIN_SCALE],
+      extrapolate: 'clamp',
+    });
+  }
+
+  function getCassetteOpacity(index: number) {
+    return personalScrollY.interpolate({
+      inputRange: getCassettePlateauInputRange(index, CASSETTE_OPACITY_PLATEAU_RATIO),
+      outputRange: [CASSETTE_MIN_OPACITY, 1, 1, CASSETTE_MIN_OPACITY],
       extrapolate: 'clamp',
     });
   }
@@ -446,6 +472,7 @@ export default function ConnectionsScreen() {
                     style={[
                       styles.cassette,
                       {
+                        opacity: getCassetteOpacity(index),
                         transform: [
                           { rotate: index % 2 === 0 ? '-0.25deg' : '0.25deg' },
                           { scale: getCassetteScale(index) },
@@ -715,7 +742,7 @@ const styles = StyleSheet.create({
   },
 
   cassetteTouchable: {
-    marginBottom: 18,
+    marginBottom: CASSETTE_MARGIN_BOTTOM,
   },
 
   cassette: {
