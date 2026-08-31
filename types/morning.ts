@@ -11,7 +11,7 @@ export type ScheduleType =
 
 export type MoodType = '少し憂鬱' | '緊張している' | '疲れている' | '普通' | '楽しみ';
 
-export type VoiceStyle = '優しく' | '明るく' | '背中を押して' | '面白く' | '落ち着いて';
+export type VoiceStyle = 'そっと優しく' | '明るく元気に' | '渇を入れて' | '面白く愉快に';
 
 export type MorningRequestStatus = 'draft' | 'open' | 'voice_assigned' | 'completed';
 

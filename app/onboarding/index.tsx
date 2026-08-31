@@ -169,7 +169,6 @@ const styles = StyleSheet.create({
     color: '#30463E',
     fontSize: 27,
     lineHeight: 37,
-    fontWeight: '800',
     textAlign: 'center',
     zIndex: 1,
   },
@@ -240,7 +239,6 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#30463E',
     fontSize: 13,
-    fontWeight: '600',
   },
 
   nextButton: {
@@ -268,7 +266,6 @@ const styles = StyleSheet.create({
   nextButtonText: {
     color: '#30463E',
     fontSize: 18,
-    fontWeight: '700',
     letterSpacing: 2,
   },
 });

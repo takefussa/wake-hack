@@ -6,7 +6,6 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
-import { Avatar } from '@/components/common/avatar';
 import { Waveform } from '@/components/common/waveform';
 import { fonts, shadows, spacing } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
@@ -30,13 +29,8 @@ function NotebookBackground({ children }: PropsWithChildren) {
 function HomeHeader({ user }: { user: UserProfile }) {
   return (
     <View style={styles.header}>
-      <View>
-        <AppText style={styles.eyebrow}>オキタ！</AppText>
-        <AppText style={styles.headerTitle}>こんばんは、{user.nickname}さん</AppText>
-      </View>
-      <View style={styles.avatarFrame}>
-        <Avatar avatarId={user.avatarId} imageUri={user.profileImageUri} name={user.nickname} size={44} />
-      </View>
+      <AppText style={styles.eyebrow}>オキタ！</AppText>
+      <AppText style={styles.headerTitle}>こんばんは、{user.nickname}さん</AppText>
     </View>
   );
 }
@@ -203,20 +197,19 @@ const styles = StyleSheet.create({
   paperLine: { height: 32, borderBottomWidth: 1, borderBottomColor: 'rgba(92,135,144,0.16)' },
   marginLine: { position: 'absolute', top: 0, bottom: 0, left: 28, width: 1, backgroundColor: 'rgba(194,94,74,0.28)' },
   content: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.xxl },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg },
-  eyebrow: { color: '#A2543D', fontSize: 10, lineHeight: 14, fontWeight: '800', letterSpacing: 1.7 },
-  headerTitle: { color: '#344239', fontFamily: fonts?.rounded, fontSize: 23, lineHeight: 32, fontWeight: '700', marginTop: 2 },
-  avatarFrame: { padding: 3, borderWidth: 1.5, borderColor: '#687867', borderRadius: 26, backgroundColor: '#FFF9E9', transform: [{ rotate: '2deg' }] },
+  header: { gap: spacing.lg },
+  eyebrow: { color: '#A2543D', fontSize: 10, lineHeight: 14, letterSpacing: 1.7 },
+  headerTitle: { color: '#344239', fontFamily: fonts?.rounded, fontSize: 23, lineHeight: 32, marginTop: 2 },
   memoWrap: { alignSelf: 'center', width: '92%', transform: [{ rotate: '-1.5deg' }] },
   tape: { position: 'absolute', zIndex: 1, top: -10, left: '37%', width: 78, height: 22, backgroundColor: 'rgba(218,190,126,0.55)', transform: [{ rotate: '2deg' }] },
   memo: { paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, backgroundColor: '#FFF6C9', ...shadows.surface },
-  memoText: { color: '#4E5142', fontFamily: fonts?.rounded, fontSize: 19, lineHeight: 28, fontWeight: '700', textAlign: 'center' },
+  memoText: { color: '#4E5142', fontFamily: fonts?.rounded, fontSize: 19, lineHeight: 28, textAlign: 'center' },
   memoUnderline: { alignSelf: 'center', width: 176, height: 2, marginTop: 5, backgroundColor: 'rgba(181,87,61,0.42)' },
   boomboxShadow: { borderRadius: 18, backgroundColor: '#B07943', paddingBottom: 6, transform: [{ rotate: '0.4deg' }], ...shadows.surface },
   boombox: { padding: spacing.lg, borderWidth: 2, borderColor: '#404A40', borderRadius: 18, backgroundColor: '#687463', gap: spacing.lg },
   boomboxTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { color: '#FFF5D9', fontSize: 12, lineHeight: 16, fontWeight: '900', letterSpacing: 1.8 },
-  modelNumber: { color: '#CED1B9', fontSize: 8, lineHeight: 12, fontWeight: '600', letterSpacing: 1 },
+  brand: { color: '#FFF5D9', fontSize: 12, lineHeight: 16, letterSpacing: 1.8 },
+  modelNumber: { color: '#CED1B9', fontSize: 8, lineHeight: 12, letterSpacing: 1 },
   knobs: { flexDirection: 'row', gap: spacing.md },
   knob: { width: 21, height: 21, borderWidth: 3, borderColor: '#30382F', borderRadius: 11, backgroundColor: '#D6C493' },
   boomboxBody: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
@@ -226,23 +219,23 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   statusLight: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D18A55' },
   statusLightReady: { backgroundColor: '#A8CE8A' },
-  statusText: { color: '#C3C9A8', fontSize: 8, lineHeight: 11, fontWeight: '700', letterSpacing: 1 },
-  time: { color: '#F3D685', fontFamily: fonts?.rounded, fontSize: 35, lineHeight: 41, fontWeight: '700', letterSpacing: 2 },
-  schedule: { color: '#D7DBC3', fontSize: 10, lineHeight: 14, fontWeight: '600' },
+  statusText: { color: '#C3C9A8', fontSize: 8, lineHeight: 11, letterSpacing: 1 },
+  time: { color: '#F3D685', fontFamily: fonts?.rounded, fontSize: 35, lineHeight: 41, letterSpacing: 2 },
+  schedule: { color: '#D7DBC3', fontSize: 10, lineHeight: 14 },
   waveformBox: { marginTop: spacing.sm, overflow: 'hidden' },
   actionButton: { minHeight: 52, paddingHorizontal: spacing.md, borderRadius: 9, backgroundColor: '#B6533D', flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   actionButtonPressed: { backgroundColor: '#98432F', transform: [{ translateY: 1 }] },
   playButton: { width: 31, height: 31, borderWidth: 1, borderColor: '#F4D7B1', borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  actionLabel: { flex: 1, color: '#FFF8E8', fontSize: 15, lineHeight: 21, fontWeight: '700' },
+  actionLabel: { flex: 1, color: '#FFF8E8', fontSize: 15, lineHeight: 21 },
   timeline: { position: 'relative', paddingTop: spacing.sm },
   timelineTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xl },
   titleRule: { flex: 1, height: 1, backgroundColor: '#9C9A7A' },
-  timelineTitle: { color: '#8B5948', fontSize: 10, lineHeight: 14, fontWeight: '800', letterSpacing: 1.8 },
+  timelineTitle: { color: '#8B5948', fontSize: 10, lineHeight: 14, letterSpacing: 1.8 },
   timelineTrack: { position: 'absolute', top: 69, left: '16%', right: '16%', height: 2, backgroundColor: '#A29A79' },
   timelineSteps: { flexDirection: 'row', justifyContent: 'space-between' },
   timelineStep: { width: '31%', alignItems: 'center' },
   cassetteReel: { width: 54, height: 54, padding: 6, borderWidth: 2, borderColor: '#6D765F', borderRadius: 27, backgroundColor: '#E5D8B6' },
   reelCenter: { flex: 1, borderWidth: 1, borderColor: '#8E947C', borderRadius: 20, backgroundColor: '#F8EED3', alignItems: 'center', justifyContent: 'center' },
-  stepNumber: { color: '#9C513D', fontSize: 9, lineHeight: 13, fontWeight: '800', letterSpacing: 1, marginTop: spacing.sm },
-  stepCopy: { color: '#4E594D', fontSize: 11, lineHeight: 16, fontWeight: '600', textAlign: 'center', marginTop: 2 },
+  stepNumber: { color: '#9C513D', fontSize: 9, lineHeight: 13, letterSpacing: 1, marginTop: spacing.sm },
+  stepCopy: { color: '#4E594D', fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 2 },
 });
