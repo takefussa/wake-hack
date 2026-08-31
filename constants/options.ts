@@ -37,6 +37,7 @@ export const scheduleOptions: ScheduleType[] = [
   '仕事',
   '朝活',
   '旅行',
+  'その他',
   '特にない',
 ];
 

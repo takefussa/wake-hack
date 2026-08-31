@@ -76,7 +76,7 @@ function BoomboxCard({ request, wakeVoice, onPress }: BoomboxCardProps) {
   const [now, setNow] = useState(() => new Date());
   const isReady = wakeVoice !== null;
   const { dateLabel, relativeDayLabel } = getWakeDayDisplay(request, now);
-  const buttonLabel = isReady ? '準備した内容を見る' : '明日の朝をセットする';
+  const buttonLabel = request ? '朝を確認する' : '設定する';
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000);
@@ -109,6 +109,11 @@ function BoomboxCard({ request, wakeVoice, onPress }: BoomboxCardProps) {
             <AppText numberOfLines={1} style={styles.schedule}>
               {request ? request.schedules.join(' ・ ') : '明日の予定を録音しよう'}
             </AppText>
+            {request ? (
+              <AppText numberOfLines={1} style={styles.morningDetails}>
+                {request.mood} ・ {request.preferredVoiceStyle}
+              </AppText>
+            ) : null}
             <View style={styles.waveformBox}>
               <Waveform color={isReady ? '#E6A451' : '#8B927B'} height={25} levels={[6, 12, 20, 9, 16, 23, 11, 18, 7, 14, 21, 9]} />
             </View>
@@ -162,13 +167,11 @@ export default function HomeScreen() {
   if (!currentUser) return <Redirect href="/onboarding" />;
 
   function handleMorningAction() {
-    runOnce(() => {
-      if (assignedWakeVoice) {
-        router.push('/morning/ready');
-        return;
-      }
-      router.push('/morning/setup');
-    });
+    runOnce(() =>
+      router.push(
+        currentMorningRequest ? '/morning/summary' : '/morning/setup'
+      )
+    );
   }
 
   return (
@@ -209,6 +212,7 @@ const styles = StyleSheet.create({
   statusText: { color: '#C3C9A8', fontSize: 8, lineHeight: 11, letterSpacing: 1 },
   time: { color: '#F3D685', fontFamily: fonts?.rounded, fontSize: 35, lineHeight: 41, letterSpacing: 2 },
   schedule: { color: '#D7DBC3', fontSize: 10, lineHeight: 14 },
+  morningDetails: { color: '#AFC0A9', fontSize: 9, lineHeight: 13, marginTop: 2 },
   waveformBox: { marginTop: spacing.sm, overflow: 'hidden' },
   actionButton: { minHeight: 52, paddingHorizontal: spacing.md, borderRadius: 9, backgroundColor: '#B6533D', flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   actionButtonPressed: { backgroundColor: '#98432F', transform: [{ translateY: 1 }] },
