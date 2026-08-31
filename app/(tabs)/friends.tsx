@@ -81,7 +81,7 @@ export default function FriendsScreen() {
       {isLoading ? <LoadingState label="朝のつながりを読み込んでいます" /> : null}
       {!isLoading && friends.length === 0 ? (
         <View style={styles.emptyState}>
-          <AppText variant="bodyMedium">まだ朝フレンドはいません</AppText>
+          <AppText variant="bodyMedium">まだオキメイトはいません</AppText>
           <AppText variant="secondary" tone="soft">
             良い声の体験があったときだけ、無理なくつながれます。
           </AppText>
