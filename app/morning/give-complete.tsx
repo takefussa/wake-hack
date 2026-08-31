@@ -73,7 +73,7 @@ export default function GiveCompleteScreen() {
     return <Redirect href="/morning/setup" />;
   }
   if (!requestId || !completedVoice) {
-    return <Redirect href="/morning/request-list" />;
+    return <Redirect href="/(tabs)/connections" />;
   }
 
   function navigateOnce(action: () => void) {
@@ -129,7 +129,7 @@ export default function GiveCompleteScreen() {
               icon="people-outline"
               label="もう1人応援する"
               onPress={() =>
-                navigateOnce(() => router.dismissTo('/morning/request-list', {}))
+                navigateOnce(() => router.replace('/(tabs)/connections'))
               }
               testID="give-another"
             />

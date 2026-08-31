@@ -118,7 +118,7 @@ export default function TomorrowReadyScreen() {
           <AppButton
             icon="mic-outline"
             label="やっぱり誰かに声を届ける"
-            onPress={() => runOnce(() => router.push('/morning/request-list'))}
+            onPress={() => runOnce(() => router.push('/(tabs)/connections'))}
             variant="textOnDark"
           />
         ) : null}

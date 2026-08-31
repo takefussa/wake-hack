@@ -46,18 +46,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="timeline"
-        options={{
-          title: 'タイムライン',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon color={color} focused={focused} name="list" />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="connections"
         options={{
-          title: 'つながり',
+          title: '起こす',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon color={color} focused={focused} name="people" />
           ),
