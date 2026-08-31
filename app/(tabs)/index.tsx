@@ -6,12 +6,11 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
-import { Avatar } from '@/components/common/avatar';
 import { Waveform } from '@/components/common/waveform';
 import { fonts, shadows, spacing } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useAppStore } from '@/store/use-app-store';
-import type { MorningRequest, UserProfile, VoiceMessage } from '@/types';
+import type { MorningRequest, VoiceMessage } from '@/types';
 
 function NotebookBackground({ children }: PropsWithChildren) {
   return (
@@ -27,26 +26,13 @@ function NotebookBackground({ children }: PropsWithChildren) {
   );
 }
 
-function HomeHeader({ user }: { user: UserProfile }) {
-  return (
-    <View style={styles.header}>
-      <View>
-        <AppText style={styles.eyebrow}>オキタ！</AppText>
-        <AppText style={styles.headerTitle}>こんばんは、{user.nickname}さん</AppText>
-      </View>
-      <View style={styles.avatarFrame}>
-        <Avatar avatarId={user.avatarId} imageUri={user.profileImageUri} name={user.nickname} size={44} />
-      </View>
-    </View>
-  );
-}
-
-function MemoNote({ children }: PropsWithChildren) {
+function MemoNote({ name }: { name: string }) {
   return (
     <View style={styles.memoWrap}>
       <View style={styles.tape} />
       <View style={styles.memo}>
-        <AppText style={styles.memoText}>{children}</AppText>
+        <AppText style={styles.memoGreeting}>こんばんは、{name}さん</AppText>
+        <AppText style={styles.memoText}>明日も、いい朝にしよう</AppText>
         <View style={styles.memoUnderline} />
       </View>
     </View>
@@ -189,8 +175,7 @@ export default function HomeScreen() {
 
   return (
     <NotebookBackground>
-      <HomeHeader user={currentUser} />
-      <MemoNote>明日も、いい朝にしよう</MemoNote>
+      <MemoNote name={currentUser.nickname} />
       <BoomboxCard request={currentMorningRequest} wakeVoice={assignedWakeVoice} onPress={handleMorningAction} />
       <CassetteTimeline />
     </NotebookBackground>
@@ -202,14 +187,11 @@ const styles = StyleSheet.create({
   paperLines: { ...StyleSheet.absoluteFillObject, top: 48 },
   paperLine: { height: 32, borderBottomWidth: 1, borderBottomColor: 'rgba(92,135,144,0.16)' },
   marginLine: { position: 'absolute', top: 0, bottom: 0, left: 28, width: 1, backgroundColor: 'rgba(194,94,74,0.28)' },
-  content: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.xxl },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg },
-  eyebrow: { color: '#A2543D', fontSize: 10, lineHeight: 14, fontWeight: '800', letterSpacing: 1.7 },
-  headerTitle: { color: '#344239', fontFamily: fonts?.rounded, fontSize: 23, lineHeight: 32, fontWeight: '700', marginTop: 2 },
-  avatarFrame: { padding: 3, borderWidth: 1.5, borderColor: '#687867', borderRadius: 26, backgroundColor: '#FFF9E9', transform: [{ rotate: '2deg' }] },
+  content: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxxl, paddingBottom: spacing.xxxl, gap: spacing.xxl },
   memoWrap: { alignSelf: 'center', width: '92%', transform: [{ rotate: '-1.5deg' }] },
   tape: { position: 'absolute', zIndex: 1, top: -10, left: '37%', width: 78, height: 22, backgroundColor: 'rgba(218,190,126,0.55)', transform: [{ rotate: '2deg' }] },
-  memo: { paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, backgroundColor: '#FFF6C9', ...shadows.surface },
+  memo: { paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, backgroundColor: '#FFF6C9', alignItems: 'center', ...shadows.surface },
+  memoGreeting: { color: '#7B6352', fontFamily: fonts?.rounded, fontSize: 14, lineHeight: 21, fontWeight: '700', marginBottom: spacing.xs },
   memoText: { color: '#4E5142', fontFamily: fonts?.rounded, fontSize: 19, lineHeight: 28, fontWeight: '700', textAlign: 'center' },
   memoUnderline: { alignSelf: 'center', width: 176, height: 2, marginTop: 5, backgroundColor: 'rgba(181,87,61,0.42)' },
   boomboxShadow: { borderRadius: 18, backgroundColor: '#B07943', paddingBottom: 6, transform: [{ rotate: '0.4deg' }], ...shadows.surface },

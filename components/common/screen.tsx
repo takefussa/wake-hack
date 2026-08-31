@@ -9,6 +9,7 @@ type ScreenVariant = 'light' | 'dark';
 
 type ScreenProps = PropsWithChildren<{
   variant?: ScreenVariant;
+  backgroundColor?: string;
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
   testID?: string;
@@ -17,11 +18,13 @@ type ScreenProps = PropsWithChildren<{
 export function Screen({
   children,
   variant = 'light',
+  backgroundColor: customBackgroundColor,
   scroll = true,
   contentStyle,
   testID,
 }: ScreenProps) {
-  const backgroundColor = variant === 'dark' ? colors.navy : colors.background;
+  const backgroundColor =
+    customBackgroundColor ?? (variant === 'dark' ? colors.navy : colors.background);
   const content = (
     <View style={[styles.content, contentStyle]} testID={testID}>
       {children}

@@ -63,14 +63,17 @@ export const fonts = Platform.select({
   ios: {
     sans: 'system-ui',
     rounded: 'ui-rounded',
+    handwritten: 'Hiragino Maru Gothic ProN',
   },
   default: {
     sans: 'sans-serif',
     rounded: 'sans-serif',
+    handwritten: 'sans-serif-rounded',
   },
   web: {
     sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', sans-serif",
+    handwritten: "'Hiragino Maru Gothic ProN', 'Comic Sans MS', cursive",
   },
 });
 
