@@ -14,7 +14,7 @@ import { goBackOrReplace } from '@/features/navigation/go-back';
 import { isProfileInputValid } from '@/features/profile/profile-form';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
-import type { AvatarId, CreateProfileInput, ProfileTag, UserType } from '@/types';
+import type { AvatarId, CreateProfileInput, LifeRhythm, UserType } from '@/types';
 
 export default function ProfileSetupScreen() {
   const setProfile = useAppStore((state) => state.setProfile);
@@ -25,7 +25,7 @@ export default function ProfileSetupScreen() {
   const [userType, setUserType] = useState<UserType | null>(
     demoProfileDefaults.userType
   );
-  const [tags, setTags] = useState<ProfileTag[]>([...demoProfileDefaults.tags]);
+  const [tags, setTags] = useState<LifeRhythm[]>([...demoProfileDefaults.tags]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isSavingRef = useRef(false);

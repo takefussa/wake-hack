@@ -5,10 +5,9 @@ import { ChoiceChip } from '@/components/common/choice-chip';
 import { AvatarPicker } from '@/components/profile/avatar-picker';
 import { ProfilePhotoPicker } from '@/components/profile/profile-photo-picker';
 import { prototypeConfig } from '@/constants/config';
-import { profileTagOptions, userTypeOptions } from '@/constants/options';
+import { lifeRhythmOptions, userTypeOptions } from '@/constants/options';
 import { colors, componentSizes, fonts, radii, spacing } from '@/constants/theme';
-import { toggleProfileTag } from '@/features/profile/profile-form';
-import type { AvatarId, ProfileTag, UserType } from '@/types';
+import type { AvatarId, LifeRhythm, UserType } from '@/types';
 
 type ProfileFieldsProps = {
   avatarId: AvatarId;
@@ -16,13 +15,13 @@ type ProfileFieldsProps = {
   nickname: string;
   bio: string;
   userType: UserType | null;
-  tags: ProfileTag[];
+  tags: LifeRhythm[];
   onAvatarChange: (avatarId: AvatarId) => void;
   onProfileImageChange: (profileImageUri?: string) => void;
   onNicknameChange: (nickname: string) => void;
   onBioChange: (bio: string) => void;
   onUserTypeChange: (userType: UserType) => void;
-  onTagsChange: (tags: ProfileTag[]) => void;
+  onTagsChange: (tags: LifeRhythm[]) => void;
 };
 
 export function ProfileFields({
@@ -79,7 +78,7 @@ export function ProfileFields({
       </View>
 
       <View style={styles.section}>
-        <AppText variant="sectionTitle">あなたについて</AppText>
+        <AppText variant="sectionTitle">立場</AppText>
         <View style={styles.chips}>
           {userTypeOptions.map((option) => (
             <ChoiceChip
@@ -94,18 +93,18 @@ export function ProfileFields({
 
       <View style={styles.section}>
         <View style={styles.sectionHeading}>
-          <AppText variant="sectionTitle">朝について</AppText>
+          <AppText variant="sectionTitle">生活リズム</AppText>
           <AppText variant="caption" tone="muted">
-            任意・複数選択
+            任意
           </AppText>
         </View>
         <View style={styles.chips}>
-          {profileTagOptions.map((tag) => (
+          {lifeRhythmOptions.map((rhythm) => (
             <ChoiceChip
-              key={tag}
-              label={tag}
-              onPress={() => onTagsChange(toggleProfileTag(tags, tag))}
-              selected={tags.includes(tag)}
+              key={rhythm}
+              label={rhythm}
+              onPress={() => onTagsChange([rhythm])}
+              selected={tags.includes(rhythm)}
             />
           ))}
         </View>

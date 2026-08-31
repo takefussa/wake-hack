@@ -72,7 +72,7 @@ export default function FriendsScreen() {
   return (
     <Screen contentStyle={styles.content} testID="friends-screen">
       <View style={styles.header}>
-        <AppText variant="screenTitle">フレンド</AppText>
+        <AppText variant="screenTitle">オキメイト</AppText>
         <AppText variant="secondary" tone="soft">
           一度声を通して、また一緒に朝を迎えたいと思った人。
         </AppText>

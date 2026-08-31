@@ -84,7 +84,7 @@ export default function ConnectionsScreen() {
           label="今朝の合計"
         />
         <View style={styles.verticalDivider} />
-        <StatTile compact value="48人" label="大学生" />
+        <StatTile compact value="48人" label="大学生・専門学生" />
         <View style={styles.verticalDivider} />
         <StatTile compact value="17人" label="1限あり" />
       </View>
