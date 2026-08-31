@@ -82,7 +82,7 @@ export function ProfilePhotoPicker({
 const styles = StyleSheet.create({
   container: {
     alignItems: 'flex-start',
-    gap: spacing.md,
+    gap: 14,
   },
   preview: {
     position: 'relative',

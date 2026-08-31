@@ -112,7 +112,7 @@ export default function RequestDetailScreen() {
     <Screen contentStyle={styles.content} testID="request-detail-screen">
       <StatusBar style="dark" />
       <ScreenHeader
-        onBack={() => goBackOrReplace('/morning/request-list')}
+        onBack={() => goBackOrReplace('/(tabs)/connections')}
         title="この人の明日の朝へ"
       />
 
@@ -123,7 +123,7 @@ export default function RequestDetailScreen() {
           <AppText variant="bodyMedium">{error}</AppText>
           <AppButton
             label="一覧に戻る"
-            onPress={() => goBackOrReplace('/morning/request-list')}
+            onPress={() => goBackOrReplace('/(tabs)/connections')}
             variant="secondary"
           />
         </View>

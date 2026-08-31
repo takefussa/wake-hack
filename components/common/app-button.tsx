@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
+import type { ViewStyle } from 'react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
@@ -21,6 +22,7 @@ type AppButtonProps = {
   disabled?: boolean;
   compact?: boolean;
   testID?: string;
+  buttonColor?: ViewStyle['backgroundColor'];
 };
 
 function getTextTone(variant: ButtonVariant): 'light' | 'lightMuted' | 'dark' | 'accent' {
@@ -38,6 +40,7 @@ export function AppButton({
   disabled = false,
   compact = false,
   testID,
+  buttonColor,
 }: AppButtonProps) {
   const textTone = getTextTone(variant);
   const iconColor =
@@ -67,6 +70,7 @@ export function AppButton({
         variant === 'inverted' && styles.inverted,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
+        buttonColor ? { backgroundColor: buttonColor } : null,
       ]}>
       <View style={styles.content}>
         <AppText

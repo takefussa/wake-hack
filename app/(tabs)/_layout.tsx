@@ -29,7 +29,6 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontFamily: fonts?.sans,
           fontSize: 10,
-          fontWeight: '500',
           letterSpacing: 0,
         },
         tabBarStyle: {
@@ -49,7 +48,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="connections"
         options={{
-          title: 'つながり',
+          title: '起こす',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon color={color} focused={focused} name="people" />
           ),
@@ -58,7 +57,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="friends"
         options={{
-          title: 'フレンド',
+          title: 'オキメイト',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon color={color} focused={focused} name="heart" />
           ),
