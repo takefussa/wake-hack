@@ -1,4 +1,4 @@
-export type WakeSessionStatus = 'scheduled' | 'ringing' | 'mission' | 'completed';
+export type WakeSessionStatus = 'scheduled' | 'ringing' | 'completed';
 
 export type WakeSession = {
   id: string;
@@ -7,6 +7,5 @@ export type WakeSession = {
   voiceMessageId: string;
   alarmAt: string;
   wokeAt?: string;
-  missionCompleted: boolean;
   status: WakeSessionStatus;
 };
