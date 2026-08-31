@@ -17,7 +17,7 @@ import { useAppStore } from '@/store/use-app-store';
 import type {
   AvatarId,
   CreateProfileInput,
-  ProfileTag,
+  LifeRhythm,
   UserType,
 } from '@/types';
 
@@ -45,11 +45,7 @@ export default function ProfileSetupScreen() {
   const [userType, setUserType] = useState<UserType | null>(
     demoProfileDefaults.userType
   );
-
-  const [tags, setTags] = useState<ProfileTag[]>([
-    ...demoProfileDefaults.tags,
-  ]);
-
+  const [tags, setTags] = useState<LifeRhythm[]>([...demoProfileDefaults.tags]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

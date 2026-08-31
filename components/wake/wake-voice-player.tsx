@@ -52,7 +52,7 @@ export function WakeVoicePlayer({
         )}
         <View style={styles.senderCopy}>
           <AppText variant="bodyMedium">
-            {isCommunity ? 'Wake Hackのみんなから' : `${sender?.nickname ?? '誰か'}さんから`}
+            {isCommunity ? 'オキタ！のみんなから' : `${sender?.nickname ?? '誰か'}さんから`}
           </AppText>
           <AppText variant="caption" tone="muted">
             {formatSeconds(player.durationSeconds)}の声

@@ -64,18 +64,19 @@ function PaperChoice({
 export default function TomorrowConditionScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const morningRequestDraft = useAppStore((state) => state.morningRequestDraft);
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const setMorningRequest = useAppStore((state) => state.setMorningRequest);
 
   const [schedules, setSchedules] = useState<ScheduleType[]>([
-    ...demoMorningDefaults.schedules,
+    ...(currentMorningRequest?.schedules ?? demoMorningDefaults.schedules),
   ]);
 
   const [mood, setMood] = useState<MoodType | null>(
-    demoMorningDefaults.mood
+    currentMorningRequest?.mood ?? demoMorningDefaults.mood
   );
 
   const [voiceStyle, setVoiceStyle] = useState<VoiceStyle | null>(
-    demoMorningDefaults.preferredVoiceStyle
+    currentMorningRequest?.preferredVoiceStyle ?? demoMorningDefaults.preferredVoiceStyle
   );
 
   const [isSaving, setIsSaving] = useState(false);
@@ -313,7 +314,6 @@ const styles = StyleSheet.create({
   backText: {
     color: '#30463E',
     fontSize: 17,
-    fontWeight: '700',
   },
 
   stepTape: {
@@ -332,7 +332,6 @@ const styles = StyleSheet.create({
   stepText: {
     color: '#30463E',
     fontSize: 17,
-    fontWeight: '700',
     letterSpacing: 1,
   },
 
@@ -347,7 +346,6 @@ const styles = StyleSheet.create({
   title: {
     color: '#30463E',
     fontSize: 27,
-    fontWeight: '800',
   },
 
   redUnderline: {
@@ -375,7 +373,6 @@ const styles = StyleSheet.create({
     color: '#30463E',
     fontSize: 14,
     lineHeight: 23,
-    fontWeight: '600',
   },
 
   blueUnderline: {
@@ -439,7 +436,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#30463E',
     fontSize: 18,
-    fontWeight: '800',
   },
 
   caption: {
@@ -485,11 +481,9 @@ const styles = StyleSheet.create({
   choiceText: {
     color: '#394A42',
     fontSize: 14,
-    fontWeight: '600',
   },
 
   choiceTextSelected: {
-    fontWeight: '800',
   },
 
   choiceCheck: {
@@ -547,7 +541,6 @@ const styles = StyleSheet.create({
   submitText: {
     color: '#30463E',
     fontSize: 20,
-    fontWeight: '800',
   },
 
   pressed: {

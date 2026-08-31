@@ -76,9 +76,7 @@ function BoomboxCard({ request, wakeVoice, onPress }: BoomboxCardProps) {
   const [now, setNow] = useState(() => new Date());
   const isReady = wakeVoice !== null;
   const { dateLabel, relativeDayLabel } = getWakeDayDisplay(request, now);
-  const buttonLabel = !request
-    ? '明日の朝をセットする'
-    : isReady ? '準備した内容を見る' : 'リクエストを確認する';
+  const buttonLabel = isReady ? '準備した内容を見る' : '明日の朝をセットする';
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000);
@@ -165,11 +163,11 @@ export default function HomeScreen() {
 
   function handleMorningAction() {
     runOnce(() => {
-      if (!currentMorningRequest) {
-        router.push('/morning/setup');
+      if (assignedWakeVoice) {
+        router.push('/morning/ready');
         return;
       }
-      router.push(assignedWakeVoice ? '/morning/ready' : '/morning/give-choice');
+      router.push('/morning/setup');
     });
   }
 
@@ -197,8 +195,8 @@ const styles = StyleSheet.create({
   boomboxShadow: { borderRadius: 18, backgroundColor: '#B07943', paddingBottom: 6, transform: [{ rotate: '0.4deg' }], ...shadows.surface },
   boombox: { padding: spacing.lg, borderWidth: 2, borderColor: '#404A40', borderRadius: 18, backgroundColor: '#687463', gap: spacing.lg },
   boomboxTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { color: '#FFF5D9', fontSize: 12, lineHeight: 16, fontWeight: '900', letterSpacing: 1.8 },
-  modelNumber: { color: '#CED1B9', fontSize: 8, lineHeight: 12, fontWeight: '600', letterSpacing: 1 },
+  brand: { color: '#FFF5D9', fontSize: 12, lineHeight: 16, letterSpacing: 1.8 },
+  modelNumber: { color: '#CED1B9', fontSize: 8, lineHeight: 12, letterSpacing: 1 },
   knobs: { flexDirection: 'row', gap: spacing.md },
   knob: { width: 21, height: 21, borderWidth: 3, borderColor: '#30382F', borderRadius: 11, backgroundColor: '#D6C493' },
   boomboxBody: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
@@ -208,23 +206,23 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   statusLight: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D18A55' },
   statusLightReady: { backgroundColor: '#A8CE8A' },
-  statusText: { color: '#C3C9A8', fontSize: 8, lineHeight: 11, fontWeight: '700', letterSpacing: 1 },
-  time: { color: '#F3D685', fontFamily: fonts?.rounded, fontSize: 35, lineHeight: 41, fontWeight: '700', letterSpacing: 2 },
-  schedule: { color: '#D7DBC3', fontSize: 10, lineHeight: 14, fontWeight: '600' },
+  statusText: { color: '#C3C9A8', fontSize: 8, lineHeight: 11, letterSpacing: 1 },
+  time: { color: '#F3D685', fontFamily: fonts?.rounded, fontSize: 35, lineHeight: 41, letterSpacing: 2 },
+  schedule: { color: '#D7DBC3', fontSize: 10, lineHeight: 14 },
   waveformBox: { marginTop: spacing.sm, overflow: 'hidden' },
   actionButton: { minHeight: 52, paddingHorizontal: spacing.md, borderRadius: 9, backgroundColor: '#B6533D', flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   actionButtonPressed: { backgroundColor: '#98432F', transform: [{ translateY: 1 }] },
   playButton: { width: 31, height: 31, borderWidth: 1, borderColor: '#F4D7B1', borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  actionLabel: { flex: 1, color: '#FFF8E8', fontSize: 15, lineHeight: 21, fontWeight: '700' },
+  actionLabel: { flex: 1, color: '#FFF8E8', fontSize: 15, lineHeight: 21 },
   timeline: { position: 'relative', paddingTop: spacing.sm },
   timelineTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xl },
   titleRule: { flex: 1, height: 1, backgroundColor: '#9C9A7A' },
-  timelineTitle: { color: '#8B5948', fontSize: 10, lineHeight: 14, fontWeight: '800', letterSpacing: 1.8 },
+  timelineTitle: { color: '#8B5948', fontSize: 10, lineHeight: 14, letterSpacing: 1.8 },
   timelineTrack: { position: 'absolute', top: 69, left: '16%', right: '16%', height: 2, backgroundColor: '#A29A79' },
   timelineSteps: { flexDirection: 'row', justifyContent: 'space-between' },
   timelineStep: { width: '31%', alignItems: 'center' },
   cassetteReel: { width: 54, height: 54, padding: 6, borderWidth: 2, borderColor: '#6D765F', borderRadius: 27, backgroundColor: '#E5D8B6' },
   reelCenter: { flex: 1, borderWidth: 1, borderColor: '#8E947C', borderRadius: 20, backgroundColor: '#F8EED3', alignItems: 'center', justifyContent: 'center' },
-  stepNumber: { color: '#9C513D', fontSize: 9, lineHeight: 13, fontWeight: '800', letterSpacing: 1, marginTop: spacing.sm },
-  stepCopy: { color: '#4E594D', fontSize: 11, lineHeight: 16, fontWeight: '600', textAlign: 'center', marginTop: 2 },
+  stepNumber: { color: '#9C513D', fontSize: 9, lineHeight: 13, letterSpacing: 1, marginTop: spacing.sm },
+  stepCopy: { color: '#4E594D', fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 2 },
 });

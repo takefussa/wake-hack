@@ -260,7 +260,6 @@ const styles = StyleSheet.create({
   backText: {
     color: '#30463E',
     fontSize: 16,
-    fontWeight: '700',
   },
 
   stepTape: {
@@ -276,7 +275,6 @@ const styles = StyleSheet.create({
   stepText: {
     color: '#30463E',
     fontSize: 15,
-    fontWeight: '800',
     letterSpacing: 1,
   },
 
@@ -291,7 +289,6 @@ const styles = StyleSheet.create({
   title: {
     color: '#30463E',
     fontSize: 26,
-    fontWeight: '800',
     letterSpacing: 0.5,
   },
 
@@ -320,7 +317,6 @@ const styles = StyleSheet.create({
     color: '#30463E',
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: '600',
   },
 
   timePaper: {
@@ -358,7 +354,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     color: '#30463E',
     fontSize: 17,
-    fontWeight: '800',
   },
 
   timeWheelContainer: {
@@ -416,7 +411,6 @@ const styles = StyleSheet.create({
   quickTitle: {
     color: '#30463E',
     fontSize: 16,
-    fontWeight: '800',
   },
 
   quickChoices: {
@@ -450,11 +444,9 @@ const styles = StyleSheet.create({
   quickChoiceText: {
     color: '#35483F',
     fontSize: 16,
-    fontWeight: '600',
   },
 
   quickChoiceTextSelected: {
-    fontWeight: '800',
   },
 
   checkBubble: {
@@ -503,6 +495,5 @@ const styles = StyleSheet.create({
   nextButtonText: {
     color: '#30463E',
     fontSize: 20,
-    fontWeight: '800',
   },
 });

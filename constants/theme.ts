@@ -49,31 +49,28 @@ export const radii = {
 } as const;
 
 export const typography = {
-  screenTitle: { fontSize: 28, lineHeight: 35, fontWeight: '700' as const },
-  sectionTitle: { fontSize: 18, lineHeight: 24, fontWeight: '600' as const },
-  body: { fontSize: 16, lineHeight: 24, fontWeight: '400' as const },
-  bodyMedium: { fontSize: 16, lineHeight: 24, fontWeight: '600' as const },
-  secondary: { fontSize: 14, lineHeight: 21, fontWeight: '400' as const },
-  caption: { fontSize: 12, lineHeight: 17, fontWeight: '500' as const },
-  displayNumber: { fontSize: 40, lineHeight: 48, fontWeight: '600' as const },
-  time: { fontSize: 56, lineHeight: 62, fontWeight: '600' as const },
+  screenTitle: { fontSize: 28, lineHeight: 35 },
+  sectionTitle: { fontSize: 18, lineHeight: 24 },
+  body: { fontSize: 16, lineHeight: 24 },
+  bodyMedium: { fontSize: 16, lineHeight: 24 },
+  secondary: { fontSize: 14, lineHeight: 21 },
+  caption: { fontSize: 12, lineHeight: 17 },
+  displayNumber: { fontSize: 40, lineHeight: 48 },
+  time: { fontSize: 56, lineHeight: 62 },
 } as const;
 
+export const fontFamilyName = 'Tegaki851';
+
 export const fonts = Platform.select({
-  ios: {
-    sans: 'system-ui',
-    rounded: 'ui-rounded',
-    handwritten: 'Hiragino Maru Gothic ProN',
+  web: {
+    sans: `'${fontFamilyName}', sans-serif`,
+    rounded: `'${fontFamilyName}', sans-serif`,
+    handwritten: `'${fontFamilyName}', sans-serif`,
   },
   default: {
-    sans: 'sans-serif',
-    rounded: 'sans-serif',
-    handwritten: 'sans-serif-rounded',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', sans-serif",
-    handwritten: "'Hiragino Maru Gothic ProN', 'Comic Sans MS', cursive",
+    sans: fontFamilyName,
+    rounded: fontFamilyName,
+    handwritten: fontFamilyName,
   },
 });
 

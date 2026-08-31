@@ -116,7 +116,7 @@ export default function ThanksSendScreen() {
         )}
         <View style={styles.recipientCopy}>
           <AppText variant="bodyMedium">
-            {isPersonal ? `${sender?.nickname ?? '誰か'}さんへ` : 'Wake Hackのみんなへ'}
+            {isPersonal ? `${sender?.nickname ?? '誰か'}さんへ` : 'オキタ！のみんなへ'}
           </AppText>
           <AppText variant="caption" tone="muted">
             {isPersonal ? '今朝届いた声へのありがとう' : 'みんなに向けた声へのリアクション'}

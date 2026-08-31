@@ -11,17 +11,16 @@ import { AvatarPicker } from '@/components/profile/avatar-picker';
 import { ProfilePhotoPicker } from '@/components/profile/profile-photo-picker';
 import { prototypeConfig } from '@/constants/config';
 import {
-  profileTagOptions,
+  lifeRhythmOptions,
   userTypeOptions,
 } from '@/constants/options';
 import {
   colors,
   fonts,
 } from '@/constants/theme';
-import { toggleProfileTag } from '@/features/profile/profile-form';
 import type {
   AvatarId,
-  ProfileTag,
+  LifeRhythm,
   UserType,
 } from '@/types';
 
@@ -33,8 +32,7 @@ type ProfileFieldsProps = {
   nickname: string;
   bio: string;
   userType: UserType | null;
-  tags: ProfileTag[];
-
+  tags: LifeRhythm[];
   onAvatarChange: (avatarId: AvatarId) => void;
   onProfileImageChange: (
     profileImageUri?: string
@@ -45,7 +43,7 @@ type ProfileFieldsProps = {
     userType: UserType
   ) => void;
   onTagsChange: (
-    tags: ProfileTag[]
+    tags: LifeRhythm[]
   ) => void;
 };
 
@@ -201,7 +199,7 @@ export function ProfileFields({
           </AppText>
 
           <AppText style={styles.optional}>
-            任意・複数選択
+            任意
           </AppText>
         </View>
 
@@ -210,16 +208,12 @@ export function ProfileFields({
         </AppText>
 
         <View style={styles.chips}>
-          {profileTagOptions.map((tag) => (
+          {lifeRhythmOptions.map((rhythm) => (
             <ChoiceChip
-              key={tag}
-              label={tag}
-              onPress={() =>
-                onTagsChange(
-                  toggleProfileTag(tags, tag)
-                )
-              }
-              selected={tags.includes(tag)}
+              key={rhythm}
+              label={rhythm}
+              onPress={() => onTagsChange([rhythm])}
+              selected={tags.includes(rhythm)}
             />
           ))}
         </View>
