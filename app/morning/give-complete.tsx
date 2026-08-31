@@ -93,7 +93,11 @@ export default function GiveCompleteScreen() {
           <AppText variant="bodyMedium">{error}</AppText>
           <AppButton
             label="明日の準備へ戻る"
-            onPress={() => navigateOnce(() => router.replace('/morning/ready'))}
+            onPress={() =>
+              navigateOnce(() =>
+                router.replace({ pathname: '/morning/ready', params: { requestId } })
+              )
+            }
             variant="secondary"
           />
         </View>
@@ -135,7 +139,11 @@ export default function GiveCompleteScreen() {
             />
             <AppButton
               label="明日の準備へ戻る"
-              onPress={() => navigateOnce(() => router.replace('/morning/ready'))}
+              onPress={() =>
+                navigateOnce(() =>
+                  router.replace({ pathname: '/morning/ready', params: { requestId } })
+                )
+              }
               variant="secondary"
             />
           </View>

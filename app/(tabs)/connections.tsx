@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -15,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { voiceStyleOptions } from '@/constants/options';
 import { fontFamilyName } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { rankMorningRequests } from '@/services/matching-service';
@@ -34,32 +37,117 @@ function isUserProfile(profile: UserProfile | null): profile is UserProfile {
   return profile !== null;
 }
 
-const communityDemo = [
-  {
-    id: '1',
-    name: 'Takuma',
-    text: '今日もぼちぼちいこう〜',
-    likes: 128,
-  },
-  {
-    id: '2',
-    name: 'Haruka',
-    text: '朝から頑張るみんな、おはよう！',
-    likes: 84,
-  },
-];
+// cassette 画像比率(880x561)から算出したカード1件分の高さの目安
+const CASSETTE_ASPECT_RATIO = 880 / 561;
+const CASSETTE_MARGIN_BOTTOM = 18;
+const PAGE_CONTENT_HORIZONTAL_PADDING = 24;
+const PAGE_CONTENT_BASE_BOTTOM_PADDING = 120;
+const CASSETTE_MIN_SCALE = 0.85;
+
+function VoiceOptionsPanel({ options }: { options: readonly string[] }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 260,
+      useNativeDriver: true,
+    }).start();
+  }, [anim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.voiceOptionsPanel,
+        {
+          opacity: anim,
+          transform: [
+            {
+              translateY: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-16, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      {options.map((option) => (
+        <Pressable
+          key={option}
+          style={({ pressed }) => [
+            styles.voiceOptionButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => {
+            // TODO:
+            // 選んだ声のスタイルでコミュニティボイス録音画面へ遷移
+          }}
+        >
+          <AppText style={styles.voiceOptionText}>{option}</AppText>
+
+          <Ionicons name="chevron-forward" size={18} color="#30463E" />
+        </Pressable>
+      ))}
+    </Animated.View>
+  );
+}
 
 export default function ConnectionsScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
   const replaceMorningRequest = useAppStore((state) => state.replaceMorningRequest);
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
 
   const horizontalRef = useRef<ScrollView>(null);
+  const personalScrollViewRef = useRef<ScrollView>(null);
   const runOnce = useTapLock();
 
+  const personalScrollY = useRef(new Animated.Value(0)).current;
+  const [personalViewportTop, setPersonalViewportTop] = useState(0);
+  const [personalViewportHeight, setPersonalViewportHeight] = useState(0);
+
+  const cassetteWidth = width - PAGE_CONTENT_HORIZONTAL_PADDING * 2;
+  const cassetteHeight = cassetteWidth / CASSETTE_ASPECT_RATIO;
+  const cassetteItemHeight = cassetteHeight + CASSETTE_MARGIN_BOTTOM;
+
+  // ヘッダー・タブの下からタブバーの上までの表示領域ではなく、
+  // スマホの画面(ディスプレイ)全体の中央をズームの焦点にする
+  const screenCenterInViewport = height / 2 - personalViewportTop;
+
+  // 一番上のカセットが上端に引っかかって中央(最大ズーム)まで来られない問題を防ぐため、
+  // 1枚目が初期表示のまま画面中央に来るよう上部余白を確保する
+  const personalContentTopPadding = Math.max(
+    0,
+    screenCenterInViewport - cassetteHeight / 2
+  );
+  // 同様に、一番下のカセットも中央まで来られるよう下部余白を確保する
+  const personalContentBottomPadding =
+    PAGE_CONTENT_BASE_BOTTOM_PADDING +
+    Math.max(
+      0,
+      personalViewportHeight - cassetteItemHeight - personalContentTopPadding
+    );
+
+  function getCassetteScale(index: number) {
+    const cardCenter =
+      personalContentTopPadding + index * cassetteItemHeight + cassetteHeight / 2;
+    const focusScrollY = cardCenter - screenCenterInViewport;
+
+    return personalScrollY.interpolate({
+      inputRange: [
+        focusScrollY - cassetteItemHeight,
+        focusScrollY,
+        focusScrollY + cassetteItemHeight,
+      ],
+      outputRange: [CASSETTE_MIN_SCALE, 1, CASSETTE_MIN_SCALE],
+      extrapolate: 'clamp',
+    });
+  }
+
   const [mode, setMode] = useState<TimelineMode>('personal');
+  const [showVoiceOptions, setShowVoiceOptions] = useState(false);
   const [candidates, setCandidates] = useState<RequestCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -138,39 +226,31 @@ export default function ConnectionsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
-      {/* ノート背景 */}
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        {Array.from({ length: 35 }).map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.paperLine,
-              {
-                top: 28 + index * 32,
-              },
-            ]}
-          />
-        ))}
+      {/* ノート背景(コミュニティのみ) */}
+      {mode === 'community' ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          {Array.from({ length: 35 }).map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.paperLine,
+                {
+                  top: 28 + index * 32,
+                },
+              ]}
+            />
+          ))}
 
-        <View style={styles.marginLine} />
-      </View>
+          <View style={styles.marginLine} />
+        </View>
+      ) : null}
 
       {/* ヘッダー */}
       <View style={styles.header}>
-        <View>
-          <AppText style={styles.title}>起こす</AppText>
-          <AppText style={styles.subtitle}>
-            誰かの明日の朝に、声を届けよう。
-          </AppText>
-        </View>
-
-        <View style={styles.headerDoodle}>
-          <Ionicons
-            name="mic-outline"
-            size={27}
-            color="#30463E"
-          />
-        </View>
+        <AppText style={styles.title}>起こす</AppText>
+        <AppText style={styles.subtitle}>
+          誰かの明日の朝に、声を届けよう。
+        </AppText>
       </View>
 
       {/* Twitter風 上タブ */}
@@ -210,7 +290,7 @@ export default function ConnectionsScreen() {
                   styles.modeTextActive,
               ]}
             >
-              コミュニティ
+              みんなを起こす
             </AppText>
 
             <Ionicons
@@ -242,24 +322,36 @@ export default function ConnectionsScreen() {
       >
         {/* PERSONAL */}
         <View style={[styles.page, { width }]}>
-          <ScrollView
+          <Animated.ScrollView
+            ref={personalScrollViewRef}
+            onLayout={() => {
+              (
+                personalScrollViewRef.current as unknown as {
+                  measureInWindow: (
+                    callback: (x: number, y: number, w: number, h: number) => void
+                  ) => void;
+                } | null
+              )?.measureInWindow((_x, y, _w, h) => {
+                setPersonalViewportTop(y);
+                setPersonalViewportHeight(h);
+              });
+            }}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: personalScrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.pageContent}
           >
-            <View style={styles.personalIntro}>
-              <View style={styles.introTape} />
-
-              <AppText style={styles.introTitle}>
-                明日の朝を待っている人
-              </AppText>
-
-              <AppText style={styles.introText}>
-                予定や気持ちを見て、その人だけに
-                {'\n'}
-                10秒の声を届けます。
-              </AppText>
-            </View>
-
+            <View
+              style={[
+                styles.pageContent,
+                {
+                  paddingTop: personalContentTopPadding,
+                  paddingBottom: personalContentBottomPadding,
+                },
+              ]}
+            >
             {!currentMorningRequest ? (
               <View style={styles.stateCard}>
                 <AppText style={styles.stateTitle}>
@@ -332,130 +424,64 @@ export default function ConnectionsScreen() {
             {currentMorningRequest &&
               !isLoading &&
               !error &&
-              candidates.map(({ request, user, commonPoints }, index) => (
-                <View
+              candidates.map(({ request, user }, index) => (
+                <Pressable
+                  accessibilityLabel={`${user.nickname}さんを起こす`}
+                  accessibilityRole="button"
                   key={request.id}
-                  style={[
-                    styles.personCard,
-                    index % 2 === 0
-                      ? styles.cardRotateLeft
-                      : styles.cardRotateRight,
+                  onPress={() =>
+                    runOnce(() =>
+                      router.push({
+                        pathname: '/morning/request-detail',
+                        params: { requestId: request.id },
+                      })
+                    )
+                  }
+                  style={({ pressed }) => [
+                    styles.cassetteTouchable,
+                    pressed && styles.pressed,
                   ]}
                 >
-                  <View style={styles.cardTape} />
+                  <Animated.View
+                    style={[
+                      styles.cassette,
+                      {
+                        transform: [
+                          { rotate: index % 2 === 0 ? '-0.25deg' : '0.25deg' },
+                          { scale: getCassetteScale(index) },
+                        ],
+                      },
+                    ]}
+                  >
+                    <Image
+                      accessibilityIgnoresInvertColors
+                      contentFit="fill"
+                      source={require('../../assets/images/cassette-personal.png')}
+                      style={StyleSheet.absoluteFill}
+                    />
 
-                  <View style={styles.personHeader}>
-                    <View style={styles.avatar}>
-                      <AppText style={styles.avatarText}>
-                        {user.nickname.charAt(0)}
-                      </AppText>
-                    </View>
-
-                    <View style={styles.personInfo}>
-                      <AppText style={styles.personName}>
+                    <View style={styles.cassetteNameOverlay}>
+                      <AppText numberOfLines={1} style={styles.cassetteName}>
                         {user.nickname}
                       </AppText>
-
-                      <View style={styles.personMeta}>
-                        <AppText style={styles.personType}>
-                          {user.userType}
-                        </AppText>
-
-                        <View style={styles.dot} />
-
-                        <Ionicons
-                          name="alarm-outline"
-                          size={15}
-                          color="#687169"
-                        />
-
-                        <AppText style={styles.wakeTime}>
-                          {request.wakeAt}
-                        </AppText>
-                      </View>
                     </View>
-                  </View>
 
-                  <View style={styles.tomorrowNote}>
-                    <AppText style={styles.noteLabel}>
-                      明日のこと
-                    </AppText>
-
-                    <AppText style={styles.noteText}>
-                      「{request.schedules.join('・')}」
-                    </AppText>
-                  </View>
-
-                  {commonPoints.length > 0 ? (
-                    <View style={styles.commonPoints}>
-                      <AppText style={styles.noteLabel}>
-                        あなたとの共通点
-                      </AppText>
-
-                      <AppText style={styles.commonPointsText}>
-                        {commonPoints.join('・')}
-                      </AppText>
-                    </View>
-                  ) : null}
-
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.personalVoiceButton,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() =>
-                      runOnce(() =>
-                        router.push({
-                          pathname: '/morning/request-detail',
-                          params: { requestId: request.id },
-                        })
-                      )
-                    }
-                  >
-                    <Ionicons
-                      name="mic"
-                      size={21}
-                      color="#30463E"
-                    />
-
-                    <View style={styles.voiceButtonCopy}>
-                      <AppText style={styles.voiceButtonText}>
-                        {user.nickname}さんを起こす
-                      </AppText>
-
-                      <AppText style={styles.voiceButtonSubtext}>
-                        この人だけに声を届ける
+                    <View style={styles.cassetteSideAOverlay}>
+                      <AppText numberOfLines={1} style={styles.cassetteSideValue}>
+                        {user.userType}
                       </AppText>
                     </View>
 
-                    <Ionicons
-                      name="chevron-forward"
-                      size={21}
-                      color="#30463E"
-                    />
-                  </Pressable>
-                </View>
+                    <View style={styles.cassetteSideBOverlay}>
+                      <AppText numberOfLines={1} style={styles.cassetteSideValueRight}>
+                        {request.preferredVoiceStyle}
+                      </AppText>
+                    </View>
+                  </Animated.View>
+                </Pressable>
               ))}
-
-            {currentMorningRequest &&
-            !isLoading &&
-            !error &&
-            candidates.length > 0 ? (
-              <View style={styles.bottomMessage}>
-                <Ionicons
-                  name="heart-outline"
-                  size={18}
-                  color="#D98E87"
-                />
-
-                <AppText style={styles.bottomMessageText}>
-                  名前を呼んで、その人のための
-                  {'\n'}
-                  「おはよう」を届けよう。
-                </AppText>
-              </View>
-            ) : null}
-          </ScrollView>
+            </View>
+          </Animated.ScrollView>
         </View>
 
         {/* COMMUNITY */}
@@ -488,10 +514,7 @@ export default function ConnectionsScreen() {
                   styles.communityRecordButton,
                   pressed && styles.pressed,
                 ]}
-                onPress={() => {
-                  // TODO:
-                  // コミュニティボイス録音画面へ遷移
-                }}
+                onPress={() => setShowVoiceOptions((prev) => !prev)}
               >
                 <Ionicons
                   name="mic"
@@ -503,6 +526,10 @@ export default function ConnectionsScreen() {
                   コミュニティボイスを録る
                 </AppText>
               </Pressable>
+
+              {showVoiceOptions ? (
+                <VoiceOptionsPanel options={voiceStyleOptions} />
+              ) : null}
             </View>
 
             <View style={styles.communityHint}>
@@ -518,77 +545,6 @@ export default function ConnectionsScreen() {
                 いいねがたくさん集まることも。
               </AppText>
             </View>
-
-            <View style={styles.communitySectionHeading}>
-              <AppText style={styles.communitySectionTitle}>
-                みんなの声
-              </AppText>
-
-              <View style={styles.pinkUnderline} />
-            </View>
-
-            {communityDemo.map((voice) => (
-              <View
-                key={voice.id}
-                style={styles.communityCard}
-              >
-                <View style={styles.communityUserRow}>
-                  <View style={styles.smallAvatar}>
-                    <AppText style={styles.smallAvatarText}>
-                      {voice.name.charAt(0)}
-                    </AppText>
-                  </View>
-
-                  <AppText style={styles.communityName}>
-                    {voice.name}
-                  </AppText>
-                </View>
-
-                <View style={styles.communityVoicePaper}>
-                  <Pressable style={styles.playButton}>
-                    <Ionicons
-                      name="play"
-                      size={19}
-                      color="#30463E"
-                    />
-                  </Pressable>
-
-                  <View style={styles.fakeWave}>
-                    {[18, 28, 13, 34, 23, 38, 16, 30, 21].map(
-                      (height, index) => (
-                        <View
-                          key={index}
-                          style={[
-                            styles.waveLine,
-                            { height },
-                          ]}
-                        />
-                      )
-                    )}
-                  </View>
-
-                  <AppText style={styles.voiceDuration}>
-                    0:10
-                  </AppText>
-                </View>
-
-                <AppText style={styles.communityVoiceText}>
-                  「{voice.text}」
-                </AppText>
-
-                <View style={styles.likeRow}>
-                  <Ionicons
-                    name="heart"
-                    size={20}
-                    color="#E58F91"
-                  />
-
-                  <AppText style={styles.likeNumber}>
-                    {voice.likes}
-                  </AppText>
-                </View>
-              </View>
-            ))}
           </ScrollView>
         </View>
       </ScrollView>
@@ -623,10 +579,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingTop: 8,
     paddingBottom: 14,
-
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
 
   title: {
@@ -640,18 +592,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyName,
     color: '#6B716C',
     fontSize: 13,
-  },
-
-  headerDoodle: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    backgroundColor: '#F3D6CF',
-    transform: [{ rotate: '4deg' }],
   },
 
   modeTabs: {
@@ -720,50 +660,6 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
 
-  personalIntro: {
-    marginHorizontal: 8,
-    marginBottom: 20,
-
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-
-    backgroundColor: '#FFFDF7',
-
-    borderWidth: 1,
-    borderColor: '#D4C7B2',
-
-    transform: [{ rotate: '-0.5deg' }],
-  },
-
-  introTape: {
-    position: 'absolute',
-    top: -8,
-    left: 18,
-
-    width: 65,
-    height: 18,
-
-    backgroundColor: '#B5D8E6',
-    opacity: 0.75,
-
-    transform: [{ rotate: '-5deg' }],
-  },
-
-  introTitle: {
-    fontFamily: fontFamilyName,
-    color: '#30463E',
-    fontSize: 18,
-  },
-
-  introText: {
-    marginTop: 7,
-
-    fontFamily: fontFamilyName,
-    color: '#687169',
-    fontSize: 13,
-    lineHeight: 20,
-  },
-
   stateCard: {
     minHeight: 220,
 
@@ -818,206 +714,80 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  commonPoints: {
-    marginTop: 12,
-  },
-
-  commonPointsText: {
-    marginTop: 5,
-
-    fontFamily: fontFamilyName,
-    color: '#59645D',
-    fontSize: 13,
-    lineHeight: 19,
-  },
-
-  personCard: {
+  cassetteTouchable: {
     marginBottom: 18,
-
-    padding: 18,
-
-    backgroundColor: '#FFFDF7',
-
-    borderWidth: 1,
-    borderColor: '#CDBFA8',
-
-    shadowColor: '#665C4F',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: {
-      width: 1,
-      height: 2,
-    },
-
-    elevation: 1,
   },
 
-  cardRotateLeft: {
-    transform: [{ rotate: '-0.25deg' }],
+  cassette: {
+    position: 'relative',
+
+    width: '100%',
+    aspectRatio: 880 / 561,
+
+    overflow: 'hidden',
   },
 
-  cardRotateRight: {
-    transform: [{ rotate: '0.25deg' }],
-  },
-
-  cardTape: {
+  cassetteNameOverlay: {
     position: 'absolute',
-    top: -9,
-    right: 22,
+    top: '4%',
+    left: '2%',
 
-    width: 55,
-    height: 18,
-
-    backgroundColor: '#F3B9AF',
-    opacity: 0.68,
-
-    transform: [{ rotate: '5deg' }],
-  },
-
-  personHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  avatar: {
-    width: 49,
-    height: 49,
-    borderRadius: 25,
+    width: '96%',
+    height: '23.4%',
 
     alignItems: 'center',
     justifyContent: 'center',
-
-    backgroundColor: '#DDE8CB',
-
-    borderWidth: 1,
-    borderColor: '#AEB99D',
   },
 
-  avatarText: {
+  cassetteName: {
     fontFamily: fontFamilyName,
-    color: '#30463E',
-    fontSize: 19,
+    color: '#2E2E2E',
+    fontSize: 16,
   },
 
-  personInfo: {
-    marginLeft: 12,
-  },
+  cassetteSideAOverlay: {
+    position: 'absolute',
+    top: '59.1%',
+    left: '1%',
 
-  personName: {
-    fontFamily: fontFamilyName,
-    color: '#30463E',
-    fontSize: 18,
-  },
+    width: '47%',
+    height: '18.3%',
 
-  personMeta: {
-    marginTop: 4,
-
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
   },
 
-  personType: {
-    fontFamily: fontFamilyName,
-    color: '#717770',
-    fontSize: 12,
-  },
+  cassetteSideBOverlay: {
+    position: 'absolute',
+    top: '59.1%',
+    left: '52%',
 
-  dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: '#969A95',
-  },
+    width: '47%',
+    height: '18.3%',
 
-  wakeTime: {
-    fontFamily: fontFamilyName,
-    color: '#59645D',
-    fontSize: 12,
-  },
-
-  tomorrowNote: {
-    marginTop: 15,
-
-    padding: 13,
-
-    backgroundColor: '#FAF1D5',
-
-    borderLeftWidth: 3,
-    borderLeftColor: '#E5C978',
-  },
-
-  noteLabel: {
-    fontFamily: fontFamilyName,
-    color: '#887548',
-    fontSize: 11,
-  },
-
-  noteText: {
-    marginTop: 5,
-
-    fontFamily: fontFamilyName,
-    color: '#30463E',
-    fontSize: 15,
-    lineHeight: 22,
-  },
-
-  personalVoiceButton: {
-    marginTop: 15,
-
-    minHeight: 64,
-
-    paddingHorizontal: 15,
-
-    flexDirection: 'row',
     alignItems: 'center',
-
-    backgroundColor: '#B9DAE8',
-
-    borderWidth: 1,
-    borderColor: '#7FB4C9',
+    justifyContent: 'center',
+    gap: 3,
+    paddingHorizontal: 2,
   },
 
-  voiceButtonCopy: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  voiceButtonText: {
+  cassetteSideValue: {
     fontFamily: fontFamilyName,
-    color: '#30463E',
+    color: '#2E2E2E',
     fontSize: 15,
+    textAlign: 'center',
   },
 
-  voiceButtonSubtext: {
-    marginTop: 2,
-
+  cassetteSideValueRight: {
     fontFamily: fontFamilyName,
-    color: '#68736D',
-    fontSize: 10,
+    color: '#2E2E2E',
+    fontSize: 12,
+    textAlign: 'center',
   },
 
   pressed: {
     opacity: 0.68,
-  },
-
-  bottomMessage: {
-    marginTop: 4,
-
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    gap: 8,
-  },
-
-  bottomMessageText: {
-    textAlign: 'center',
-
-    fontFamily: fontFamilyName,
-    color: '#767A76',
-    fontSize: 12,
-    lineHeight: 19,
   },
 
   communityHero: {
@@ -1118,144 +888,31 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  communitySectionHeading: {
-    alignSelf: 'flex-start',
-
-    marginTop: 25,
-    marginBottom: 12,
-    marginLeft: 4,
-  },
-
-  communitySectionTitle: {
-    fontFamily: fontFamilyName,
-    color: '#30463E',
-    fontSize: 19,
-  },
-
-  pinkUnderline: {
-    width: 90,
-    height: 5,
-
-    marginTop: -2,
-
-    backgroundColor: '#F0AAA5',
-    opacity: 0.65,
-
-    transform: [{ rotate: '-2deg' }],
-  },
-
-  communityCard: {
-    marginBottom: 15,
-
-    padding: 16,
-
-    backgroundColor: '#FFFDF7',
-
-    borderWidth: 1,
-    borderColor: '#D0C2AE',
-  },
-
-  communityUserRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  smallAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    backgroundColor: '#DDE8CB',
-  },
-
-  smallAvatarText: {
-    fontFamily: fontFamilyName,
-    color: '#30463E',
-    fontSize: 13,
-  },
-
-  communityName: {
-    marginLeft: 9,
-
-    fontFamily: fontFamilyName,
-    color: '#30463E',
-    fontSize: 14,
-  },
-
-  communityVoicePaper: {
+  voiceOptionsPanel: {
     marginTop: 12,
 
-    minHeight: 61,
+    width: '100%',
+    gap: 8,
+  },
+
+  voiceOptionButton: {
+    minHeight: 50,
+
+    paddingHorizontal: 16,
 
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
 
-    paddingHorizontal: 11,
+    backgroundColor: '#FAF1D5',
 
-    backgroundColor: '#F5EFE1',
+    borderWidth: 1,
+    borderColor: '#E5C978',
   },
 
-  playButton: {
-    width: 39,
-    height: 39,
-    borderRadius: 20,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    backgroundColor: '#B9DAE8',
-  },
-
-  fakeWave: {
-    flex: 1,
-
-    height: 42,
-
-    marginHorizontal: 12,
-
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-
-  waveLine: {
-    width: 3,
-    borderRadius: 2,
-
-    backgroundColor: '#7597A2',
-  },
-
-  voiceDuration: {
-    fontFamily: fontFamilyName,
-    color: '#66726C',
-    fontSize: 11,
-  },
-
-  communityVoiceText: {
-    marginTop: 10,
-
+  voiceOptionText: {
     fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 14,
-  },
-
-  likeRow: {
-    alignSelf: 'flex-end',
-
-    marginTop: 8,
-
-    flexDirection: 'row',
-    alignItems: 'center',
-
-    gap: 4,
-  },
-
-  likeNumber: {
-    fontFamily: fontFamilyName,
-    color: '#9A6D6D',
-    fontSize: 12,
   },
 });
