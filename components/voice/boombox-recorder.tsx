@@ -1,4 +1,5 @@
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { prototypeConfig } from '@/constants/config';
 
@@ -15,6 +16,13 @@ const gaugeColors = {
   seekRecording: '#E4483A',
   seekPlaying: '#4F9E5C',
 };
+
+// Matches the boombox artwork's speaker fill color (both speakers share it);
+// also used for the reel hubs, so they read as the same tape-body material.
+const cassetteInk = '#3C3C3C';
+// A touch lighter than pure black, for the two reel circles.
+const cassetteReelInk = '#4A4A4A';
+const REEL_MARKER_ANGLES = [0, 120, 240];
 
 // Matches the gray tick-mark bars baked into radioplayer-*.png, positioned
 // relative to the trackZone overlay so each one can be lit up individually.
@@ -90,6 +98,31 @@ export function BoomboxRecorder({
   // by index, so a bar lights up the instant the seek marker reaches it.
   const gaugeThresholdPercent = gaugeFraction * 100;
 
+  // The cassette reels spin while tape is actually moving (recording or playing)
+  // and simply freeze in place otherwise, like a real deck's motor stopping.
+  const isReelSpinning = isRecording || isPlaying;
+  const reelSpin = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isReelSpinning) return;
+
+    const loop = Animated.loop(
+      Animated.timing(reelSpin, {
+        toValue: 1,
+        duration: 1600,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isReelSpinning, reelSpin]);
+
+  const reelRotation = reelSpin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   function handleRecordPress() {
     if (disabled) return;
     if (isRecording) {
@@ -145,6 +178,34 @@ export function BoomboxRecorder({
               ]}
             />
           ) : null}
+        </View>
+
+        <View pointerEvents="none" style={styles.cassetteZone}>
+          <View style={styles.cassetteBody} />
+          <Animated.View
+            style={[styles.reel, styles.reelLeft, { transform: [{ rotate: reelRotation }] }]}
+          >
+            {REEL_MARKER_ANGLES.map((angle) => (
+              <View
+                key={angle}
+                style={[styles.reelMarkerPivot, { transform: [{ rotate: `${angle}deg` }] }]}
+              >
+                <View style={styles.reelMarker} />
+              </View>
+            ))}
+          </Animated.View>
+          <Animated.View
+            style={[styles.reel, styles.reelRight, { transform: [{ rotate: reelRotation }] }]}
+          >
+            {REEL_MARKER_ANGLES.map((angle) => (
+              <View
+                key={angle}
+                style={[styles.reelMarkerPivot, { transform: [{ rotate: `${angle}deg` }] }]}
+              >
+                <View style={styles.reelMarker} />
+              </View>
+            ))}
+          </Animated.View>
         </View>
 
         <Pressable
@@ -213,6 +274,48 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 4,
     marginLeft: -2,
+  },
+  cassetteZone: {
+    position: 'absolute',
+    left: '38.15%',
+    top: '65.75%',
+    width: '23.61%',
+    height: '21.625%',
+  },
+  cassetteBody: {
+    position: 'absolute',
+    left: '6%',
+    top: '23%',
+    width: '88%',
+    height: '54%',
+    borderRadius: 10,
+    backgroundColor: cassetteInk,
+  },
+  reel: {
+    position: 'absolute',
+    top: '26.88%',
+    width: '31.37%',
+    height: '46.24%',
+    borderRadius: 999,
+    backgroundColor: cassetteReelInk,
+    alignItems: 'center',
+  },
+  reelLeft: {
+    left: '9.31%',
+  },
+  reelRight: {
+    left: '59.31%',
+  },
+  reelMarkerPivot: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+  },
+  reelMarker: {
+    marginTop: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: cassetteInk,
   },
   hitZone: {
     position: 'absolute',
