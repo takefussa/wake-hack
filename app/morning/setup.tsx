@@ -1,7 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -11,12 +12,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { TimeWheel } from '@/components/morning/time-wheel';
 import { quickWakeTimes } from '@/constants/options';
+import { paperColors, shadows } from '@/constants/theme';
 import { demoMorningDefaults } from '@/data/demo-scenario';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useAppStore } from '@/store/use-app-store';
+
+const quickWakeTimesStorageKey = 'wake-hack-quick-wake-times-v01';
+const wakeTimePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 export default function MorningSetupScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
@@ -35,6 +41,46 @@ export default function MorningSetupScreen() {
       currentMorningRequest?.wakeAt ??
       demoMorningDefaults.wakeAt
   );
+  const [savedQuickTimes, setSavedQuickTimes] = useState<string[]>([
+    ...quickWakeTimes,
+  ]);
+  const [isEditingQuickTimes, setIsEditingQuickTimes] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadQuickWakeTimes() {
+      try {
+        const storedValue = await AsyncStorage.getItem(
+          quickWakeTimesStorageKey
+        );
+
+        if (!storedValue) return;
+
+        const parsedValue: unknown = JSON.parse(storedValue);
+        if (!Array.isArray(parsedValue)) return;
+
+        const validTimes = parsedValue
+          .filter(
+            (value): value is string =>
+              typeof value === 'string' && wakeTimePattern.test(value)
+          )
+          .slice(0, 4);
+
+        if (isMounted && validTimes.length > 0) {
+          setSavedQuickTimes(validTimes);
+        }
+      } catch {
+        // 保存値が壊れている場合は初期値を使う。
+      }
+    }
+
+    void loadQuickWakeTimes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -47,6 +93,38 @@ export default function MorningSetupScreen() {
     });
   }
 
+  function saveQuickWakeTimes(nextTimes: string[]) {
+    setSavedQuickTimes(nextTimes);
+    void AsyncStorage.setItem(
+      quickWakeTimesStorageKey,
+      JSON.stringify(nextTimes)
+    );
+  }
+
+  function handleQuickTimePress(time: string) {
+    if (!isEditingQuickTimes) {
+      setWakeAt(time);
+      return;
+    }
+
+    if (savedQuickTimes.length <= 1) return;
+
+    saveQuickWakeTimes(
+      savedQuickTimes.filter((savedTime) => savedTime !== time)
+    );
+  }
+
+  function handleAddQuickTime() {
+    if (
+      savedQuickTimes.length >= 4 ||
+      savedQuickTimes.includes(wakeAt)
+    ) {
+      return;
+    }
+
+    saveQuickWakeTimes([...savedQuickTimes, wakeAt]);
+  }
+
   return (
     <SafeAreaView
       style={styles.safeArea}
@@ -54,22 +132,7 @@ export default function MorningSetupScreen() {
     >
       <StatusBar style="dark" />
 
-      <View
-        pointerEvents="none"
-        style={StyleSheet.absoluteFill}
-      >
-        {Array.from({ length: 30 }).map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.paperLine,
-              { top: 30 + index * 32 },
-            ]}
-          />
-        ))}
-
-        <View style={styles.marginLine} />
-      </View>
+      <NotebookWallpaper />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -121,30 +184,56 @@ export default function MorningSetupScreen() {
         </View>
 
         <View style={styles.quickPaper}>
-          <View style={styles.quickHeading}>
-            <Ionicons
-              name="star-outline"
-              size={19}
-              color="#C69D38"
-            />
+          <View style={styles.quickHeadingRow}>
+            <View style={styles.quickHeading}>
+              <Ionicons
+                name="star-outline"
+                size={19}
+                color={paperColors.ink}
+              />
 
-            <AppText style={styles.quickTitle}>
-              よく使う時刻
-            </AppText>
+              <AppText style={styles.quickTitle}>
+                よく使う時刻
+              </AppText>
+            </View>
+
+            <Pressable
+              onPress={() =>
+                setIsEditingQuickTimes((isEditing) => !isEditing)
+              }
+              hitSlop={8}
+              style={styles.editQuickButton}
+            >
+              <Ionicons
+                name={isEditingQuickTimes ? 'checkmark' : 'pencil-outline'}
+                size={15}
+                color={paperColors.ink}
+              />
+              <AppText style={styles.editQuickText}>
+                {isEditingQuickTimes ? '完了' : '編集'}
+              </AppText>
+            </Pressable>
           </View>
 
+          {isEditingQuickTimes ? (
+            <AppText style={styles.quickEditHint}>
+              削除したい時刻を押し、ホイールで選んだ時刻を追加できます。
+            </AppText>
+          ) : null}
+
           <View style={styles.quickChoices}>
-            {quickWakeTimes.map((time) => {
-              const selected = wakeAt === time;
+            {savedQuickTimes.map((time) => {
+              const selected = !isEditingQuickTimes && wakeAt === time;
 
               return (
                 <Pressable
                   key={time}
-                  onPress={() => setWakeAt(time)}
+                  onPress={() => handleQuickTimePress(time)}
                   style={[
                     styles.quickChoice,
                     selected &&
                       styles.quickChoiceSelected,
+                    isEditingQuickTimes && styles.quickChoiceEditing,
                   ]}
                 >
                   <AppText
@@ -157,7 +246,15 @@ export default function MorningSetupScreen() {
                     {time}
                   </AppText>
 
-                  {selected ? (
+                  {isEditingQuickTimes ? (
+                    <View style={styles.removeBubble}>
+                      <Ionicons
+                        name="remove"
+                        size={14}
+                        color={paperColors.ink}
+                      />
+                    </View>
+                  ) : selected ? (
                     <View style={styles.checkBubble}>
                       <Ionicons
                         name="checkmark"
@@ -169,6 +266,24 @@ export default function MorningSetupScreen() {
                 </Pressable>
               );
             })}
+
+            {isEditingQuickTimes &&
+            savedQuickTimes.length < 4 &&
+            !savedQuickTimes.includes(wakeAt) ? (
+              <Pressable
+                onPress={handleAddQuickTime}
+                style={styles.addQuickTime}
+              >
+                <Ionicons
+                  name="add"
+                  size={17}
+                  color={paperColors.ink}
+                />
+                <AppText style={styles.addQuickTimeText}>
+                  {wakeAt}を追加
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
@@ -198,7 +313,7 @@ export default function MorningSetupScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F0DE',
+    backgroundColor: '#F6F6F6',
   },
 
   paperLine: {
@@ -206,7 +321,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(117, 163, 177, 0.14)',
+    backgroundColor: 'rgba(174, 203, 226, 0.52)',
   },
 
   marginLine: {
@@ -215,7 +330,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 44,
     width: 1,
-    backgroundColor: 'rgba(219, 124, 124, 0.32)',
+    backgroundColor: 'rgba(243, 196, 197, 0.80)',
   },
 
   content: {
@@ -245,7 +360,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     paddingHorizontal: 16,
     paddingVertical: 6,
-    backgroundColor: '#B7D9E8',
+    backgroundColor: paperColors.tape,
     transform: [{ rotate: '-1.5deg' }],
   },
 
@@ -260,7 +375,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 12,
     paddingBottom: 10,
-    backgroundColor: '#F8E8B9',
+    backgroundColor: 'transparent',
   },
 
   title: {
@@ -273,7 +388,7 @@ const styles = StyleSheet.create({
     height: 3,
     marginTop: 7,
     borderRadius: 10,
-    backgroundColor: '#EE9D95',
+    backgroundColor: paperColors.ruleBlue,
   },
 
   timePaper: {
@@ -281,18 +396,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 20,
     paddingBottom: 18,
-    backgroundColor: '#FCF8EA',
-    borderWidth: 1,
-    borderColor: '#C7BBA4',
-
-    shadowColor: '#786D5D',
-    shadowOpacity: 0.07,
-    shadowRadius: 4,
-    shadowOffset: {
-      width: 1,
-      height: 2,
-    },
-    elevation: 1,
+    backgroundColor: paperColors.base,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    ...shadows.paper,
   },
 
   blueTape: {
@@ -301,8 +409,7 @@ const styles = StyleSheet.create({
     left: -7,
     width: 76,
     height: 20,
-    backgroundColor: '#89BED6',
-    opacity: 0.75,
+    backgroundColor: paperColors.tape,
     transform: [{ rotate: '-9deg' }],
   },
 
@@ -325,10 +432,19 @@ const styles = StyleSheet.create({
     paddingTop: 13,
     paddingBottom: 14,
 
-    backgroundColor: '#FCF8EA',
+    backgroundColor: paperColors.base,
 
-    borderWidth: 1,
-    borderColor: '#C7BBA4',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    ...shadows.paper,
+  },
+
+  quickHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 11,
   },
 
   quickHeading: {
@@ -337,16 +453,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
 
-    marginBottom: 11,
     paddingHorizontal: 9,
     paddingVertical: 5,
 
-    backgroundColor: '#E8E8CB',
+    backgroundColor: paperColors.noteBlue,
   },
 
   quickTitle: {
     color: '#30463E',
     fontSize: 16,
+  },
+
+  editQuickButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderBottomWidth: 3,
+    borderBottomColor: paperColors.ruleBlue,
+  },
+
+  editQuickText: {
+    color: paperColors.ink,
+    fontSize: 14,
+  },
+
+  quickEditHint: {
+    marginTop: -3,
+    marginBottom: 9,
+    color: '#59635F',
+    fontSize: 12,
+    lineHeight: 18,
   },
 
   quickChoices: {
@@ -364,7 +502,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
 
-    backgroundColor: '#FFFDF7',
+    backgroundColor: '#FFFDF8',
 
     borderWidth: 1,
     borderColor: '#C9BCA7',
@@ -372,9 +510,14 @@ const styles = StyleSheet.create({
   },
 
   quickChoiceSelected: {
-    backgroundColor: '#B8D8E8',
+    backgroundColor: '#DCEEFB',
     borderColor: '#68A4C2',
     borderWidth: 1.5,
+  },
+
+  quickChoiceEditing: {
+    borderStyle: 'dashed',
+    borderColor: paperColors.ruleBlue,
   },
 
   quickChoiceText: {
@@ -397,7 +540,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
 
-    backgroundColor: '#A9B99B',
+    backgroundColor: '#CAD6C6',
+  },
+
+  removeBubble: {
+    position: 'absolute',
+    top: -7,
+    right: -5,
+    width: 21,
+    height: 21,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: paperColors.salmon,
+  },
+
+  addQuickTime: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: paperColors.noteBlue,
+    borderWidth: 1,
+    borderColor: paperColors.ruleBlue,
+    borderStyle: 'dashed',
+    borderRadius: 3,
+  },
+
+  addQuickTimeText: {
+    color: paperColors.ink,
+    fontSize: 14,
   },
 
   nextButton: {
@@ -412,12 +586,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 34,
 
-    backgroundColor: '#8EC3DE',
+    backgroundColor: '#F3C4C5',
 
-    borderWidth: 1,
-    borderColor: '#68A4C2',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
 
     transform: [{ rotate: '-0.4deg' }],
+    ...shadows.paper,
   },
 
   nextButtonPressed: {

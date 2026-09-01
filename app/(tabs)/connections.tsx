@@ -17,8 +17,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { voiceStyleOptions } from '@/constants/options';
-import { fontFamilyName } from '@/constants/theme';
+import { fontFamilyName, paperColors, shadows } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { rankMorningRequests } from '@/services/matching-service';
 import type { MorningRequestMatch } from '@/services/matching-service';
@@ -252,24 +253,7 @@ export default function ConnectionsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
-      {/* ノート背景(コミュニティのみ) */}
-      {mode === 'community' ? (
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          {Array.from({ length: 35 }).map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.paperLine,
-                {
-                  top: 28 + index * 32,
-                },
-              ]}
-            />
-          ))}
-
-          <View style={styles.marginLine} />
-        </View>
-      ) : null}
+      <NotebookWallpaper />
 
       {/* ヘッダー */}
       <View style={styles.header}>
@@ -563,7 +547,7 @@ export default function ConnectionsScreen() {
               <Ionicons
                 name="heart"
                 size={17}
-                color="#E58F91"
+                color={paperColors.ink}
               />
 
               <AppText style={styles.communityHintText}>
@@ -582,7 +566,7 @@ export default function ConnectionsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F0DE',
+    backgroundColor: '#F6F6F6',
   },
 
   paperLine: {
@@ -590,7 +574,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(117, 163, 177, 0.14)',
+    backgroundColor: 'rgba(174, 203, 226, 0.52)',
   },
 
   marginLine: {
@@ -599,7 +583,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 44,
     width: 1,
-    backgroundColor: 'rgba(220, 126, 126, 0.30)',
+    backgroundColor: 'rgba(243, 196, 197, 0.80)',
   },
 
   header: {
@@ -625,11 +609,11 @@ const styles = StyleSheet.create({
     height: 55,
     flexDirection: 'row',
 
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFDF8',
 
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#E7DED1',
+    borderColor: paperColors.ruleBlue,
   },
 
   modeButton: {
@@ -668,11 +652,11 @@ const styles = StyleSheet.create({
   },
 
   personalMarker: {
-    backgroundColor: '#8FC7DE',
+    backgroundColor: paperColors.ruleBlue,
   },
 
   communityMarker: {
-    backgroundColor: '#F1A7A5',
+    backgroundColor: paperColors.ruleBlue,
   },
 
   page: {
@@ -700,10 +684,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
 
-    backgroundColor: '#FFFDF7',
+    backgroundColor: '#FFFDF8',
 
-    borderWidth: 1,
-    borderColor: '#D4C7B2',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    ...shadows.paper,
   },
 
   stateTitle: {
@@ -729,10 +714,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 12,
 
-    backgroundColor: '#B9DAE8',
+    backgroundColor: paperColors.salmon,
 
-    borderWidth: 1,
-    borderColor: '#7FB4C9',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    ...shadows.paper,
   },
 
   stateButtonText: {
@@ -824,10 +810,11 @@ const styles = StyleSheet.create({
 
     alignItems: 'center',
 
-    backgroundColor: '#FFFDF7',
+    backgroundColor: '#FFFDF8',
 
-    borderWidth: 1,
-    borderColor: '#CDBFA8',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    ...shadows.paper,
   },
 
   communityTape: {
@@ -837,8 +824,7 @@ const styles = StyleSheet.create({
     width: 75,
     height: 20,
 
-    backgroundColor: '#F0B4B2',
-    opacity: 0.72,
+    backgroundColor: paperColors.tape,
 
     transform: [{ rotate: '-3deg' }],
   },
@@ -874,10 +860,11 @@ const styles = StyleSheet.create({
 
     gap: 10,
 
-    backgroundColor: '#F1C6C3',
+    backgroundColor: paperColors.salmon,
 
-    borderWidth: 1,
-    borderColor: '#D99B98',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    ...shadows.paper,
   },
 
   communityRecordText: {
@@ -899,11 +886,11 @@ const styles = StyleSheet.create({
 
     gap: 7,
 
-    backgroundColor: '#FFF8F3',
+    backgroundColor: '#FFFDF8',
 
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#E4AAA3',
+    borderColor: paperColors.ink,
   },
 
   communityHintText: {
@@ -931,10 +918,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
 
-    backgroundColor: '#FAF1D5',
+    backgroundColor: paperColors.paleYellow,
 
     borderWidth: 1,
-    borderColor: '#E5C978',
+    borderColor: paperColors.ruleBlue,
   },
 
   voiceOptionText: {

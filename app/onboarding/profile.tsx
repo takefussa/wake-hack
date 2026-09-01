@@ -119,18 +119,11 @@ export default function ProfileSetupScreen() {
 
   return (
     <Screen
-      backgroundColor="#F8F4EA"
+      backgroundColor="#F6F6F6"
       contentStyle={styles.content}
       testID="profile-setup-screen"
     >
       <StatusBar style="dark" />
-
-      <View pointerEvents="none" style={styles.paperLines}>
-        {Array.from({ length: 32 }, (_, index) => (
-          <View key={index} style={styles.paperLine} />
-        ))}
-      </View>
-      <View pointerEvents="none" style={styles.marginLine} />
 
       <View style={styles.navigation}>
         <IconButton
@@ -211,7 +204,7 @@ export default function ProfileSetupScreen() {
 
       {step === 1 ? (
         <AppButton
-          buttonColor="#627F8E"
+          buttonColor="#F3C4C5"
           disabled={!canGoNext}
           label="次へ"
           onPress={handleNext}
@@ -219,7 +212,7 @@ export default function ProfileSetupScreen() {
         />
       ) : (
         <AppButton
-          buttonColor="#627F8E"
+          buttonColor="#F3C4C5"
           disabled={!canSubmit || isSaving}
           label={
             isSaving
@@ -263,7 +256,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: -2,
     width: 1,
-    backgroundColor: 'rgba(199, 109, 101, 0.2)',
+    backgroundColor: 'rgba(243, 196, 197, 0.72)',
   },
 
   navigation: {
@@ -311,11 +304,11 @@ const styles = StyleSheet.create({
   },
 
   headerMarkerBlue: {
-    backgroundColor: 'rgba(155, 192, 208, 0.42)',
+    backgroundColor: 'rgba(220, 238, 251, 0.92)',
   },
 
   headerMarkerPink: {
-    backgroundColor: 'rgba(222, 158, 171, 0.36)',
+    backgroundColor: 'rgba(174, 203, 226, 0.72)',
   },
 
   headerTitle: {
@@ -347,11 +340,11 @@ const styles = StyleSheet.create({
   },
 
   stepLabelBlue: {
-    backgroundColor: '#D4E2E9',
+    backgroundColor: '#DCEEFB',
   },
 
   stepLabelPink: {
-    backgroundColor: '#EBCFD5',
+    backgroundColor: '#F3C4C5',
   },
 
   error: {

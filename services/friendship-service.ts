@@ -14,6 +14,11 @@ export class FriendshipService {
     return this.repository.createPending({ userAId, userBId, morningCount: 1 });
   }
 
+  async addOkimate(userAId: string, userBId: string): Promise<Friendship> {
+    const pending = await this.request(userAId, userBId);
+    return this.repository.match(pending);
+  }
+
   shouldAutoMatch(friendship: Friendship): boolean {
     return (
       friendship.userAId === demoWakeSenderId ||

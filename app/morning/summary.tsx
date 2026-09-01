@@ -5,6 +5,8 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
+import { paperColors, shadows } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useAppStore } from '@/store/use-app-store';
 
@@ -18,7 +20,7 @@ function SummaryRow({ icon, label, value }: SummaryRowProps) {
   return (
     <View style={styles.summaryRow}>
       <View style={styles.rowIcon}>
-        <Ionicons color="#51675D" name={icon} size={20} />
+        <Ionicons color={paperColors.ink} name={icon} size={21} />
       </View>
       <View style={styles.rowCopy}>
         <AppText style={styles.rowLabel}>{label}</AppText>
@@ -48,15 +50,7 @@ export default function MorningSummaryScreen() {
     <SafeAreaView style={styles.safeArea} testID="morning-summary-screen">
       <StatusBar style="dark" />
 
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        {Array.from({ length: 32 }).map((_, index) => (
-          <View
-            key={index}
-            style={[styles.paperLine, { top: 32 + index * 32 }]}
-          />
-        ))}
-        <View style={styles.marginLine} />
-      </View>
+      <NotebookWallpaper />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -127,7 +121,7 @@ export default function MorningSummaryScreen() {
 
         <View style={styles.voiceNote}>
           <Ionicons
-            color={assignedWakeVoice ? '#66835F' : '#9A765B'}
+            color={paperColors.ink}
             name={assignedWakeVoice ? 'checkmark-circle-outline' : 'time-outline'}
             size={21}
           />
@@ -166,14 +160,14 @@ export default function MorningSummaryScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F0DE',
+    backgroundColor: '#F6F6F6',
   },
   paperLine: {
     position: 'absolute',
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(117, 163, 177, 0.15)',
+    backgroundColor: 'rgba(174, 203, 226, 0.52)',
   },
   marginLine: {
     position: 'absolute',
@@ -181,7 +175,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 43,
     width: 1,
-    backgroundColor: 'rgba(220, 126, 126, 0.35)',
+    backgroundColor: 'rgba(243, 196, 197, 0.80)',
   },
   content: {
     width: '100%',
@@ -219,7 +213,7 @@ const styles = StyleSheet.create({
     color: '#56665E',
     fontSize: 14,
     borderBottomWidth: 2,
-    borderBottomColor: '#EDB7B0',
+    borderBottomColor: paperColors.ruleBlue,
   },
   linkPressed: {
     opacity: 0.58,
@@ -230,7 +224,7 @@ const styles = StyleSheet.create({
     marginLeft: 18,
     paddingHorizontal: 20,
     paddingVertical: 9,
-    backgroundColor: '#DDE7C8',
+    backgroundColor: paperColors.tape,
     transform: [{ rotate: '-1deg' }],
   },
   headingTapeText: {
@@ -251,7 +245,7 @@ const styles = StyleSheet.create({
     height: 5,
     marginTop: 7,
     borderRadius: 10,
-    backgroundColor: 'rgba(239, 160, 151, 0.72)',
+    backgroundColor: paperColors.ruleBlue,
     transform: [{ rotate: '-1deg' }],
   },
   description: {
@@ -265,9 +259,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 30,
     paddingBottom: 18,
-    backgroundColor: '#FFFDF5',
-    borderWidth: 1,
-    borderColor: '#AEB5AA',
+    backgroundColor: paperColors.base,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    ...shadows.paper,
   },
   blueTape: {
     position: 'absolute',
@@ -275,15 +271,16 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: 96,
     height: 24,
-    backgroundColor: 'rgba(142, 195, 222, 0.68)',
+    backgroundColor: paperColors.tape,
   },
   timeBlock: {
     alignItems: 'center',
-    paddingBottom: 20,
+    paddingVertical: 18,
   },
   timeLabel: {
-    color: '#657169',
-    fontSize: 13,
+    color: paperColors.ink,
+    fontSize: 15,
+    lineHeight: 21,
   },
   time: {
     marginTop: 2,
@@ -293,15 +290,17 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   divider: {
-    height: 1,
-    backgroundColor: '#D6D1C2',
+    height: 2,
+    marginTop: 18,
+    backgroundColor: paperColors.ink,
   },
   summaryRow: {
-    minHeight: 72,
+    minHeight: 78,
+    paddingHorizontal: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(174, 181, 170, 0.45)',
+    borderBottomWidth: 1.5,
+    borderBottomColor: paperColors.ink,
   },
   rowIcon: {
     width: 38,
@@ -309,20 +308,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 19,
-    backgroundColor: '#EEF0DC',
+    backgroundColor: paperColors.noteBlue,
   },
   rowCopy: {
     flex: 1,
     marginLeft: 13,
   },
   rowLabel: {
-    color: '#7A817A',
-    fontSize: 12,
+    color: paperColors.ink,
+    fontSize: 13,
+    lineHeight: 18,
   },
   rowValue: {
     marginTop: 2,
-    color: '#30463E',
-    fontSize: 17,
+    color: paperColors.ink,
+    fontSize: 19,
+    lineHeight: 25,
   },
   voiceNote: {
     minHeight: 52,
@@ -332,7 +333,11 @@ const styles = StyleSheet.create({
     gap: 9,
     marginTop: 18,
     paddingHorizontal: 14,
-    backgroundColor: '#F7E8BD',
+    backgroundColor: paperColors.cardGray,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 8,
+    ...shadows.paper,
   },
   voiceNoteText: {
     color: '#526158',
@@ -346,9 +351,10 @@ const styles = StyleSheet.create({
     gap: 18,
     marginTop: 22,
     marginHorizontal: 12,
-    backgroundColor: '#8EC3DE',
-    borderWidth: 1,
-    borderColor: '#68A4C2',
+    backgroundColor: '#F3C4C5',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    ...shadows.paper,
   },
   nextButtonPressed: {
     opacity: 0.72,

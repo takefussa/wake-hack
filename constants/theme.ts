@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-export const colors = {
+export const legacyColors = {
   background: '#F6F6F3',
   surface: '#FFFFFF',
   surfaceSubtle: '#F0F1ED',
@@ -26,6 +26,51 @@ export const colors = {
   successSoft: '#E3ECE7',
   danger: '#A85454',
   overlay: 'rgba(16, 23, 38, 0.32)',
+  transparent: 'transparent',
+} as const;
+
+export const paperColors = {
+  base: '#F6F6F6',
+  ink: '#111111',
+  noteBlue: '#DCEEFB',
+  ruleBlue: '#AECBE2',
+  salmon: '#F3C4C5',
+  tape: 'rgba(174, 203, 226, 0.68)',
+  orange: '#E8A044',
+  clockGray: '#C4C8CA',
+  olive: '#CAD6C6',
+  statusGray: '#A3A3A3',
+  cardGray: '#ECECEC',
+  cream: '#FFF3C4',
+  paleYellow: '#FFF3C4',
+} as const;
+
+export const colors = {
+  background: paperColors.base,
+  surface: '#FFFDF8',
+  surfaceSubtle: paperColors.cream,
+  navy: '#303235',
+  navyRaised: '#474A4D',
+  indigo: '#6EADD5',
+  indigoPressed: '#5797C0',
+  indigoSoft: paperColors.noteBlue,
+  warm: paperColors.orange,
+  warmPressed: '#CE8735',
+  warmSoft: paperColors.paleYellow,
+  morningSky: paperColors.noteBlue,
+  morningLight: '#FFFDF8',
+  morningBlush: '#F8E8E5',
+  text: paperColors.ink,
+  textSecondary: '#55585B',
+  textTertiary: '#85898C',
+  textInverse: '#FFFFFF',
+  textInverseSecondary: '#E8ECEE',
+  border: paperColors.clockGray,
+  separator: paperColors.ruleBlue,
+  success: '#7E967A',
+  successSoft: paperColors.olive,
+  danger: '#B75D5F',
+  overlay: 'rgba(17, 17, 17, 0.28)',
   transparent: 'transparent',
 } as const;
 
@@ -84,6 +129,17 @@ export const shadows = {
         shadowOpacity: 0.06,
         shadowRadius: 3,
         elevation: 1,
+      },
+    }) ?? {},
+  paper:
+    Platform.select({
+      web: { boxShadow: '3px 5px 0 rgba(17, 17, 17, 0.18)' },
+      default: {
+        shadowColor: paperColors.ink,
+        shadowOffset: { width: 3, height: 5 },
+        shadowOpacity: 0.18,
+        shadowRadius: 0,
+        elevation: 4,
       },
     }) ?? {},
 } as const;
