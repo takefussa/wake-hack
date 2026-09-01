@@ -8,7 +8,7 @@ import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
-import { colors, fonts, radii, spacing } from '@/constants/theme';
+import { legacyColors as colors, fonts, radii, spacing } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -119,6 +119,7 @@ export default function TomorrowReadyScreen() {
           </AppText>
         ) : null}
         <AppButton
+          legacy
           disabled={isStartingWake}
           icon="sunny-outline"
           label={isStartingWake ? '朝を準備しています…' : '朝を体験する'}
@@ -127,6 +128,7 @@ export default function TomorrowReadyScreen() {
           variant="warm"
         />
         <AppButton
+          legacy
           icon="home-outline"
           label="ホーム画面に戻る"
           onPress={() => runOnce(() => router.replace('/(tabs)'))}
@@ -135,6 +137,7 @@ export default function TomorrowReadyScreen() {
         />
         {isCommunity ? (
           <AppButton
+            legacy
             icon="mic-outline"
             label="やっぱり誰かに声を届ける"
             onPress={() => runOnce(() => router.push('/(tabs)/connections'))}

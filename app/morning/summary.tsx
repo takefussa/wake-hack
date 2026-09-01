@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { paperColors, shadows } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useAppStore } from '@/store/use-app-store';
 
@@ -166,14 +167,14 @@ export default function MorningSummaryScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F0DE',
+    backgroundColor: '#F6F6F6',
   },
   paperLine: {
     position: 'absolute',
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(117, 163, 177, 0.15)',
+    backgroundColor: 'rgba(174, 203, 226, 0.52)',
   },
   marginLine: {
     position: 'absolute',
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 43,
     width: 1,
-    backgroundColor: 'rgba(220, 126, 126, 0.35)',
+    backgroundColor: 'rgba(243, 196, 197, 0.80)',
   },
   content: {
     width: '100%',
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
     marginLeft: 18,
     paddingHorizontal: 20,
     paddingVertical: 9,
-    backgroundColor: '#DDE7C8',
+    backgroundColor: paperColors.noteBlue,
     transform: [{ rotate: '-1deg' }],
   },
   headingTapeText: {
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
     height: 5,
     marginTop: 7,
     borderRadius: 10,
-    backgroundColor: 'rgba(239, 160, 151, 0.72)',
+    backgroundColor: 'rgba(243, 196, 197, 0.90)',
     transform: [{ rotate: '-1deg' }],
   },
   description: {
@@ -265,9 +266,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 30,
     paddingBottom: 18,
-    backgroundColor: '#FFFDF5',
-    borderWidth: 1,
-    borderColor: '#AEB5AA',
+    backgroundColor: paperColors.base,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    ...shadows.paper,
   },
   blueTape: {
     position: 'absolute',
@@ -275,7 +278,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: 96,
     height: 24,
-    backgroundColor: 'rgba(142, 195, 222, 0.68)',
+    backgroundColor: 'rgba(220, 238, 251, 0.92)',
   },
   timeBlock: {
     alignItems: 'center',
@@ -294,7 +297,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#D6D1C2',
+    backgroundColor: '#C4C8CA',
   },
   summaryRow: {
     minHeight: 72,
@@ -309,7 +312,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 19,
-    backgroundColor: '#EEF0DC',
+    backgroundColor: '#F3EFE4',
   },
   rowCopy: {
     flex: 1,
@@ -332,7 +335,11 @@ const styles = StyleSheet.create({
     gap: 9,
     marginTop: 18,
     paddingHorizontal: 14,
-    backgroundColor: '#F7E8BD',
+    backgroundColor: paperColors.base,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 8,
+    ...shadows.paper,
   },
   voiceNoteText: {
     color: '#526158',
@@ -346,9 +353,10 @@ const styles = StyleSheet.create({
     gap: 18,
     marginTop: 22,
     marginHorizontal: 12,
-    backgroundColor: '#8EC3DE',
-    borderWidth: 1,
-    borderColor: '#68A4C2',
+    backgroundColor: '#F3C4C5',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    ...shadows.paper,
   },
   nextButtonPressed: {
     opacity: 0.72,

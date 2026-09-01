@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { Waveform } from '@/components/common/waveform';
-import { colors, componentSizes, radii, shadows, spacing } from '@/constants/theme';
+import { legacyColors as colors, componentSizes, radii, shadows, spacing } from '@/constants/theme';
 import { useVoicePlayer } from '@/hooks/use-voice-player';
 import type { UserProfile, VoiceMessage } from '@/types';
 

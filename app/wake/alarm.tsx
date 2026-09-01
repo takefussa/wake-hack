@@ -8,7 +8,7 @@ import { AppText } from '@/components/common/app-text';
 import { IconButton } from '@/components/common/icon-button';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { WakeVoicePlayer } from '@/components/wake/wake-voice-player';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { legacyColors as colors, fonts, spacing } from '@/constants/theme';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
@@ -101,6 +101,7 @@ export default function WakeAlarmScreen() {
 
       <View style={styles.footer}>
         <AppButton
+          legacy
           icon="sunny-outline"
           label="起きる"
           onPress={handleWakeUp}
