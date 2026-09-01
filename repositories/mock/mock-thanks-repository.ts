@@ -1,6 +1,6 @@
 import type { ThanksRepository } from '@/repositories/interfaces/thanks-repository';
 import type {
-  CreateThanksMessageInput,
+  SendThanksInput,
   ThanksMessage,
   VoiceMessage,
 } from '@/types';
@@ -12,12 +12,37 @@ const incomingCopy: Record<string, string> = {
 };
 
 export class MockThanksRepository implements ThanksRepository {
-  async create(input: CreateThanksMessageInput): Promise<ThanksMessage> {
-    return {
-      ...input,
-      id: `thanks-${Date.now()}-${input.type}-${input.receiverId}`,
-      createdAt: new Date().toISOString(),
-    };
+  async send(input: SendThanksInput): Promise<ThanksMessage[]> {
+    const createdAt = new Date().toISOString();
+    const messages: ThanksMessage[] = [
+      {
+        id: `thanks-${Date.now()}-reaction-${input.receiverId}`,
+        senderId: input.senderId,
+        receiverId: input.receiverId,
+        sourceVoiceMessageId: input.sourceVoiceMessageId,
+        type: 'reaction',
+        content: input.reaction,
+        createdAt,
+      },
+    ];
+
+    if (input.text) {
+      messages.push({
+        id: `thanks-${Date.now()}-text-${input.receiverId}`,
+        senderId: input.senderId,
+        receiverId: input.receiverId,
+        sourceVoiceMessageId: input.sourceVoiceMessageId,
+        type: 'text',
+        content: input.text,
+        createdAt,
+      });
+    }
+
+    return messages;
+  }
+
+  async getForUser(): Promise<ThanksMessage[]> {
+    return [];
   }
 
   async createIncomingForGives(

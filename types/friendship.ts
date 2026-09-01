@@ -9,4 +9,9 @@ export type Friendship = {
   createdAt: string;
 };
 
-export type CreateFriendshipInput = Pick<Friendship, 'userAId' | 'userBId' | 'morningCount'>;
+export type RequestFriendshipInput = {
+  requesterId: string;
+  otherUserId: string;
+  sourceVoiceMessageId: string;
+  morningCount: number;
+};

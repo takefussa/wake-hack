@@ -6,12 +6,15 @@
 2. SQL Editorで`migrations/001_profiles.sql`を実行する
 3. SQL Editorで`migrations/002_morning_requests.sql`を実行する
 4. SQL Editorで`migrations/003_voice_messages.sql`を実行する
+5. SQL Editorで`migrations/004_thanks_messages.sql`を実行する
+6. SQL Editorで`migrations/005_friendships.sql`を実行する
 
 実行後、次を確認します。
 
-- `profiles`、`morning_requests`、`voice_messages`でRLSが有効
+- `profiles`、`morning_requests`、`voice_messages`、`thanks_messages`、`friendships`でRLSが有効
 - `voice-messages` bucketがPrivate
 - `send_personal_voice`が`authenticated`からのみ実行可能
+- `request_friendship`が`authenticated`からのみ実行可能
 - `.env`には公開URLとPublishable Keyだけを設定
 
 `service_role`やSecret Keyはアプリへ設定しません。

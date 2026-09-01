@@ -282,6 +282,7 @@ export const useAppStore = create<AppStore>()(
         set((state) => {
           const existingIds = new Set(state.thanksMessages.map((message) => message.id));
           const uniqueMessages = messages.filter((message) => !existingIds.has(message.id));
+          if (uniqueMessages.length === 0) return state;
           return { thanksMessages: [...uniqueMessages, ...state.thanksMessages] };
         }),
       upsertFriendship: (friendship) =>
@@ -316,6 +317,16 @@ export const useAppStore = create<AppStore>()(
                   morningCount: Math.max(existing.morningCount, friendship.morningCount),
                   createdAt: existing.createdAt,
                 };
+          if (
+            existing.id === nextFriendship.id &&
+            existing.userAId === nextFriendship.userAId &&
+            existing.userBId === nextFriendship.userBId &&
+            existing.status === nextFriendship.status &&
+            existing.morningCount === nextFriendship.morningCount &&
+            existing.createdAt === nextFriendship.createdAt
+          ) {
+            return state;
+          }
           const friendships = [...state.friendships];
           friendships[existingIndex] = nextFriendship;
           return { friendships };

@@ -1,16 +1,22 @@
 import type { FriendshipRepository } from '@/repositories/interfaces/friendship-repository';
-import type { CreateFriendshipInput, Friendship } from '@/types';
+import type { Friendship, RequestFriendshipInput } from '@/types';
 
 const demoMatchDelayMs = 650;
 
 export class MockFriendshipRepository implements FriendshipRepository {
-  async createPending(input: CreateFriendshipInput): Promise<Friendship> {
+  async request(input: RequestFriendshipInput): Promise<Friendship> {
     return {
-      ...input,
-      id: `friendship-${Date.now()}-${input.userBId}`,
+      id: `friendship-${Date.now()}-${input.otherUserId}`,
+      userAId: input.requesterId,
+      userBId: input.otherUserId,
       status: 'pending',
+      morningCount: input.morningCount,
       createdAt: new Date().toISOString(),
     };
+  }
+
+  async getForUser(): Promise<Friendship[]> {
+    return [];
   }
 
   async match(friendship: Friendship): Promise<Friendship> {

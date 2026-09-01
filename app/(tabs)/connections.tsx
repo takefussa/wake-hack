@@ -17,9 +17,11 @@ export default function ConnectionsScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const thanksMessages = useAppStore((state) => state.thanksMessages);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
+  const addThanksMessages = useAppStore((state) => state.addThanksMessages);
   const currentUserId = currentUser?.id;
   const [inboxItems, setInboxItems] = useState<ThanksInboxItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -28,14 +30,35 @@ export default function ConnectionsScreen() {
     let isMounted = true;
     async function loadInbox() {
       try {
+        const availableMessages = await thanksService.getMessagesForUser(
+          userId,
+          thanksMessages
+        );
         const items = await thanksService.getInboxItems(
-          thanksMessages,
+          availableMessages,
           givenVoiceMessages,
           userId
         );
-        if (isMounted) setInboxItems(items);
+        if (isMounted) {
+          addThanksMessages(availableMessages);
+          setInboxItems(items);
+          setLoadError(null);
+        }
       } catch {
-        if (isMounted) setInboxItems([]);
+        let localItems: ThanksInboxItem[] = [];
+        try {
+          localItems = await thanksService.getInboxItems(
+            thanksMessages,
+            givenVoiceMessages,
+            userId
+          );
+        } catch {
+          // ローカルデータの一部が古い場合も、タブ自体は表示し続ける。
+        }
+        if (isMounted) {
+          setInboxItems(localItems);
+          setLoadError('新しいありがとうを確認できませんでした。');
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -45,7 +68,12 @@ export default function ConnectionsScreen() {
     return () => {
       isMounted = false;
     };
-  }, [currentUserId, givenVoiceMessages, thanksMessages]);
+  }, [
+    addThanksMessages,
+    currentUserId,
+    givenVoiceMessages,
+    thanksMessages,
+  ]);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -101,6 +129,12 @@ export default function ConnectionsScreen() {
         <AppText variant="caption" tone="muted">
           あなたが届けた声への返事です。
         </AppText>
+
+        {loadError ? (
+          <AppText variant="caption" style={styles.error}>
+            {loadError}
+          </AppText>
+        ) : null}
 
         {isLoading ? <LoadingState label="届いた言葉を読み込んでいます" /> : null}
         {!isLoading && inboxItems.length === 0 ? (
@@ -176,5 +210,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: colors.separator,
     gap: spacing.sm,
+  },
+  error: {
+    color: colors.danger,
   },
 });
