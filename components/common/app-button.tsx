@@ -23,6 +23,7 @@ type AppButtonProps = {
   compact?: boolean;
   testID?: string;
   buttonColor?: ViewStyle['backgroundColor'];
+  legacy?: boolean;
 };
 
 function getTextTone(variant: ButtonVariant): 'light' | 'lightMuted' | 'dark' | 'accent' {
@@ -41,10 +42,13 @@ export function AppButton({
   compact = false,
   testID,
   buttonColor,
+  legacy = false,
 }: AppButtonProps) {
-  const textTone = getTextTone(variant);
+  const textTone = !legacy && variant === 'primary' ? 'dark' : getTextTone(variant);
   const iconColor =
-    textTone === 'light'
+    legacy && textTone === 'accent'
+      ? '#4D628B'
+      : textTone === 'light'
       ? colors.textInverse
       : textTone === 'lightMuted'
         ? colors.textInverseSecondary
@@ -68,6 +72,9 @@ export function AppButton({
         variant === 'textOnDark' && styles.text,
         variant === 'warm' && styles.warm,
         variant === 'inverted' && styles.inverted,
+        legacy && variant === 'primary' && styles.legacyPrimary,
+        legacy && variant === 'secondary' && styles.legacySecondary,
+        legacy && variant === 'warm' && styles.legacyWarm,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
         buttonColor ? { backgroundColor: buttonColor } : null,
@@ -77,7 +84,7 @@ export function AppButton({
           adjustsFontSizeToFit
           minimumFontScale={0.85}
           numberOfLines={1}
-          style={styles.label}
+          style={[styles.label, legacy && textTone === 'accent' && styles.legacyAccentLabel]}
           tone={textTone}
           variant="bodyMedium">
           {label}
@@ -113,7 +120,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   primary: {
-    backgroundColor: colors.indigo,
+    borderWidth: 1,
+    borderColor: '#D59A9C',
+    backgroundColor: '#F3C4C5',
   },
   secondary: {
     borderWidth: 1,
@@ -135,5 +144,19 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.78,
+  },
+  legacyPrimary: {
+    borderWidth: 0,
+    backgroundColor: '#4D628B',
+  },
+  legacySecondary: {
+    borderColor: '#4D628B',
+  },
+  legacyWarm: {
+    borderWidth: 0,
+    backgroundColor: '#D59B45',
+  },
+  legacyAccentLabel: {
+    color: '#4D628B',
   },
 });

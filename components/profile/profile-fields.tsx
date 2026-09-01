@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
 
     gap: 14,
 
-    backgroundColor: '#FCFAF5',
+    backgroundColor: '#FFFDF8',
 
     borderWidth: 1,
     borderColor: '#87919A',
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
 
     width: 72,
     height: 16,
-    backgroundColor: '#C7DCE6',
+    backgroundColor: '#DCEEFB',
 
     opacity: 0.72,
 
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 16,
 
-    backgroundColor: '#EBCBD2',
+    backgroundColor: '#F3C4C5',
 
     opacity: 0.75,
 
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 5,
 
-    backgroundColor: '#EBCBD2',
+    backgroundColor: '#F3C4C5',
   },
 
   requiredBadgeText: {
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
   },
 
   inputPaper: {
-    backgroundColor: '#FCFAF5',
+    backgroundColor: '#FFFDF8',
 
     borderWidth: 1.5,
     borderColor: '#87919A',
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   },
 
   bioPaper: {
-    backgroundColor: '#FCFAF5',
+    backgroundColor: '#FFFDF8',
 
     borderWidth: 1.5,
     borderColor: '#87919A',
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
 
     gap: 9,
 
-    backgroundColor: '#F7F5EF',
+    backgroundColor: '#F3EFE4',
 
     borderWidth: 1,
     borderStyle: 'dashed',
