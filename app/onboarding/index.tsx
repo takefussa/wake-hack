@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { OnboardingScene } from '@/components/onboarding/onboarding-scene';
 import { onboardingPages } from '@/data/onboarding-pages';
 import { useTapLock } from '@/hooks/use-tap-lock';
@@ -37,13 +38,7 @@ export default function OnboardingScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
-      <View pointerEvents="none" style={styles.paperLines}>
-        {Array.from({ length: 30 }, (_, index) => (
-          <View key={index} style={styles.paperLine} />
-        ))}
-      </View>
-
-      <View pointerEvents="none" style={styles.marginLine} />
+      <NotebookWallpaper />
 
       <View style={styles.content}>
         {pageIndex > 0 && (
@@ -113,7 +108,7 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F0DE',
+    backgroundColor: '#F6F6F6',
   },
 
   paperLines: {
@@ -133,7 +128,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 43,
     width: 1,
-    backgroundColor: 'rgba(198, 95, 76, 0.28)',
+    backgroundColor: 'rgba(243, 196, 197, 0.80)',
   },
 
   content: {
@@ -161,7 +156,7 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     height: 14,
-    backgroundColor: 'rgba(244, 210, 91, 0.42)',
+    backgroundColor: 'rgba(174, 203, 226, 0.82)',
     transform: [{ rotate: '-1deg' }],
   },
 
@@ -201,17 +196,17 @@ const styles = StyleSheet.create({
   },
 
   dotBlue: {
-    backgroundColor: '#89B5CC',
+    backgroundColor: '#AECBE2',
     borderColor: '#567C91',
   },
 
   dotPink: {
-    backgroundColor: '#F2B5AA',
+    backgroundColor: '#F3C4C5',
     borderColor: '#B96F61',
   },
 
   dotYellow: {
-    backgroundColor: '#F1D77A',
+    backgroundColor: '#FFF3C4',
     borderColor: '#C49A42',
   },
 
@@ -245,7 +240,7 @@ const styles = StyleSheet.create({
     minHeight: 58,
     marginHorizontal: 34,
     paddingHorizontal: 26,
-    backgroundColor: '#9EC6DD',
+    backgroundColor: '#F3C4C5',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

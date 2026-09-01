@@ -9,7 +9,7 @@ import 'react-native-reanimated';
 
 import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
 import { LoadingScreen } from '@/components/common/loading-screen';
-import { colors, fontFamilyName } from '@/constants/theme';
+import { colors, fontFamilyName, paperColors } from '@/constants/theme';
 import { useAuthBootstrap } from '@/hooks/use-auth-bootstrap';
 import { useAppStore } from '@/store/use-app-store';
 
@@ -62,11 +62,12 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding/profile" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="profile-edit" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="user/[id]" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="morning" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="wake" options={{ animation: 'fade' }} />
             <Stack.Screen name="friend" options={{ animation: 'slide_from_right' }} />
           </Stack>
-          <StatusBar style="dark" />
+          <StatusBar backgroundColor={paperColors.statusGray} style="dark" />
         </ThemeProvider>
       ) : authStatus === 'error' ? (
         <AuthErrorScreen failure={failure} onRetry={retry} />

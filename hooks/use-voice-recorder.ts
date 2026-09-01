@@ -63,10 +63,13 @@ export function useVoiceRecorder() {
     if (!recording?.uri) return;
 
     try {
-      if (player.playing) {
-        player.pause();
-      }
+      // Pause unconditionally rather than trusting `player.playing`: that flag comes from
+      // a polled status hook and can lag the native player by up to its update interval,
+      // so a still-playing previous take could otherwise keep running into the new source
+      // and make `replace` appear to auto-resume playback.
+      player.pause();
       player.replace({ uri: recording.uri });
+      player.pause();
     } catch {
       setError('録音した声の再生を準備できませんでした。');
     }
@@ -197,8 +200,10 @@ export function useVoiceRecorder() {
       setRecording(null);
       latestRecordingDurationMs.current = 0;
       recordingStartedAt.current = null;
-      if (player.playing) {
+      try {
         player.pause();
+      } catch {
+        // Starting a new recording remains available even if the player has no source yet.
       }
       await setAudioModeAsync({
         allowsRecording: true,
@@ -208,7 +213,7 @@ export function useVoiceRecorder() {
       await recorder.prepareToRecordAsync();
       hasActiveRecording.current = true;
       recordingStartedAt.current = Date.now();
-      recorder.record({ forDuration: prototypeConfig.recordingMaxMs / 1_000 });
+      recorder.record();
       autoStopTimer.current = setTimeout(() => {
         void finishRecording();
       }, prototypeConfig.recordingMaxMs + 100);
@@ -252,9 +257,7 @@ export function useVoiceRecorder() {
 
   const resetRecording = useCallback(() => {
     try {
-      if (player.playing) {
-        player.pause();
-      }
+      player.pause();
     } catch {
       // Reset remains available even if the native player has already stopped.
     }
