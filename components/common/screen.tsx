@@ -3,6 +3,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { colors, layout, spacing } from '@/constants/theme';
 
 type ScreenVariant = 'light' | 'dark';
@@ -48,6 +49,7 @@ export function Screen({
 
   return (
     <View style={[styles.root, { backgroundColor }]}>
+      {variant === 'light' ? <NotebookWallpaper /> : null}
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {body}
       </SafeAreaView>

@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   beigeTape: {
     paddingHorizontal: 16,
     paddingVertical: 7,
-    backgroundColor: 'rgba(224, 213, 185, 0.88)',
+    backgroundColor: 'rgba(174, 203, 226, 0.68)',
     transform: [{ rotate: '-3deg' }],
   },
 
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     width: 245,
     height: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(243, 196, 197, 0.88)',
+    backgroundColor: 'rgba(174, 203, 226, 0.88)',
     transform: [{ rotate: '-2deg' }],
   },
 
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 24,
     zIndex: 5,
-    backgroundColor: 'rgba(174, 203, 226, 0.88)',
+    backgroundColor: 'rgba(174, 203, 226, 0.68)',
     transform: [{ rotate: '-13deg' }],
   },
 
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   nightTape: {
     paddingHorizontal: 28,
     paddingVertical: 13,
-    backgroundColor: 'rgba(220, 238, 251, 0.86)',
+    backgroundColor: 'rgba(174, 203, 226, 0.68)',
   },
 
   nightLabel: {
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     width: 78,
     height: 24,
     zIndex: 4,
-    backgroundColor: 'rgba(243, 196, 197, 0.88)',
+    backgroundColor: 'rgba(174, 203, 226, 0.68)',
     transform: [{ rotate: '2deg' }],
   },
 
@@ -530,9 +530,9 @@ const styles = StyleSheet.create({
     borderRadius: 39,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E0D5B9',
+    backgroundColor: '#FFF3C4',
     borderWidth: 1,
-    borderColor: '#8E7E59',
+    borderColor: '#111111',
   },
 
   recordTime: {
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(243, 239, 228, 0.96)',
     borderWidth: 1,
-    borderColor: '#C6B98E',
+    borderColor: '#111111',
     borderRadius: 9,
   },
 
@@ -573,10 +573,10 @@ const styles = StyleSheet.create({
     bottom: -7,
     width: 14,
     height: 14,
-    backgroundColor: '#F3EFE4',
+    backgroundColor: '#FFF3C4',
     borderRightWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#C6B98E',
+    borderColor: '#111111',
     transform: [{ rotate: '45deg' }],
   },
 
@@ -701,9 +701,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 5,
-    backgroundColor: '#E0D5B9',
+    backgroundColor: '#FFF3C4',
     borderWidth: 1,
-    borderColor: '#847858',
+    borderColor: '#111111',
   },
 
   lineTopLeft: {

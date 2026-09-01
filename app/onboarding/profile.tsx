@@ -125,13 +125,6 @@ export default function ProfileSetupScreen() {
     >
       <StatusBar style="dark" />
 
-      <View pointerEvents="none" style={styles.paperLines}>
-        {Array.from({ length: 32 }, (_, index) => (
-          <View key={index} style={styles.paperLine} />
-        ))}
-      </View>
-      <View pointerEvents="none" style={styles.marginLine} />
-
       <View style={styles.navigation}>
         <IconButton
           icon="chevron-back"
@@ -315,7 +308,7 @@ const styles = StyleSheet.create({
   },
 
   headerMarkerPink: {
-    backgroundColor: 'rgba(243, 196, 197, 0.72)',
+    backgroundColor: 'rgba(174, 203, 226, 0.72)',
   },
 
   headerTitle: {

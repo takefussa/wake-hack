@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { voiceStyleOptions } from '@/constants/options';
 import { fontFamilyName, paperColors, shadows } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
@@ -252,24 +253,7 @@ export default function ConnectionsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
-      {/* ノート背景(コミュニティのみ) */}
-      {mode === 'community' ? (
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          {Array.from({ length: 35 }).map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.paperLine,
-                {
-                  top: 28 + index * 32,
-                },
-              ]}
-            />
-          ))}
-
-          <View style={styles.marginLine} />
-        </View>
-      ) : null}
+      <NotebookWallpaper />
 
       {/* ヘッダー */}
       <View style={styles.header}>
@@ -672,7 +656,7 @@ const styles = StyleSheet.create({
   },
 
   communityMarker: {
-    backgroundColor: paperColors.salmon,
+    backgroundColor: paperColors.ruleBlue,
   },
 
   page: {
@@ -840,8 +824,7 @@ const styles = StyleSheet.create({
     width: 75,
     height: 20,
 
-    backgroundColor: paperColors.ruleBlue,
-    opacity: 0.72,
+    backgroundColor: paperColors.tape,
 
     transform: [{ rotate: '-3deg' }],
   },
@@ -938,7 +921,7 @@ const styles = StyleSheet.create({
     backgroundColor: paperColors.paleYellow,
 
     borderWidth: 1,
-    borderColor: paperColors.ink,
+    borderColor: paperColors.ruleBlue,
   },
 
   voiceOptionText: {

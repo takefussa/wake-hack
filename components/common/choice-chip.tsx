@@ -9,9 +9,16 @@ type ChoiceChipProps = {
   selected: boolean;
   onPress: () => void;
   mode?: 'light' | 'dark';
+  emphasized?: boolean;
 };
 
-export function ChoiceChip({ label, selected, onPress, mode = 'light' }: ChoiceChipProps) {
+export function ChoiceChip({
+  label,
+  selected,
+  onPress,
+  mode = 'light',
+  emphasized = false,
+}: ChoiceChipProps) {
   const isDark = mode === 'dark';
   const textTone = isDark ? 'light' : selected ? 'accent' : 'soft';
 
@@ -22,6 +29,7 @@ export function ChoiceChip({ label, selected, onPress, mode = 'light' }: ChoiceC
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,
+        emphasized && styles.emphasized,
         isDark ? styles.dark : styles.light,
         selected && (isDark ? styles.selectedDark : styles.selectedLight),
         pressed && styles.pressed,
@@ -50,6 +58,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
+  },
+  emphasized: {
+    borderWidth: 2,
   },
   light: {
     backgroundColor: colors.transparent,
