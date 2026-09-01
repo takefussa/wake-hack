@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 
 import { mockCommunityVoices, mockPersonalWakeVoice } from '@/data/mock-voices';
 import { getPrototypeStateRepair } from '@/features/prototype/repair-persisted-state';
@@ -40,6 +40,16 @@ type AppStore = PrototypePersistedState & {
 };
 
 const prototypeStorageKey = 'wake-hack-prototype-v01';
+
+const serverStorage: StateStorage = {
+  getItem: () => null,
+  setItem: () => undefined,
+  removeItem: () => undefined,
+};
+
+function getPrototypeStorage(): StateStorage {
+  return typeof window === 'undefined' ? serverStorage : AsyncStorage;
+}
 
 const initialPersistedState: PrototypePersistedState = {
   currentUser: null,
@@ -297,7 +307,7 @@ export const useAppStore = create<AppStore>()(
     }),
     {
       name: prototypeStorageKey,
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => getPrototypeStorage()),
       partialize: (state): PrototypePersistedState => ({
         currentUser: state.currentUser,
         morningRequestDraft: state.morningRequestDraft,
