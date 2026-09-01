@@ -20,7 +20,6 @@ export default function WakeAlarmScreen() {
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
   const cancelWakeSession = useAppStore((state) => state.cancelWakeSession);
-  const completeWakeSession = useAppStore((state) => state.completeWakeSession);
   const sender = useVoiceSender(assignedWakeVoice);
   const runOnce = useTapLock();
   const stopPlaybackRef = useRef<() => void>(() => undefined);
@@ -52,8 +51,7 @@ export default function WakeAlarmScreen() {
   function handleWakeUp() {
     runOnce(() => {
       stopPlaybackRef.current();
-      completeWakeSession();
-      router.replace('/wake/complete');
+      router.replace('/wake/mission');
     });
   }
 
