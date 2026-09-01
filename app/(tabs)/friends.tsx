@@ -1,5 +1,5 @@
 import { Redirect } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
@@ -7,6 +7,7 @@ import { Avatar } from '@/components/common/avatar';
 import { LoadingState } from '@/components/common/loading-state';
 import { Screen } from '@/components/common/screen';
 import { colors, spacing } from '@/constants/theme';
+import { friendshipService } from '@/services/friendship-service';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
 import type { Friendship, UserProfile } from '@/types';
@@ -26,13 +27,11 @@ function getFriendUserId(friendship: Friendship, currentUserId: string): string 
 export default function FriendsScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const friendships = useAppStore((state) => state.friendships);
+  const upsertFriendship = useAppStore((state) => state.upsertFriendship);
   const currentUserId = currentUser?.id;
-  const matchedFriendships = useMemo(
-    () => friendships.filter((friendship) => friendship.status === 'matched'),
-    [friendships]
-  );
   const [friends, setFriends] = useState<FriendListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -41,6 +40,13 @@ export default function FriendsScreen() {
     let isMounted = true;
     async function loadFriends() {
       try {
+        const availableFriendships = await friendshipService.getForUser(
+          userId,
+          friendships
+        );
+        const matchedFriendships = availableFriendships.filter(
+          (friendship) => friendship.status === 'matched'
+        );
         const items = await Promise.all(
           matchedFriendships.map(async (friendship) => {
             const profile = await profileService.getProfile(
@@ -50,10 +56,28 @@ export default function FriendsScreen() {
           })
         );
         if (isMounted) {
+          availableFriendships.forEach(upsertFriendship);
           setFriends(items.filter((item): item is FriendListItem => item !== null));
+          setLoadError(null);
         }
       } catch {
-        if (isMounted) setFriends([]);
+        const localMatched = friendships.filter(
+          (friendship) => friendship.status === 'matched'
+        );
+        const localItems = await Promise.all(
+          localMatched.map(async (friendship) => {
+            const profile = await profileService.getProfile(
+              getFriendUserId(friendship, userId)
+            );
+            return profile ? { friendship, profile } : null;
+          })
+        );
+        if (isMounted) {
+          setFriends(
+            localItems.filter((item): item is FriendListItem => item !== null)
+          );
+          setLoadError('朝フレンドを更新できませんでした。');
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -63,7 +87,7 @@ export default function FriendsScreen() {
     return () => {
       isMounted = false;
     };
-  }, [currentUserId, matchedFriendships]);
+  }, [currentUserId, friendships, upsertFriendship]);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -77,6 +101,12 @@ export default function FriendsScreen() {
           一度声を通して、また一緒に朝を迎えたいと思った人。
         </AppText>
       </View>
+
+      {loadError ? (
+        <AppText variant="caption" style={styles.error}>
+          {loadError}
+        </AppText>
+      ) : null}
 
       {isLoading ? <LoadingState label="朝のつながりを読み込んでいます" /> : null}
       {!isLoading && friends.length === 0 ? (
@@ -144,5 +174,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: colors.separator,
     gap: spacing.sm,
+  },
+  error: {
+    color: colors.danger,
   },
 });

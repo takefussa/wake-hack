@@ -1,11 +1,12 @@
 import type {
-  CreateThanksMessageInput,
+  SendThanksInput,
   ThanksMessage,
   VoiceMessage,
 } from '@/types';
 
 export interface ThanksRepository {
-  create(input: CreateThanksMessageInput): Promise<ThanksMessage>;
+  send(input: SendThanksInput): Promise<ThanksMessage[]>;
+  getForUser(userId: string): Promise<ThanksMessage[]>;
   createIncomingForGives(
     givenVoices: VoiceMessage[],
     receiverId: string

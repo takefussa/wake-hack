@@ -33,6 +33,28 @@ export type VoiceMessageRow = {
   created_at: string;
 };
 
+export type ThanksMessageRow = {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  source_voice_message_id: string;
+  reaction: string;
+  text_message: string | null;
+  created_at: string;
+};
+
+export type FriendshipRow = {
+  id: string;
+  user_a_id: string;
+  user_b_id: string;
+  user_a_requested: boolean;
+  user_b_requested: boolean;
+  status: string;
+  morning_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -100,6 +122,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      thanks_messages: {
+        Row: ThanksMessageRow;
+        Insert: {
+          id?: string;
+          sender_id: string;
+          receiver_id: string;
+          source_voice_message_id: string;
+          reaction: string;
+          text_message?: string | null;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      friendships: {
+        Row: FriendshipRow;
+        Insert: {
+          id?: string;
+          user_a_id: string;
+          user_b_id: string;
+          user_a_requested?: boolean;
+          user_b_requested?: boolean;
+          status?: string;
+          morning_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -113,6 +165,13 @@ export type Database = {
           p_duration_ms: number;
         };
         Returns: VoiceMessageRow[];
+      };
+      request_friendship: {
+        Args: {
+          p_other_user_id: string;
+          p_source_voice_message_id: string;
+        };
+        Returns: FriendshipRow[];
       };
     };
   };

@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -40,6 +40,38 @@ export default function FriendRequestScreen() {
   const [isMatching, setIsMatching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isMatchingRef = useRef(false);
+
+  useEffect(() => {
+    if (!currentUser || !assignedWakeVoice || assignedWakeVoice.type !== 'personal') {
+      return;
+    }
+    const userId = currentUser.id;
+    const senderId = assignedWakeVoice.senderId;
+
+    let isMounted = true;
+    async function restoreFriendship() {
+      try {
+        const restored = await friendshipService.getBetween(
+          userId,
+          senderId,
+          friendships
+        );
+        if (isMounted && restored) {
+          upsertFriendship(restored);
+          setFriendship(restored);
+        }
+      } catch {
+        if (isMounted) {
+          setError('朝フレンドの状態を確認できませんでした。');
+        }
+      }
+    }
+
+    void restoreFriendship();
+    return () => {
+      isMounted = false;
+    };
+  }, [assignedWakeVoice, currentUser, friendships, upsertFriendship]);
 
   if (!currentUser || !currentMorningRequest || !assignedWakeVoice || !wakeSession) {
     return <Redirect href="/(tabs)" />;
@@ -82,7 +114,8 @@ export default function FriendRequestScreen() {
     try {
       const pending = await friendshipService.request(
         currentUser.id,
-        assignedWakeVoice.senderId
+        assignedWakeVoice.senderId,
+        assignedWakeVoice.id
       );
       upsertFriendship(pending);
       setFriendship(pending);
