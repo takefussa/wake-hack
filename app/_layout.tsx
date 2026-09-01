@@ -62,6 +62,7 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding/profile" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="profile-edit" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="user/[id]" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="morning" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="wake" options={{ animation: 'fade' }} />
             <Stack.Screen name="friend" options={{ animation: 'slide_from_right' }} />

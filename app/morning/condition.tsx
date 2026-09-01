@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import {
   moodOptions,
   scheduleOptions,
@@ -163,15 +164,7 @@ export default function TomorrowConditionScreen() {
     <SafeAreaView style={styles.safeArea} testID="tomorrow-condition-screen">
       <StatusBar style="dark" />
 
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        {Array.from({ length: 35 }).map((_, index) => (
-          <View
-            key={index}
-            style={[styles.paperLine, { top: 34 + index * 32 }]}
-          />
-        ))}
-        <View style={styles.marginLine} />
-      </View>
+      <NotebookWallpaper />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -416,7 +409,7 @@ const styles = StyleSheet.create({
     color: '#30463E',
     fontSize: 14,
     borderBottomWidth: 2,
-    borderBottomColor: '#EDB7B0',
+    borderBottomColor: paperColors.ruleBlue,
   },
 
   stepTape: {
@@ -429,7 +422,7 @@ const styles = StyleSheet.create({
   },
 
   pinkStep: {
-    backgroundColor: paperColors.noteBlue,
+    backgroundColor: paperColors.tape,
   },
 
   stepText: {
@@ -440,7 +433,7 @@ const styles = StyleSheet.create({
 
   titlePaper: {
     alignSelf: 'center',
-    backgroundColor: paperColors.paleYellow,
+    backgroundColor: 'transparent',
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 16,
@@ -504,8 +497,7 @@ const styles = StyleSheet.create({
     height: 22,
     top: -10,
     left: -7,
-    opacity: 0.7,
-    backgroundColor: paperColors.ruleBlue,
+    backgroundColor: paperColors.tape,
     transform: [{ rotate: '-9deg' }],
   },
 

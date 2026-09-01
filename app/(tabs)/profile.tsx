@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
+import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { fonts, paperColors, shadows, spacing } from '@/constants/theme';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
@@ -58,16 +59,14 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea} testID="profile-screen">
-      <View pointerEvents="none" style={styles.paperLines}>
-        {Array.from({ length: 30 }, (_, index) => <View key={index} style={styles.paperLine} />)}
-      </View>
-      <View pointerEvents="none" style={styles.marginLine} />
+      <NotebookWallpaper />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.titleTape}>
             <AppText style={styles.titleEyebrow}>MY PROFILE</AppText>
             <AppText style={styles.title}>プロフィール</AppText>
+            <View style={styles.profileTitleUnderline} />
           </View>
           <Pressable
             accessibilityLabel="プロフィールを編集"
@@ -183,14 +182,12 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: paperColors.base },
-  paperLines: { ...StyleSheet.absoluteFillObject, top: 48 },
-  paperLine: { height: 32, borderBottomWidth: 1, borderBottomColor: 'rgba(174,203,226,0.52)' },
-  marginLine: { position: 'absolute', top: 0, bottom: 0, left: 28, width: 1, backgroundColor: 'rgba(243,196,197,0.8)' },
   content: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xxxl, gap: spacing.xxl },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg },
-  titleTape: { minWidth: 180, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, backgroundColor: paperColors.tape, transform: [{ rotate: '-1deg' }] },
+  titleTape: { minWidth: 180, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, backgroundColor: 'transparent', transform: [{ rotate: '-1deg' }] },
   titleEyebrow: { color: paperColors.ink, fontSize: 10, lineHeight: 14, letterSpacing: 1.5 },
   title: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 23, lineHeight: 30 },
+  profileTitleUnderline: { width: '100%', height: 5, marginTop: 3, borderRadius: 3, backgroundColor: paperColors.ruleBlue },
   editButton: { minHeight: 42, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 7, backgroundColor: paperColors.salmon },
   editButtonPressed: { backgroundColor: '#E4ADB0', transform: [{ translateY: 1 }] },
   editButtonText: { color: paperColors.ink, fontSize: 14, lineHeight: 19 },
@@ -198,7 +195,7 @@ const styles = StyleSheet.create({
   profileTape: { position: 'absolute', zIndex: 1, top: -10, left: '38%', width: 92, height: 22, backgroundColor: paperColors.tape, transform: [{ rotate: '-1deg' }] },
   profileCard: { padding: spacing.xl, borderWidth: 2, borderColor: paperColors.ink, borderRadius: 13, backgroundColor: paperColors.base, ...shadows.paper },
   identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
-  avatarFrame: { padding: 5, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 50, backgroundColor: paperColors.salmon },
+  avatarFrame: { padding: 5, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 50, backgroundColor: paperColors.base },
   identityCopy: { flex: 1, minWidth: 0 },
   identityLabel: { color: paperColors.ink, fontSize: 10, lineHeight: 14, letterSpacing: 1.6 },
   nickname: { marginTop: 1, color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 25, lineHeight: 33 },
@@ -218,17 +215,17 @@ const styles = StyleSheet.create({
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   sectionRule: { flex: 1, height: 1, backgroundColor: paperColors.ruleBlue },
   sectionTitle: { color: paperColors.ink, fontSize: 12, lineHeight: 17, letterSpacing: 1.8 },
-  logCard: { position: 'relative', overflow: 'visible', flexDirection: 'row', flexWrap: 'wrap', borderWidth: 2, borderColor: paperColors.ink, borderRadius: 14, backgroundColor: paperColors.noteBlue, ...shadows.paper },
+  logCard: { position: 'relative', overflow: 'visible', flexDirection: 'row', flexWrap: 'wrap', borderWidth: 2, borderColor: paperColors.ink, borderRadius: 14, backgroundColor: paperColors.base, ...shadows.paper },
   logTape: { position: 'absolute', zIndex: 2, top: -11, right: 24, width: 72, height: 20, backgroundColor: paperColors.tape, transform: [{ rotate: '2deg' }] },
   stat: { width: '50%', minHeight: 104, padding: spacing.md, alignItems: 'center', justifyContent: 'center' },
   statRightBorder: { borderRightWidth: 1, borderRightColor: paperColors.ink },
   statBottomBorder: { borderBottomWidth: 1, borderBottomColor: paperColors.ink },
-  statIcon: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: paperColors.ink, borderRadius: 15, backgroundColor: paperColors.clockGray },
+  statIcon: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: paperColors.ink, borderRadius: 15, backgroundColor: paperColors.noteBlue },
   statValue: { marginTop: 4, color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 22, lineHeight: 28 },
   statLabel: { color: paperColors.ink, fontSize: 11, lineHeight: 16 },
   privacyWrap: { position: 'relative', transform: [{ rotate: '-0.4deg' }] },
   privacyTape: { position: 'absolute', zIndex: 1, top: -8, left: 24, width: 68, height: 18, backgroundColor: paperColors.tape, transform: [{ rotate: '-2deg' }] },
-  privacy: { padding: spacing.lg, borderWidth: 2, borderColor: paperColors.ink, borderStyle: 'dashed', borderRadius: 10, backgroundColor: paperColors.base, flexDirection: 'row', alignItems: 'center', gap: spacing.md, ...shadows.paper },
+  privacy: { padding: spacing.lg, borderWidth: 2, borderColor: paperColors.ink, borderStyle: 'dashed', borderRadius: 10, backgroundColor: paperColors.clockGray, flexDirection: 'row', alignItems: 'center', gap: spacing.md, ...shadows.paper },
   privacyIcon: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 21, backgroundColor: paperColors.olive },
   privacyCopy: { flex: 1 },
   privacyTitle: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 14, lineHeight: 20 },

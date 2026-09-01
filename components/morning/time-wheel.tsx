@@ -140,10 +140,10 @@ const styles = StyleSheet.create({
     right: spacing.md,
     height: itemHeight,
     borderRadius: radii.input,
-    backgroundColor: '#DCEEFB',
+    backgroundColor: paperColors.cardGray,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#A8C4CF',
+    borderColor: paperColors.statusGray,
   },
   wheel: {
     width: 100,
