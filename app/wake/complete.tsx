@@ -9,7 +9,7 @@ import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { IconButton } from '@/components/common/icon-button';
 import { MorningScreen } from '@/components/wake/morning-screen';
-import { colors, radii, spacing } from '@/constants/theme';
+import { legacyColors as colors, radii, spacing } from '@/constants/theme';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
@@ -171,6 +171,7 @@ export default function WakeCompleteScreen() {
 
       <View style={styles.actions}>
         <AppButton
+          legacy
           icon="heart-outline"
           label={
             hasSentThanks
@@ -184,6 +185,7 @@ export default function WakeCompleteScreen() {
           onPress={handleThanks}
         />
         <AppButton
+          legacy
           label="ホームに戻る"
           onPress={() => runOnce(() => router.replace('/(tabs)'))}
           variant="secondary"

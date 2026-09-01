@@ -3,7 +3,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
-import { componentSizes, fonts, radii, spacing } from '@/constants/theme';
+import { componentSizes, fonts, paperColors, radii, spacing } from '@/constants/theme';
 
 const visibleRows = 5;
 const itemHeight = componentSizes.timeWheelItem;
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: wheelHeight,
     borderRadius: radii.card,
-    backgroundColor: '#FCF8EA',
+    backgroundColor: paperColors.base,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-evenly',
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     right: spacing.md,
     height: itemHeight,
     borderRadius: radii.input,
-    backgroundColor: '#DCE8ED',
+    backgroundColor: '#DCEEFB',
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: '#A8C4CF',

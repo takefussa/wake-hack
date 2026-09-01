@@ -17,6 +17,7 @@ import {
   scheduleOptions,
   voiceStyleOptions,
 } from '@/constants/options';
+import { paperColors, shadows } from '@/constants/theme';
 import { demoMorningDefaults } from '@/data/demo-scenario';
 import { toggleSchedule } from '@/features/morning/morning-request-form';
 import { goBackOrReplace } from '@/features/navigation/go-back';
@@ -229,7 +230,7 @@ export default function TomorrowConditionScreen() {
 
           <View style={styles.sectionHeading}>
             <View style={[styles.sectionLabel, styles.greenLabel]}>
-              <Ionicons name="leaf-outline" size={20} color="#688464" />
+              <Ionicons name="leaf-outline" size={20} color={paperColors.ink} />
               <AppText style={styles.sectionTitle}>明日の予定</AppText>
             </View>
 
@@ -273,7 +274,7 @@ export default function TomorrowConditionScreen() {
 
         <View style={styles.sectionPaper}>
           <View style={[styles.sectionLabel, styles.pinkLabel]}>
-            <Ionicons name="heart-outline" size={20} color="#CF827B" />
+            <Ionicons name="heart-outline" size={20} color={paperColors.ink} />
             <AppText style={styles.sectionTitle}>今の気分</AppText>
           </View>
 
@@ -292,7 +293,7 @@ export default function TomorrowConditionScreen() {
 
         <View style={styles.sectionPaper}>
           <View style={[styles.sectionLabel, styles.blueLabel]}>
-            <Ionicons name="mic-outline" size={20} color="#50798A" />
+            <Ionicons name="mic-outline" size={20} color={paperColors.ink} />
             <AppText style={styles.sectionTitle}>
               どんな声がいいですか？
             </AppText>
@@ -355,7 +356,7 @@ export default function TomorrowConditionScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F0DE',
+    backgroundColor: '#F6F6F6',
   },
 
   paperLine: {
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(117, 163, 177, 0.15)',
+    backgroundColor: 'rgba(174, 203, 226, 0.52)',
   },
 
   marginLine: {
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 43,
     width: 1,
-    backgroundColor: 'rgba(220, 126, 126, 0.35)',
+    backgroundColor: 'rgba(243, 196, 197, 0.80)',
   },
 
   content: {
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
   },
 
   pinkStep: {
-    backgroundColor: '#EDB7B0',
+    backgroundColor: paperColors.noteBlue,
   },
 
   stepText: {
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
 
   titlePaper: {
     alignSelf: 'center',
-    backgroundColor: '#F7E8BD',
+    backgroundColor: paperColors.paleYellow,
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 16,
@@ -454,13 +455,13 @@ const styles = StyleSheet.create({
     height: 3,
     marginTop: 10,
     borderRadius: 20,
-    backgroundColor: '#EFA097',
+    backgroundColor: paperColors.ruleBlue,
   },
 
   descriptionPaper: {
     alignSelf: 'center',
     marginTop: 4,
-    backgroundColor: '#FFFDF6',
+    backgroundColor: '#FFFDF8',
     paddingHorizontal: 22,
     paddingVertical: 14,
   },
@@ -482,7 +483,7 @@ const styles = StyleSheet.create({
     width: '78%',
     alignSelf: 'center',
     marginTop: 7,
-    backgroundColor: '#A6CADB',
+    backgroundColor: '#AECBE2',
   },
 
   sectionPaper: {
@@ -490,9 +491,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 22,
     paddingBottom: 20,
-    backgroundColor: '#FCF8EA',
-    borderWidth: 1,
-    borderColor: '#C6BAA5',
+    backgroundColor: paperColors.base,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    ...shadows.paper,
   },
 
   pinkTape: {
@@ -502,7 +505,7 @@ const styles = StyleSheet.create({
     top: -10,
     left: -7,
     opacity: 0.7,
-    backgroundColor: '#E8A69E',
+    backgroundColor: paperColors.ruleBlue,
     transform: [{ rotate: '-9deg' }],
   },
 
@@ -524,15 +527,15 @@ const styles = StyleSheet.create({
   },
 
   greenLabel: {
-    backgroundColor: '#E4E8C8',
+    backgroundColor: paperColors.noteBlue,
   },
 
   pinkLabel: {
-    backgroundColor: '#F3C7C0',
+    backgroundColor: paperColors.noteBlue,
   },
 
   blueLabel: {
-    backgroundColor: '#C8E0E8',
+    backgroundColor: paperColors.noteBlue,
   },
 
   sectionTitle: {
@@ -559,25 +562,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFDF7',
+    backgroundColor: '#FFFDF8',
     borderWidth: 1,
     borderColor: '#C9BCA7',
     borderRadius: 3,
   },
 
   choiceGreen: {
-    backgroundColor: '#E7EACD',
-    borderColor: '#A4B38F',
+    backgroundColor: paperColors.noteBlue,
+    borderColor: paperColors.ruleBlue,
   },
 
   choicePink: {
-    backgroundColor: '#F5C7C1',
-    borderColor: '#E99A90',
+    backgroundColor: paperColors.noteBlue,
+    borderColor: paperColors.ruleBlue,
   },
 
   choiceBlue: {
-    backgroundColor: '#C6E1EE',
-    borderColor: '#78AEC5',
+    backgroundColor: paperColors.noteBlue,
+    borderColor: paperColors.ruleBlue,
   },
 
   choiceText: {
@@ -595,7 +598,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#A7B698',
+    backgroundColor: paperColors.ruleBlue,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -603,10 +606,10 @@ const styles = StyleSheet.create({
   customSchedulePaper: {
     marginTop: 14,
     padding: 12,
-    backgroundColor: '#F5F2DC',
-    borderWidth: 1,
+    backgroundColor: paperColors.noteBlue,
+    borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#A9B593',
+    borderColor: paperColors.ink,
   },
 
   customScheduleLabel: {
@@ -621,7 +624,7 @@ const styles = StyleSheet.create({
     color: '#30463E',
     fontSize: 16,
     fontFamily: 'Tegaki851',
-    backgroundColor: '#FFFDF7',
+    backgroundColor: '#FFFDF8',
     borderWidth: 1,
     borderColor: '#B9B5A5',
   },
@@ -635,7 +638,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 15,
     paddingVertical: 13,
-    backgroundColor: '#FFF7EF',
+    backgroundColor: '#FFFDF8',
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: '#E49283',
@@ -652,9 +655,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingTop: 10,
     paddingBottom: 10,
-    backgroundColor: 'rgba(247, 240, 222, 0.97)',
+    backgroundColor: paperColors.base,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(166, 151, 125, 0.42)',
+    borderTopColor: paperColors.ruleBlue,
   },
 
   submitButton: {
@@ -664,9 +667,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 25,
-    backgroundColor: '#8EC3DE',
-    borderWidth: 1,
-    borderColor: '#6BA7C5',
+    backgroundColor: '#F3C4C5',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    ...shadows.paper,
   },
 
   submitDisabled: {

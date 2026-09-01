@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '@/components/common/app-text';
 import { TimeWheel } from '@/components/morning/time-wheel';
 import { quickWakeTimes } from '@/constants/options';
+import { paperColors, shadows } from '@/constants/theme';
 import { demoMorningDefaults } from '@/data/demo-scenario';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { useTapLock } from '@/hooks/use-tap-lock';
@@ -198,7 +199,7 @@ export default function MorningSetupScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F0DE',
+    backgroundColor: '#F6F6F6',
   },
 
   paperLine: {
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(117, 163, 177, 0.14)',
+    backgroundColor: 'rgba(174, 203, 226, 0.52)',
   },
 
   marginLine: {
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 44,
     width: 1,
-    backgroundColor: 'rgba(219, 124, 124, 0.32)',
+    backgroundColor: 'rgba(243, 196, 197, 0.80)',
   },
 
   content: {
@@ -245,7 +246,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     paddingHorizontal: 16,
     paddingVertical: 6,
-    backgroundColor: '#B7D9E8',
+    backgroundColor: '#DCEEFB',
     transform: [{ rotate: '-1.5deg' }],
   },
 
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 12,
     paddingBottom: 10,
-    backgroundColor: '#F8E8B9',
+    backgroundColor: paperColors.paleYellow,
   },
 
   title: {
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
     height: 3,
     marginTop: 7,
     borderRadius: 10,
-    backgroundColor: '#EE9D95',
+    backgroundColor: '#F3C4C5',
   },
 
   timePaper: {
@@ -281,18 +282,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 20,
     paddingBottom: 18,
-    backgroundColor: '#FCF8EA',
-    borderWidth: 1,
-    borderColor: '#C7BBA4',
-
-    shadowColor: '#786D5D',
-    shadowOpacity: 0.07,
-    shadowRadius: 4,
-    shadowOffset: {
-      width: 1,
-      height: 2,
-    },
-    elevation: 1,
+    backgroundColor: paperColors.base,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    ...shadows.paper,
   },
 
   blueTape: {
@@ -301,7 +295,7 @@ const styles = StyleSheet.create({
     left: -7,
     width: 76,
     height: 20,
-    backgroundColor: '#89BED6',
+    backgroundColor: '#AECBE2',
     opacity: 0.75,
     transform: [{ rotate: '-9deg' }],
   },
@@ -325,10 +319,12 @@ const styles = StyleSheet.create({
     paddingTop: 13,
     paddingBottom: 14,
 
-    backgroundColor: '#FCF8EA',
+    backgroundColor: paperColors.base,
 
-    borderWidth: 1,
-    borderColor: '#C7BBA4',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    ...shadows.paper,
   },
 
   quickHeading: {
@@ -341,7 +337,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
 
-    backgroundColor: '#E8E8CB',
+    backgroundColor: paperColors.noteBlue,
   },
 
   quickTitle: {
@@ -364,7 +360,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
 
-    backgroundColor: '#FFFDF7',
+    backgroundColor: '#FFFDF8',
 
     borderWidth: 1,
     borderColor: '#C9BCA7',
@@ -372,7 +368,7 @@ const styles = StyleSheet.create({
   },
 
   quickChoiceSelected: {
-    backgroundColor: '#B8D8E8',
+    backgroundColor: '#DCEEFB',
     borderColor: '#68A4C2',
     borderWidth: 1.5,
   },
@@ -397,7 +393,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
 
-    backgroundColor: '#A9B99B',
+    backgroundColor: '#CAD6C6',
   },
 
   nextButton: {
@@ -412,12 +408,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 34,
 
-    backgroundColor: '#8EC3DE',
+    backgroundColor: '#F3C4C5',
 
-    borderWidth: 1,
-    borderColor: '#68A4C2',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
 
     transform: [{ rotate: '-0.4deg' }],
+    ...shadows.paper,
   },
 
   nextButtonPressed: {

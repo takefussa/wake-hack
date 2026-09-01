@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 
 import { HapticTab } from '@/components/common/haptic-tab';
-import { colors, componentSizes, fonts } from '@/constants/theme';
+import { componentSizes, fonts, paperColors } from '@/constants/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -22,8 +22,9 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.indigo,
-        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarActiveTintColor: paperColors.ink,
+        tabBarInactiveTintColor: paperColors.statusGray,
+        tabBarActiveBackgroundColor: paperColors.noteBlue,
         tabBarHideOnKeyboard: true,
         tabBarButton: HapticTab,
         tabBarLabelStyle: {
@@ -32,8 +33,8 @@ export default function TabLayout() {
           letterSpacing: 0,
         },
         tabBarStyle: {
-          borderTopColor: colors.separator,
-          backgroundColor: colors.surface,
+          borderTopColor: paperColors.ink,
+          backgroundColor: paperColors.base,
         },
       }}>
       <Tabs.Screen
