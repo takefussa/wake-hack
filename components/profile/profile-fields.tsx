@@ -17,6 +17,8 @@ import {
 import {
   colors,
   fonts,
+  paperColors,
+  shadows,
 } from '@/constants/theme';
 import type {
   AvatarId,
@@ -26,6 +28,7 @@ import type {
 
 type ProfileFieldsProps = {
   step: 1 | 2;
+  editMode?: boolean;
 
   avatarId: AvatarId;
   profileImageUri?: string;
@@ -49,6 +52,7 @@ type ProfileFieldsProps = {
 
 export function ProfileFields({
   step,
+  editMode = false,
   avatarId,
   profileImageUri,
   nickname,
@@ -171,6 +175,7 @@ export function ProfileFields({
           <View style={styles.chips}>
             {userTypeOptions.map((option) => (
               <ChoiceChip
+                emphasized={editMode}
                 key={option}
                 label={option}
                 onPress={() =>
@@ -210,6 +215,7 @@ export function ProfileFields({
         <View style={styles.chips}>
           {lifeRhythmOptions.map((rhythm) => (
             <ChoiceChip
+              emphasized={editMode}
               key={rhythm}
               label={rhythm}
               onPress={() => onTagsChange([rhythm])}
@@ -266,7 +272,7 @@ export function ProfileFields({
       </View>
 
       {/* 小さいメモ */}
-      <View style={styles.note}>
+      <View style={[styles.note, editMode && styles.noteGray]}>
         <AppText style={styles.noteEmoji}>
           ✎
         </AppText>
@@ -286,7 +292,15 @@ const styles = StyleSheet.create({
   },
 
   section: {
+    position: 'relative',
+    paddingHorizontal: 18,
+    paddingVertical: 18,
     gap: 12,
+    backgroundColor: paperColors.base,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    ...shadows.paper,
   },
 
   paperSection: {
@@ -298,20 +312,12 @@ const styles = StyleSheet.create({
 
     gap: 14,
 
-    backgroundColor: '#FFFDF8',
+    backgroundColor: paperColors.base,
 
-    borderWidth: 1,
-    borderColor: '#87919A',
-
-    shadowColor: '#5F6974',
-    shadowOpacity: 0.06,
-    shadowRadius: 5,
-    shadowOffset: {
-      width: 1,
-      height: 2,
-    },
-
-    elevation: 1,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    ...shadows.paper,
 
     transform: [{ rotate: '-0.25deg' }],
   },
@@ -324,9 +330,7 @@ const styles = StyleSheet.create({
 
     width: 72,
     height: 16,
-    backgroundColor: '#DCEEFB',
-
-    opacity: 0.72,
+    backgroundColor: 'rgba(174, 203, 226, 0.68)',
 
     transform: [{ rotate: '-4deg' }],
   },
@@ -340,9 +344,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 16,
 
-    backgroundColor: '#F3C4C5',
-
-    opacity: 0.75,
+    backgroundColor: 'rgba(174, 203, 226, 0.68)',
 
     transform: [{ rotate: '4deg' }],
   },
@@ -370,10 +372,10 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: '#3E4959',
+    color: paperColors.ink,
 
-    fontSize: 17,
-    fontWeight: '900',
+    fontSize: 19,
+    lineHeight: 25,
     fontFamily: fonts?.handwritten,
     letterSpacing: 0.7,
   },
@@ -440,18 +442,12 @@ const styles = StyleSheet.create({
   },
 
   inputPaper: {
-    backgroundColor: '#FFFDF8',
+    backgroundColor: '#FFFFFF',
 
-    borderWidth: 1.5,
-    borderColor: '#87919A',
-
-    shadowColor: '#5F6974',
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    shadowOffset: {
-      width: 1,
-      height: 2,
-    },
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 8,
+    ...shadows.paper,
   },
 
   input: {
@@ -468,10 +464,12 @@ const styles = StyleSheet.create({
   },
 
   bioPaper: {
-    backgroundColor: '#FFFDF8',
+    backgroundColor: '#FFFFFF',
 
-    borderWidth: 1.5,
-    borderColor: '#87919A',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 8,
+    ...shadows.paper,
 
     transform: [{ rotate: '0.25deg' }],
   },
@@ -503,11 +501,17 @@ const styles = StyleSheet.create({
 
     gap: 9,
 
-    backgroundColor: '#F3EFE4',
+    backgroundColor: paperColors.paleYellow,
 
-    borderWidth: 1,
+    borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#A5ADB5',
+    borderColor: paperColors.ink,
+    borderRadius: 10,
+    ...shadows.paper,
+  },
+
+  noteGray: {
+    backgroundColor: paperColors.clockGray,
   },
 
   noteEmoji: {

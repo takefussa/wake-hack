@@ -1,7 +1,7 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
@@ -132,12 +132,21 @@ export default function RequestDetailScreen() {
       {!isLoading && request && user ? (
         <>
           <View style={styles.person}>
-            <Avatar
-              avatarId={user.avatarId}
-              imageUri={user.profileImageUri}
-              name={user.nickname}
-              size={72}
-            />
+            <Pressable
+              accessibilityLabel={`${user.nickname}さんのプロフィールを見る`}
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() =>
+                router.push({ pathname: '/user/[id]', params: { id: user.id } })
+              }
+              style={({ pressed }) => pressed && styles.avatarPressed}>
+              <Avatar
+                avatarId={user.avatarId}
+                imageUri={user.profileImageUri}
+                name={user.nickname}
+                size={72}
+              />
+            </Pressable>
             <View style={styles.personCopy}>
               <AppText variant="sectionTitle">{user.nickname}</AppText>
               <AppText variant="secondary" tone="soft">
@@ -194,6 +203,10 @@ const styles = StyleSheet.create({
   personCopy: {
     flex: 1,
     gap: spacing.xs,
+  },
+  avatarPressed: {
+    opacity: 0.6,
+    transform: [{ scale: 0.96 }],
   },
   morningCard: {
     padding: spacing.xl,
