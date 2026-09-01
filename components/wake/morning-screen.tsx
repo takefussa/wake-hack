@@ -4,7 +4,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, layout, spacing } from '@/constants/theme';
+import { legacyColors as colors, layout, spacing } from '@/constants/theme';
 
 type MorningScreenProps = PropsWithChildren<{
   contentStyle?: StyleProp<ViewStyle>;

@@ -13,7 +13,7 @@ import { ScreenHeader } from '@/components/common/screen-header';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { prototypeConfig } from '@/constants/config';
 import { thanksReactionOptions } from '@/constants/options';
-import { colors, fonts, radii, spacing } from '@/constants/theme';
+import { legacyColors as colors, fonts, radii, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
@@ -171,6 +171,7 @@ export default function ThanksSendScreen() {
       ) : null}
 
       <AppButton
+        legacy
         disabled={!reaction || isSending}
         icon="heart-outline"
         label={isSending ? '届けています…' : 'ありがとうを届ける'}

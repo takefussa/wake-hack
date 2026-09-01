@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   beigeTape: {
     paddingHorizontal: 16,
     paddingVertical: 7,
-    backgroundColor: 'rgba(231, 215, 177, 0.82)',
+    backgroundColor: 'rgba(224, 213, 185, 0.88)',
     transform: [{ rotate: '-3deg' }],
   },
 
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     width: 245,
     height: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(221, 119, 102, 0.58)',
+    backgroundColor: 'rgba(243, 196, 197, 0.88)',
     transform: [{ rotate: '-2deg' }],
   },
 
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 24,
     zIndex: 5,
-    backgroundColor: 'rgba(123, 180, 207, 0.74)',
+    backgroundColor: 'rgba(174, 203, 226, 0.88)',
     transform: [{ rotate: '-13deg' }],
   },
 
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    backgroundColor: 'rgba(255, 252, 240, 0.93)',
+    backgroundColor: 'rgba(255, 253, 248, 0.96)',
     borderWidth: 1.2,
     borderColor: '#899087',
     borderRadius: 10,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#75B4D3',
+    backgroundColor: '#AECBE2',
     borderWidth: 1,
     borderColor: '#578CA7',
   },
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFDF6',
+    backgroundColor: '#FFFDF8',
     borderWidth: 1.2,
     borderColor: '#738078',
   },
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 17,
     borderRadius: 3,
-    backgroundColor: '#DF8875',
+    backgroundColor: '#F3C4C5',
     transform: [{ rotate: '14deg' }],
   },
 
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     marginTop: -5,
     marginLeft: 16,
     borderRadius: 3,
-    backgroundColor: '#DF8875',
+    backgroundColor: '#F3C4C5',
     transform: [{ rotate: '44deg' }],
   },
 
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   nightTape: {
     paddingHorizontal: 28,
     paddingVertical: 13,
-    backgroundColor: 'rgba(174, 198, 208, 0.56)',
+    backgroundColor: 'rgba(220, 238, 251, 0.86)',
   },
 
   nightLabel: {
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     width: 170,
     height: 5,
     marginTop: 2,
-    backgroundColor: 'rgba(108, 173, 200, 0.58)',
+    backgroundColor: 'rgba(174, 203, 226, 0.82)',
     borderRadius: 8,
     transform: [{ rotate: '-3deg' }],
   },
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     width: 78,
     height: 24,
     zIndex: 4,
-    backgroundColor: 'rgba(228, 154, 145, 0.67)',
+    backgroundColor: 'rgba(243, 196, 197, 0.88)',
     transform: [{ rotate: '2deg' }],
   },
 
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 16,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 252, 240, 0.92)',
+    backgroundColor: 'rgba(255, 253, 248, 0.96)',
     borderWidth: 1.2,
     borderColor: '#7F8B84',
     borderRadius: 8,
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     borderRadius: 39,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E7D3A0',
+    backgroundColor: '#E0D5B9',
     borderWidth: 1,
     borderColor: '#8E7E59',
   },
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 249, 224, 0.96)',
+    backgroundColor: 'rgba(243, 239, 228, 0.96)',
     borderWidth: 1,
     borderColor: '#C6B98E',
     borderRadius: 9,
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     bottom: -7,
     width: 14,
     height: 14,
-    backgroundColor: '#FFF9E0',
+    backgroundColor: '#F3EFE4',
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: '#C6B98E',
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.2,
     borderColor: '#738078',
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 253, 244, 0.9)',
+    backgroundColor: 'rgba(255, 253, 248, 0.94)',
   },
 
   receiverAvatar: {
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 32,
-    backgroundColor: '#F1D2CE',
+    backgroundColor: '#F3C4C5',
   },
 
   receiverInitial: {
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   personCircle: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 253, 244, 0.9)',
+    backgroundColor: 'rgba(255, 253, 248, 0.94)',
     borderWidth: 1.2,
     borderColor: '#738078',
   },
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 5,
-    backgroundColor: '#E6D09A',
+    backgroundColor: '#E0D5B9',
     borderWidth: 1,
     borderColor: '#847858',
   },
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 42,
     paddingHorizontal: 18,
     paddingVertical: 11,
-    backgroundColor: 'rgba(244, 210, 91, 0.3)',
+    backgroundColor: 'rgba(224, 213, 185, 0.62)',
     transform: [{ rotate: '-0.5deg' }],
   },
 

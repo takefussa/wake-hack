@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 
-import { colors } from '@/constants/theme';
+import { legacyColors as colors } from '@/constants/theme';
 
 export default function WakeLayout() {
   return (
