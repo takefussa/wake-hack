@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { Waveform } from '@/components/common/waveform';
 import { fonts, paperColors, shadows, spacing } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
@@ -17,10 +18,7 @@ import type { MorningRequest, UserProfile, VoiceMessage } from '@/types';
 function NotebookBackground({ children }: PropsWithChildren) {
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea} testID="home-screen">
-      <View pointerEvents="none" style={styles.paperLines}>
-        {Array.from({ length: 24 }, (_, index) => <View key={index} style={styles.paperLine} />)}
-      </View>
-      <View pointerEvents="none" style={styles.marginLine} />
+      <NotebookWallpaper />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {children}
       </ScrollView>
@@ -232,11 +230,18 @@ function TomorrowWakeCard({
               <View
                 key={profile.id}
                 style={[styles.recipientRow, index > 0 && styles.recipientRowBorder]}>
-                <View style={styles.recipientAvatar}>
+                <Pressable
+                  accessibilityLabel={`${profile.nickname}さんのプロフィールを見る`}
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={() =>
+                    router.push({ pathname: '/user/[id]', params: { id: profile.id } })
+                  }
+                  style={({ pressed }) => [styles.recipientAvatar, pressed && styles.recipientAvatarPressed]}>
                   <AppText style={styles.recipientAvatarText}>
                     {profile.nickname.trim().slice(0, 1).toUpperCase()}
                   </AppText>
-                </View>
+                </Pressable>
                 <View style={styles.recipientCopy}>
                   <AppText numberOfLines={1} style={styles.recipientName}>
                     {profile.nickname}さん
@@ -285,33 +290,6 @@ function TomorrowWakeCard({
   );
 }
 
-function CassetteTimeline() {
-  const steps = [
-    { icon: 'moon-outline' as const, label: '夜', copy: '気持ちを預ける' },
-    { icon: 'mic-outline' as const, label: '声', copy: '誰かの声が届く' },
-    { icon: 'sunny-outline' as const, label: '朝', copy: '声と一緒に起きる' },
-  ];
-  return (
-    <View style={styles.timeline}>
-      <View style={styles.timelineTitleRow}>
-        <View style={styles.titleRule} /><AppText style={styles.timelineTitle}>HOW IT WORKS</AppText><View style={styles.titleRule} />
-      </View>
-      <View style={styles.timelineTrack} />
-      <View style={styles.timelineSteps}>
-        {steps.map((step, index) => (
-          <View key={step.label} style={styles.timelineStep}>
-            <View style={styles.cassetteReel}><View style={styles.reelCenter}>
-              <Ionicons color={paperColors.ink} name={step.icon} size={18} />
-            </View></View>
-            <AppText style={styles.stepNumber}>0{index + 1} / {step.label}</AppText>
-            <AppText style={styles.stepCopy}>{step.copy}</AppText>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 export default function HomeScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
@@ -340,20 +318,16 @@ export default function HomeScreen() {
         givenVoices={givenVoiceMessages}
         onPressTimeline={() => runOnce(() => router.push('/(tabs)/connections'))}
       />
-      <CassetteTimeline />
     </NotebookBackground>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: paperColors.base },
-  paperLines: { ...StyleSheet.absoluteFillObject, top: 48 },
-  paperLine: { height: 32, borderBottomWidth: 1, borderBottomColor: paperColors.ruleBlue },
-  marginLine: { position: 'absolute', top: 0, bottom: 0, left: 28, width: 1, backgroundColor: paperColors.salmon },
   content: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxxl, paddingBottom: spacing.xxxl, gap: spacing.xxl },
-  memoWrap: { alignSelf: 'center', width: '92%', transform: [{ rotate: '-1.5deg' }] },
+  memoWrap: { alignSelf: 'center', width: '92%', backgroundColor: paperColors.base, transform: [{ rotate: '-1.5deg' }], ...shadows.paper },
   tape: { position: 'absolute', zIndex: 1, top: -10, left: '37%', width: 78, height: 22, backgroundColor: paperColors.tape, transform: [{ rotate: '2deg' }] },
-  memo: { paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, borderWidth: 1, borderColor: paperColors.ink, backgroundColor: paperColors.paleYellow, alignItems: 'center' },
+  memo: { paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, borderWidth: 1, borderColor: paperColors.ink, backgroundColor: paperColors.base, alignItems: 'center' },
   memoGreeting: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 14, lineHeight: 21, marginBottom: spacing.xs },
   memoText: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 22, lineHeight: 30, textAlign: 'center' },
   memoUnderline: { alignSelf: 'center', width: 176, height: 4, marginTop: 5, backgroundColor: paperColors.ruleBlue },
@@ -367,14 +341,14 @@ const styles = StyleSheet.create({
   boomboxBody: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   speaker: { width: 92, height: 92, padding: 8, borderWidth: 2, borderColor: paperColors.ink, borderRadius: 46, backgroundColor: paperColors.olive },
   speakerInner: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: paperColors.ink, borderRadius: 40, backgroundColor: paperColors.base },
-  displayPanel: { flex: 1, minHeight: 126, padding: spacing.md, borderWidth: 2, borderColor: paperColors.ink, borderRadius: 6, backgroundColor: paperColors.noteBlue },
+  displayPanel: { flex: 1, minHeight: 158, padding: spacing.md, borderWidth: 2, borderColor: paperColors.ink, borderRadius: 6, backgroundColor: paperColors.noteBlue, justifyContent: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   statusLight: { width: 6, height: 6, borderRadius: 3, backgroundColor: paperColors.orange },
   statusLightReady: { backgroundColor: paperColors.olive },
-  statusText: { color: paperColors.ink, fontSize: 8, lineHeight: 11, letterSpacing: 1 },
-  time: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 35, lineHeight: 41, letterSpacing: 2 },
-  schedule: { color: paperColors.ink, fontSize: 10, lineHeight: 14 },
-  morningDetails: { color: paperColors.ink, fontSize: 9, lineHeight: 13, marginTop: 2 },
+  statusText: { color: paperColors.ink, fontSize: 12, lineHeight: 17, letterSpacing: 1 },
+  time: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 40, lineHeight: 47, letterSpacing: 2 },
+  schedule: { color: paperColors.ink, fontSize: 14, lineHeight: 20 },
+  morningDetails: { color: paperColors.ink, fontSize: 13, lineHeight: 19, marginTop: 4 },
   waveformBox: { marginTop: spacing.sm, overflow: 'hidden' },
   actionButton: { minHeight: 58, paddingHorizontal: spacing.md, borderWidth: 2, borderColor: paperColors.ink, borderRadius: 9, backgroundColor: paperColors.salmon, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   actionButtonPressed: { backgroundColor: paperColors.statusGray, transform: [{ translateY: 1 }] },
@@ -392,6 +366,7 @@ const styles = StyleSheet.create({
   recipientRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   recipientRowBorder: { borderTopWidth: 1, borderTopColor: paperColors.ink, borderStyle: 'dashed' },
   recipientAvatar: { width: 46, height: 46, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 23, backgroundColor: paperColors.olive, alignItems: 'center', justifyContent: 'center' },
+  recipientAvatarPressed: { opacity: 0.6, transform: [{ scale: 0.96 }] },
   recipientAvatarText: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 16, lineHeight: 21 },
   recipientCopy: { flex: 1, minWidth: 0 },
   recipientName: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 15, lineHeight: 21 },
@@ -408,15 +383,4 @@ const styles = StyleSheet.create({
   timelineLink: { minHeight: 48, paddingHorizontal: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderTopWidth: 1, borderTopColor: paperColors.ink, backgroundColor: paperColors.base },
   timelineLinkPressed: { backgroundColor: paperColors.clockGray },
   timelineLinkText: { flex: 1, color: paperColors.ink, fontSize: 14, lineHeight: 20 },
-  timeline: { position: 'relative', paddingTop: spacing.sm },
-  timelineTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xl },
-  titleRule: { flex: 1, height: 1, backgroundColor: paperColors.ruleBlue },
-  timelineTitle: { color: paperColors.ink, fontSize: 10, lineHeight: 14, letterSpacing: 1.8 },
-  timelineTrack: { position: 'absolute', top: 69, left: '16%', right: '16%', height: 2, backgroundColor: paperColors.ruleBlue },
-  timelineSteps: { flexDirection: 'row', justifyContent: 'space-between' },
-  timelineStep: { width: '31%', alignItems: 'center' },
-  cassetteReel: { width: 54, height: 54, padding: 6, borderWidth: 2, borderColor: paperColors.ink, borderRadius: 27, backgroundColor: paperColors.noteBlue },
-  reelCenter: { flex: 1, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 20, backgroundColor: paperColors.base, alignItems: 'center', justifyContent: 'center' },
-  stepNumber: { color: paperColors.ink, fontSize: 9, lineHeight: 13, letterSpacing: 1, marginTop: spacing.sm },
-  stepCopy: { color: paperColors.ink, fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 2 },
 });

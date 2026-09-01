@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { OnboardingScene } from '@/components/onboarding/onboarding-scene';
 import { onboardingPages } from '@/data/onboarding-pages';
 import { useTapLock } from '@/hooks/use-tap-lock';
@@ -37,13 +38,7 @@ export default function OnboardingScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
-      <View pointerEvents="none" style={styles.paperLines}>
-        {Array.from({ length: 30 }, (_, index) => (
-          <View key={index} style={styles.paperLine} />
-        ))}
-      </View>
-
-      <View pointerEvents="none" style={styles.marginLine} />
+      <NotebookWallpaper />
 
       <View style={styles.content}>
         {pageIndex > 0 && (
@@ -161,7 +156,7 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     height: 14,
-    backgroundColor: 'rgba(224, 213, 185, 0.82)',
+    backgroundColor: 'rgba(174, 203, 226, 0.82)',
     transform: [{ rotate: '-1deg' }],
   },
 
@@ -211,7 +206,7 @@ const styles = StyleSheet.create({
   },
 
   dotYellow: {
-    backgroundColor: '#E0D5B9',
+    backgroundColor: '#FFF3C4',
     borderColor: '#C49A42',
   },
 
