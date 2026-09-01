@@ -10,7 +10,9 @@ import {
   NativeSyntheticEvent,
   Pressable,
   ScrollView,
+  StyleProp,
   StyleSheet,
+  TextStyle,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -25,7 +27,7 @@ import type { MorningRequestMatch } from '@/services/matching-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
-import type { UserProfile } from '@/types';
+import type { UserProfile, VoiceStyle } from '@/types';
 
 type TimelineMode = 'personal' | 'community';
 
@@ -37,10 +39,20 @@ function isUserProfile(profile: UserProfile | null): profile is UserProfile {
   return profile !== null;
 }
 
-// cassette 画像比率(880x561)から算出したカード1件分の高さの目安
-const CASSETTE_ASPECT_RATIO = 880 / 561;
+// cassette 画像比率(1080x800)から算出したカード1件分の高さの目安
+const CASSETTE_ASPECT_RATIO = 1080 / 800;
+
+// 希望する声のスタイルに合わせてカセットの色を出し分ける
+const CASSETTE_IMAGE_BY_VOICE_STYLE: Record<VoiceStyle, number> = {
+  そっと優しく: require('../../assets/images/cassette-icon-lightblue.png'),
+  明るく元気に: require('../../assets/images/cassette-icon-lightgreen.png'),
+  渇を入れて: require('../../assets/images/cassette-icon-red.png'),
+  面白く愉快に: require('../../assets/images/cassette-icon-yellow.png'),
+};
 const CASSETTE_MARGIN_BOTTOM = 1;
 const PAGE_CONTENT_HORIZONTAL_PADDING = 24;
+// カセットだけページ余白より少しはみ出させて大きく見せるための量
+const CASSETTE_HORIZONTAL_BLEED = 12;
 const PAGE_CONTENT_BASE_BOTTOM_PADDING = 120;
 const CASSETTE_MIN_SCALE = 0.7;
 const CASSETTE_MIN_OPACITY = 0.4;
@@ -97,6 +109,37 @@ function VoiceOptionsPanel({ options }: { options: readonly string[] }) {
   );
 }
 
+const CURVED_LABEL_ARC_ANGLE = 30;
+const CURVED_LABEL_PERSPECTIVE = 300;
+
+// 実物のカセットの持ち手部分にある、円柱に巻き付くような湾曲した印字を再現する
+// (Y軸まわりに回転させることで、両端が奥へ回り込むように見せる)
+function CurvedLabel({ text, style }: { text: string; style?: StyleProp<TextStyle> }) {
+  const characters = Array.from(text);
+  const mid = (characters.length - 1) / 2;
+
+  return (
+    <View style={styles.curvedLabelRow}>
+      {characters.map((character, index) => {
+        const t = mid === 0 ? 0 : (index - mid) / mid;
+        const rotateY = `${t * CURVED_LABEL_ARC_ANGLE}deg`;
+
+        return (
+          <AppText
+            key={`${character}-${index}`}
+            style={[
+              style,
+              { transform: [{ perspective: CURVED_LABEL_PERSPECTIVE }, { rotateY }] },
+            ]}
+          >
+            {character}
+          </AppText>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function ConnectionsScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
@@ -112,7 +155,8 @@ export default function ConnectionsScreen() {
   const [personalViewportTop, setPersonalViewportTop] = useState(0);
   const [personalViewportHeight, setPersonalViewportHeight] = useState(0);
 
-  const cassetteWidth = width - PAGE_CONTENT_HORIZONTAL_PADDING * 2;
+  const cassetteWidth =
+    width - (PAGE_CONTENT_HORIZONTAL_PADDING - CASSETTE_HORIZONTAL_BLEED) * 2;
   const cassetteHeight = cassetteWidth / CASSETTE_ASPECT_RATIO;
   const cassetteItemHeight = cassetteHeight + CASSETTE_MARGIN_BOTTOM;
 
@@ -483,26 +527,33 @@ export default function ConnectionsScreen() {
                     <Image
                       accessibilityIgnoresInvertColors
                       contentFit="fill"
-                      source={require('../../assets/images/cassette-personal.png')}
+                      source={CASSETTE_IMAGE_BY_VOICE_STYLE[request.preferredVoiceStyle]}
                       style={StyleSheet.absoluteFill}
                     />
 
                     <View style={styles.cassetteNameOverlay}>
-                      <AppText numberOfLines={1} style={styles.cassetteName}>
+                      <AppText
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.5}
+                        numberOfLines={1}
+                        style={styles.cassetteName}
+                      >
                         {user.nickname}
                       </AppText>
                     </View>
 
-                    <View style={styles.cassetteSideAOverlay}>
-                      <AppText numberOfLines={1} style={styles.cassetteSideValue}>
+                    <View style={styles.cassetteAttributeOverlay}>
+                      <View pointerEvents="none" style={styles.cassetteAttributeTape} />
+                      <AppText numberOfLines={1} style={styles.cassetteAttributeValue}>
                         {user.userType}
                       </AppText>
                     </View>
 
-                    <View style={styles.cassetteSideBOverlay}>
-                      <AppText numberOfLines={1} style={styles.cassetteSideValueRight}>
-                        {request.preferredVoiceStyle}
-                      </AppText>
+                    <View style={styles.cassetteVoiceStyleOverlay}>
+                      <CurvedLabel
+                        style={styles.cassetteVoiceStyleValue}
+                        text={request.preferredVoiceStyle}
+                      />
                     </View>
                   </Animated.View>
                 </Pressable>
@@ -745,24 +796,27 @@ const styles = StyleSheet.create({
 
   cassetteTouchable: {
     marginBottom: CASSETTE_MARGIN_BOTTOM,
+    marginHorizontal: -CASSETTE_HORIZONTAL_BLEED,
   },
 
   cassette: {
     position: 'relative',
 
     width: '100%',
-    aspectRatio: 880 / 561,
+    aspectRatio: 1080 / 800,
 
     overflow: 'hidden',
   },
 
+  // ラベル(白い部分)は画像内で概ね left 28.4% / top 26.1% / width 43.2% / height 33.6%
+  // ラベル(白い部分)のうち、内側の帯より上の領域に名前を表示
   cassetteNameOverlay: {
     position: 'absolute',
-    top: '4%',
-    left: '2%',
+    top: '26.1%',
+    left: '28.4%',
 
-    width: '96%',
-    height: '23.4%',
+    width: '43.2%',
+    height: '24.4%',
 
     alignItems: 'center',
     justifyContent: 'center',
@@ -771,48 +825,65 @@ const styles = StyleSheet.create({
   cassetteName: {
     fontFamily: fontFamilyName,
     color: '#2E2E2E',
+    fontSize: 22,
+  },
+
+  // ラベル下部にある帯にちょうど収まる位置に属性を表示
+  cassetteAttributeOverlay: {
+    position: 'absolute',
+    top: '50.6%',
+    left: '28.4%',
+
+    width: '43.2%',
+    height: '9.1%',
+
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  cassetteAttributeValue: {
+    fontFamily: fontFamilyName,
+    color: '#2E2E2E',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+
+  // 属性の文字の後ろに敷く、薄いピンクのセロハンテープ風の帯
+  cassetteAttributeTape: {
+    position: 'absolute',
+    left: '8%',
+    right: '8%',
+    top: '18%',
+    bottom: '18%',
+    backgroundColor: 'rgba(243, 196, 197, 0.5)',
+    borderRadius: 2,
+  },
+
+  // 下部中央の枠(持ち手部分)に希望する声のスタイルを表示
+  cassetteVoiceStyleOverlay: {
+    position: 'absolute',
+    top: '67.25%',
+    left: '24.35%',
+
+    width: '51.3%',
+    height: '18.6%',
+
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+
+  cassetteVoiceStyleValue: {
+    fontFamily: fontFamilyName,
+    color: '#2E2E2E',
     fontSize: 16,
-  },
-
-  cassetteSideAOverlay: {
-    position: 'absolute',
-    top: '59.1%',
-    left: '1%',
-
-    width: '47%',
-    height: '18.3%',
-
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-
-  cassetteSideBOverlay: {
-    position: 'absolute',
-    top: '59.1%',
-    left: '52%',
-
-    width: '47%',
-    height: '18.3%',
-
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-    paddingHorizontal: 2,
-  },
-
-  cassetteSideValue: {
-    fontFamily: fontFamilyName,
-    color: '#2E2E2E',
-    fontSize: 15,
     textAlign: 'center',
   },
 
-  cassetteSideValueRight: {
-    fontFamily: fontFamilyName,
-    color: '#2E2E2E',
-    fontSize: 12,
-    textAlign: 'center',
+  curvedLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   pressed: {
