@@ -41,7 +41,7 @@ export default function RequestDetailScreen() {
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
-  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
+  const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const selectGiveRequest = useAppStore((state) => state.selectGiveRequest);
   const [request, setRequest] = useState<MorningRequest | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -88,7 +88,13 @@ export default function RequestDetailScreen() {
     };
   }, [requestId]);
 
-  const hasAlreadyGiven = user !== null && currentGiveReceiverIds.includes(user.id);
+  const hasAlreadyGiven =
+    !!requestId &&
+    givenVoiceMessages.some(
+      (voice) =>
+        voice.senderId === currentUser?.id &&
+        voice.morningRequestId === requestId
+    );
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -112,7 +118,7 @@ export default function RequestDetailScreen() {
     <Screen contentStyle={styles.content} testID="request-detail-screen">
       <StatusBar style="dark" />
       <ScreenHeader
-        onBack={() => goBackOrReplace('/morning/request-list')}
+        onBack={() => goBackOrReplace('/(tabs)/connections')}
         title="この人の明日の朝へ"
       />
 
@@ -123,7 +129,7 @@ export default function RequestDetailScreen() {
           <AppText variant="bodyMedium">{error}</AppText>
           <AppButton
             label="一覧に戻る"
-            onPress={() => goBackOrReplace('/morning/request-list')}
+            onPress={() => goBackOrReplace('/(tabs)/connections')}
             variant="secondary"
           />
         </View>

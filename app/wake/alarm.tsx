@@ -12,6 +12,8 @@ import { colors, fonts, spacing } from '@/constants/theme';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
+import { alarmService } from '@/services/alarm-service';
+import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function WakeAlarmScreen() {
@@ -20,7 +22,7 @@ export default function WakeAlarmScreen() {
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
   const cancelWakeSession = useAppStore((state) => state.cancelWakeSession);
-  const startWakeMission = useAppStore((state) => state.startWakeMission);
+  const completeWakeSession = useAppStore((state) => state.completeWakeSession);
   const sender = useVoiceSender(assignedWakeVoice);
   const runOnce = useTapLock();
   const stopPlaybackRef = useRef<() => void>(() => undefined);
@@ -42,9 +44,6 @@ export default function WakeAlarmScreen() {
   ) {
     return <Redirect href="/morning/ready" />;
   }
-  if (wakeSession.status === 'mission') {
-    return <Redirect href="/wake/mission" />;
-  }
   if (wakeSession.status === 'completed') {
     return <Redirect href="/wake/complete" />;
   }
@@ -55,15 +54,22 @@ export default function WakeAlarmScreen() {
   function handleWakeUp() {
     runOnce(() => {
       stopPlaybackRef.current();
-      startWakeMission();
-      router.replace('/wake/mission');
+      const completedSession = completeWakeSession();
+      if (completedSession) {
+        void wakeService.completeWakeSession(completedSession);
+      }
+      void alarmService.cancelScheduledAlarm();
+      router.replace('/wake/complete');
     });
   }
 
   function handleBack() {
     runOnce(() => {
       stopPlaybackRef.current();
-      cancelWakeSession();
+      const canceledSession = cancelWakeSession();
+      if (canceledSession) {
+        void wakeService.cancelWakeSession(canceledSession);
+      }
       router.replace('/morning/ready');
     });
   }
@@ -91,7 +97,7 @@ export default function WakeAlarmScreen() {
       <View style={styles.voiceSection}>
         <AppText variant="sectionTitle" style={styles.centeredText}>
           {isCommunity
-            ? 'Wake Hackのみんなから'
+            ? 'オキタ！のみんなから'
             : `${senderName}さんから、あなたの朝へ`}
         </AppText>
         <WakeVoicePlayer

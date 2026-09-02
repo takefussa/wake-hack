@@ -1,7 +1,7 @@
 import type {
   AvatarId,
+  LifeRhythm,
   MoodType,
-  ProfileTag,
   ScheduleType,
   UserType,
   VoiceStyle,
@@ -24,9 +24,9 @@ export const avatarOptions: AvatarOption[] = [
   { id: 'mint', label: 'セージ', background: '#DCE5DE', foreground: '#496056', initial: 'Y' },
 ];
 
-export const userTypeOptions: UserType[] = ['大学生', '受験生', '社会人', '社会人1年目', 'その他'];
+export const userTypeOptions: UserType[] = ['中高生', '大学生・専門学生', '社会人', 'その他'];
 
-export const profileTagOptions: ProfileTag[] = ['一人暮らし', '朝が苦手', '朝活したい', '夜型'];
+export const lifeRhythmOptions: LifeRhythm[] = ['朝型', '夜型', '不規則'];
 
 export const scheduleOptions: ScheduleType[] = [
   '1限',
@@ -37,17 +37,17 @@ export const scheduleOptions: ScheduleType[] = [
   '仕事',
   '朝活',
   '旅行',
+  'その他',
   '特にない',
 ];
 
 export const moodOptions: MoodType[] = ['少し憂鬱', '緊張している', '疲れている', '普通', '楽しみ'];
 
 export const voiceStyleOptions: VoiceStyle[] = [
-  '優しく',
-  '明るく',
-  '背中を押して',
-  '面白く',
-  '落ち着いて',
+  'そっと優しく',
+  '明るく元気に',
+  '渇を入れて',
+  '面白く愉快に',
 ];
 
 export const quickWakeTimes = ['06:30', '07:00', '07:30', '08:00'] as const;

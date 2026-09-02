@@ -20,7 +20,6 @@ export default function GiveCompleteScreen() {
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
-  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const [recipient, setRecipient] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,8 +30,7 @@ export default function GiveCompleteScreen() {
     (voice) =>
       voice.senderId === currentUser?.id &&
       voice.morningRequestId === requestId &&
-      typeof voice.receiverId === 'string' &&
-      currentGiveReceiverIds.includes(voice.receiverId)
+      typeof voice.receiverId === 'string'
   );
 
   useEffect(() => {
@@ -73,7 +71,7 @@ export default function GiveCompleteScreen() {
     return <Redirect href="/morning/setup" />;
   }
   if (!requestId || !completedVoice) {
-    return <Redirect href="/morning/request-list" />;
+    return <Redirect href="/(tabs)/connections" />;
   }
 
   function navigateOnce(action: () => void) {
@@ -93,7 +91,9 @@ export default function GiveCompleteScreen() {
           <AppText variant="bodyMedium">{error}</AppText>
           <AppButton
             label="明日の準備へ戻る"
-            onPress={() => navigateOnce(() => router.replace('/morning/ready'))}
+            onPress={() =>
+              navigateOnce(() => router.replace('/morning/summary'))
+            }
             variant="secondary"
           />
         </View>
@@ -129,13 +129,15 @@ export default function GiveCompleteScreen() {
               icon="people-outline"
               label="もう1人応援する"
               onPress={() =>
-                navigateOnce(() => router.dismissTo('/morning/request-list', {}))
+                navigateOnce(() => router.replace('/(tabs)/connections'))
               }
               testID="give-another"
             />
             <AppButton
               label="明日の準備へ戻る"
-              onPress={() => navigateOnce(() => router.replace('/morning/ready'))}
+              onPress={() =>
+                navigateOnce(() => router.replace('/morning/summary'))
+              }
               variant="secondary"
             />
           </View>

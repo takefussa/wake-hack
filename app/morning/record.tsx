@@ -25,7 +25,7 @@ export default function RecordVoiceScreen() {
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
-  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
+  const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const completeGive = useAppStore((state) => state.completeGive);
   const recorder = useVoiceRecorder();
   const [request, setRequest] = useState<MorningRequest | null>(null);
@@ -87,7 +87,13 @@ export default function RecordVoiceScreen() {
 
   const currentUserId = currentUser.id;
   const currentMorningRequestId = currentMorningRequest.id;
-  const hasAlreadyGiven = recipient !== null && currentGiveReceiverIds.includes(recipient.id);
+  const hasAlreadyGiven =
+    !!requestId &&
+    givenVoiceMessages.some(
+      (voice) =>
+        voice.senderId === currentUser.id &&
+        voice.morningRequestId === requestId
+    );
   const isTooShort =
     recorder.recording !== null &&
     recorder.recording.durationMs < prototypeConfig.recordingMinMs;
@@ -106,7 +112,7 @@ export default function RecordVoiceScreen() {
 
     isLeavingRef.current = true;
     await recorder.leaveRecording();
-    goBackOrReplace('/morning/request-list');
+    goBackOrReplace('/(tabs)/connections');
   }
 
   async function handleSend() {
@@ -170,7 +176,7 @@ export default function RecordVoiceScreen() {
           </AppText>
           <AppButton
             label="一覧に戻る"
-            onPress={() => goBackOrReplace('/morning/request-list')}
+            onPress={() => goBackOrReplace('/(tabs)/connections')}
             variant="secondary"
           />
         </View>

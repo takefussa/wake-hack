@@ -58,6 +58,46 @@ export class FriendshipService {
     return this.mockRepository.match(friendship);
   }
 
+  hasRequested(friendship: Friendship, userId: string): boolean {
+    if (friendship.status === 'matched') return true;
+    if (friendship.userAId === userId || friendship.userAId === 'current-user') {
+      return friendship.userARequested ?? true;
+    }
+    if (friendship.userBId === userId || friendship.userBId === 'current-user') {
+      return friendship.userBRequested ?? true;
+    }
+    return true;
+  }
+
+  async respond(userId: string, friendship: Friendship): Promise<Friendship> {
+    const isParticipant =
+      friendship.userAId === userId ||
+      friendship.userBId === userId ||
+      friendship.userAId === 'current-user' ||
+      friendship.userBId === 'current-user';
+    if (!isParticipant || friendship.status !== 'pending') {
+      throw new Error('Friendship response is invalid');
+    }
+    if (this.hasRequested(friendship, userId)) {
+      throw new Error('Friendship response has already been sent');
+    }
+
+    try {
+      if (
+        isSupabaseUuid(userId) &&
+        isSupabaseUuid(friendship.userAId) &&
+        isSupabaseUuid(friendship.userBId) &&
+        isSupabaseUuid(friendship.id)
+      ) {
+        return await this.repository.respond(friendship.id);
+      }
+      return await this.mockRepository.match(friendship);
+    } catch (error) {
+      logDevelopmentError('friendship.respond', error);
+      throw error;
+    }
+  }
+
   async getForUser(
     userId: string,
     localFriendships: Friendship[]

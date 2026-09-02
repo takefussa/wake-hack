@@ -4,6 +4,8 @@ export type Friendship = {
   id: string;
   userAId: string;
   userBId: string;
+  userARequested: boolean;
+  userBRequested: boolean;
   status: FriendshipStatus;
   morningCount: number;
   createdAt: string;

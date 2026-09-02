@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -41,37 +41,32 @@ export default function FriendRequestScreen() {
   const [error, setError] = useState<string | null>(null);
   const isMatchingRef = useRef(false);
 
-  useEffect(() => {
+  const restoreFriendship = useCallback(async () => {
     if (!currentUser || !assignedWakeVoice || assignedWakeVoice.type !== 'personal') {
       return;
     }
     const userId = currentUser.id;
     const senderId = assignedWakeVoice.senderId;
+    setError(null);
 
-    let isMounted = true;
-    async function restoreFriendship() {
-      try {
-        const restored = await friendshipService.getBetween(
-          userId,
-          senderId,
-          friendships
-        );
-        if (isMounted && restored) {
-          upsertFriendship(restored);
-          setFriendship(restored);
-        }
-      } catch {
-        if (isMounted) {
-          setError('朝フレンドの状態を確認できませんでした。');
-        }
+    try {
+      const restored = await friendshipService.getBetween(
+        userId,
+        senderId,
+        friendships
+      );
+      if (restored) {
+        upsertFriendship(restored);
+        setFriendship(restored);
       }
+    } catch {
+      setError('オキメイトの状態を確認できませんでした。');
     }
-
-    void restoreFriendship();
-    return () => {
-      isMounted = false;
-    };
   }, [assignedWakeVoice, currentUser, friendships, upsertFriendship]);
+
+  useEffect(() => {
+    void restoreFriendship();
+  }, [restoreFriendship]);
 
   if (!currentUser || !currentMorningRequest || !assignedWakeVoice || !wakeSession) {
     return <Redirect href="/(tabs)" />;
@@ -102,8 +97,13 @@ export default function FriendRequestScreen() {
     return <Redirect href="/wake/thanks" />;
   }
 
-  const isMatched = friendship?.status === 'matched';
-  const isPending = friendship?.status === 'pending';
+  if (friendship) {
+    return (
+      <Redirect
+        href={friendship.status === 'matched' ? '/(tabs)/friends' : '/(tabs)'}
+      />
+    );
+  }
 
   async function handleRequest() {
     if (!currentUser || !assignedWakeVoice || friendship || isMatchingRef.current) return;
@@ -118,16 +118,15 @@ export default function FriendRequestScreen() {
         assignedWakeVoice.id
       );
       upsertFriendship(pending);
-      setFriendship(pending);
 
       const resolved = await friendshipService.resolveDemoMatch(pending);
       upsertFriendship(resolved);
-      setFriendship(resolved);
       if (resolved.status === 'matched') {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
           () => undefined
         );
       }
+      router.replace(resolved.status === 'matched' ? '/(tabs)/friends' : '/(tabs)');
     } catch {
       setError('気持ちを届けられませんでした。もう一度お試しください。');
     } finally {
@@ -161,18 +160,14 @@ export default function FriendRequestScreen() {
 
         <View style={styles.copy}>
           <AppText variant="screenTitle" style={styles.centeredText}>
-            {isMatched
-              ? '朝フレンドになりました'
-              : isPending || isMatching
-                ? '気持ちを届けています'
-                : `また${sender?.nickname ?? 'この人'}さんと朝を迎えたい？`}
+            {isMatching
+              ? '気持ちを届けています'
+              : `また${sender?.nickname ?? 'この人'}さんと朝を迎えたい？`}
           </AppText>
           <AppText variant="secondary" tone="soft" style={styles.centeredText}>
-            {isMatched
-              ? '今朝の声から生まれた、小さなつながりです。'
-              : isPending || isMatching
-                ? '相手も同じ気持ちなら、朝フレンドになります。'
-                : '今朝の声がよかったと感じたときだけ、次の朝にもつながれます。'}
+            {isMatching
+              ? '希望を保存しています。'
+              : '今朝の声がよかったと感じたときだけ、次の朝にもつながれます。'}
           </AppText>
         </View>
 
@@ -186,37 +181,19 @@ export default function FriendRequestScreen() {
       ) : null}
 
       <View style={styles.actions}>
-        {friendship ? (
-          <AppButton
-            disabled={isMatching}
-            icon={isMatched ? 'heart-outline' : 'people-outline'}
-            label={
-              isMatched
-                ? 'フレンドを見る'
-                : isMatching
-                  ? '相手の気持ちを確認しています'
-                  : 'つながりを見る'
-            }
-            onPress={() =>
-              router.replace(isMatched ? '/(tabs)/friends' : '/(tabs)/connections')
-            }
-          />
-        ) : (
-          <AppButton
-            disabled={isMatching}
-            icon="heart-outline"
-            label="また朝を迎えたい"
-            onPress={() => void handleRequest()}
-            testID="request-friend"
-          />
-        )}
-        {!isMatched ? (
-          <AppButton
-            label="今回はここまで"
-            onPress={() => router.replace('/(tabs)/connections')}
-            variant="text"
-          />
-        ) : null}
+        <AppButton
+          disabled={isMatching}
+          icon="heart-outline"
+          label="また朝を迎えたい"
+          onPress={() => void handleRequest()}
+          testID="request-friend"
+        />
+        <AppButton
+          disabled={isMatching}
+          label="今回はここまで"
+          onPress={() => router.replace('/(tabs)')}
+          variant="text"
+        />
       </View>
     </Screen>
   );
