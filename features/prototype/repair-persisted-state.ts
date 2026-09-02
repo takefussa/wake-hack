@@ -17,6 +17,7 @@ export function getPrototypeStateRepair(
       selectedGiveRequestId: null,
       currentGiveReceiverIds: [],
       givenVoiceMessages: [],
+      communityVoiceMessages: [],
       assignedWakeVoice: null,
       wakeSession: null,
       thanksMessages: [],

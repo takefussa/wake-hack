@@ -16,6 +16,10 @@ export type PersonalAlarmVoiceSyncResult =
     }
   | { status: 'waiting' | 'unavailable' | 'failed' };
 
+export type PersonalAlarmVoiceLookupResult =
+  | { status: 'ready'; voice: VoiceMessage }
+  | { status: 'waiting' | 'failed' };
+
 const diagnosticStorageKey = '@wake-hack/personal-alarm-diagnostic';
 
 type PersonalAlarmDiagnostic = {
@@ -59,17 +63,71 @@ export class PersonalAlarmVoiceService {
     string,
     Promise<PersonalAlarmVoiceSyncResult>
   >();
+  private readonly lookupPromises = new Map<
+    string,
+    Promise<PersonalAlarmVoiceLookupResult>
+  >();
+
+  /**
+   * Fetches the Personal Voice and its sender metadata without touching
+   * AlarmKit. Expo Go uses this path so the social/recording flow remains
+   * usable even though the custom native module is not bundled there.
+   */
+  async lookupForRequest(
+    request: MorningRequest,
+    receiverId: string,
+    voiceMessageId?: string
+  ): Promise<PersonalAlarmVoiceLookupResult> {
+    if (request.userId !== receiverId) return { status: 'failed' };
+
+    const key = `${request.id}:${voiceMessageId ?? 'latest'}`;
+    const existing = this.lookupPromises.get(key);
+    if (existing) return existing;
+
+    const lookup = this.performLookup(
+      request,
+      receiverId,
+      voiceMessageId
+    ).finally(() => {
+      if (this.lookupPromises.get(key) === lookup) {
+        this.lookupPromises.delete(key);
+      }
+    });
+    this.lookupPromises.set(key, lookup);
+    return lookup;
+  }
+
+  private async performLookup(
+    request: MorningRequest,
+    receiverId: string,
+    voiceMessageId?: string
+  ): Promise<PersonalAlarmVoiceLookupResult> {
+    try {
+      const preparation = await wakeService.preparePersonalAlarmVoice(
+        request,
+        receiverId,
+        voiceMessageId
+      );
+      return preparation.status === 'ready'
+        ? { status: 'ready', voice: preparation.voice }
+        : { status: 'waiting' };
+    } catch (error) {
+      logDevelopmentError('personalAlarmVoice.lookupOnly', error);
+      return { status: 'failed' };
+    }
+  }
 
   async syncForRequest(
     request: MorningRequest,
     receiverId: string,
-    voiceMessageId?: string
+    voiceMessageId?: string,
+    communityVoices: VoiceMessage[] = []
   ): Promise<PersonalAlarmVoiceSyncResult> {
     const key = `${request.id}:${voiceMessageId ?? 'latest'}`;
     const existing = this.syncPromises.get(key);
     if (existing) return existing;
 
-    const sync = this.performSync(request, receiverId, voiceMessageId).finally(
+    const sync = this.performSync(request, receiverId, voiceMessageId, communityVoices).finally(
       () => {
         if (this.syncPromises.get(key) === sync) {
           this.syncPromises.delete(key);
@@ -83,7 +141,8 @@ export class PersonalAlarmVoiceService {
   private async performSync(
     request: MorningRequest,
     receiverId: string,
-    voiceMessageId?: string
+    voiceMessageId?: string,
+    communityVoices: VoiceMessage[] = []
   ): Promise<PersonalAlarmVoiceSyncResult> {
     if (Platform.OS !== 'ios' || !alarmService.isNativeAlarmAvailable()) {
       return { status: 'unavailable' };
@@ -107,10 +166,7 @@ export class PersonalAlarmVoiceService {
       }
       if (preparation.status !== 'ready') {
         await saveDiagnostic(request, { status: 'no-voice' });
-        const community = await wakeService.prepareCommunityAlarmVoice(
-          request,
-          receiverId
-        );
+        const community = await wakeService.prepareCommunityAlarmVoice(request, receiverId, communityVoices);
         const alarm = await alarmService.replaceWithCommunityVoice({
           morningRequestId: request.id,
           voiceMessageId: community.voice.id,

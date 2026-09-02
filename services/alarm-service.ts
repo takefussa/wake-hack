@@ -20,6 +20,8 @@ export type ActiveAlarm = {
   voiceMessageId?: string;
   voiceSenderId?: string;
   soundFileName?: string;
+  /** Bump this whenever the native AlarmKit interaction configuration changes. */
+  stopFlowVersion?: number;
 };
 
 export type AlarmSetupResult =
@@ -103,6 +105,7 @@ export class AlarmService {
     const active = await this.getActiveAlarm();
     if (
       active &&
+      active.stopFlowVersion === 2 &&
       active.morningRequestId === request.id &&
       Math.abs(new Date(active.scheduledFor).getTime() - expectedDate.getTime()) < 1_000
     ) {
@@ -147,6 +150,7 @@ export class AlarmService {
                 ...active,
                 id: rescheduled.id,
                 scheduledFor: new Date(rescheduled.scheduledFor).toISOString(),
+                stopFlowVersion: 2,
               };
               await AsyncStorage.setItem(
                 activeAlarmStorageKey,
@@ -175,6 +179,7 @@ export class AlarmService {
               scheduledFor: new Date(scheduled.scheduledFor).toISOString(),
               deliveryMode: 'native',
               sound: 'default',
+              stopFlowVersion: 2,
             };
             await AsyncStorage.setItem(activeAlarmStorageKey, JSON.stringify(alarm));
             return { status: 'scheduled', alarm };
@@ -307,6 +312,7 @@ export class AlarmService {
         voiceMessageId: input.voiceMessageId,
         voiceSenderId: input.senderId,
         soundFileName: replacement.soundFileName,
+        stopFlowVersion: 2,
       };
       await AsyncStorage.setItem(activeAlarmStorageKey, JSON.stringify(alarm));
       if (previousSoundFileName && previousSoundFileName !== replacement.soundFileName) {

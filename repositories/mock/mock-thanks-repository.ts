@@ -38,6 +38,18 @@ export class MockThanksRepository implements ThanksRepository {
       });
     }
 
+    if (input.voiceUri) {
+      messages.push({
+        id: `thanks-${Date.now()}-voice-${input.receiverId}`,
+        senderId: input.senderId,
+        receiverId: input.receiverId,
+        sourceVoiceMessageId: input.sourceVoiceMessageId,
+        type: 'voice',
+        audioUri: input.voiceUri,
+        createdAt,
+      });
+    }
+
     return messages;
   }
 

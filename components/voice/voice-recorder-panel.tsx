@@ -10,6 +10,7 @@ import { formatRecordingDuration } from '@/features/voice/format-duration';
 import type { LocalVoiceRecording, MicrophonePermissionState } from '@/hooks/use-voice-recorder';
 
 type VoiceRecorderPanelProps = {
+  headingLabel?: string;
   permissionState: MicrophonePermissionState;
   canAskPermissionAgain: boolean;
   isRequestingPermission: boolean;
@@ -33,6 +34,7 @@ type VoiceRecorderPanelProps = {
 const waveformLevels = [8, 18, 28, 14, 36, 24, 10, 32, 20, 40, 16, 30, 12, 24, 34];
 
 export function VoiceRecorderPanel({
+  headingLabel = 'この人の明日の朝へ',
   permissionState,
   canAskPermissionAgain,
   isRequestingPermission,
@@ -125,7 +127,7 @@ export function VoiceRecorderPanel({
     <View style={styles.panel}>
       <View style={styles.heading}>
         <AppText variant="caption" tone="lightMuted">
-          この人の明日の朝へ
+          {headingLabel}
         </AppText>
         <AppText variant="displayNumber" tone="light" style={styles.time}>
           {formatRecordingDuration(durationMs)}

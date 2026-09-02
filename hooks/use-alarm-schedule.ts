@@ -6,6 +6,7 @@ import { isSupabaseUuid } from '@/lib/identifiers';
 import { alarmService, type AlarmSetupResult } from '@/services/alarm-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { personalAlarmVoiceService } from '@/services/personal-alarm-voice-service';
+import { useAppStore } from '@/store/use-app-store';
 import type { MorningRequest, VoiceMessage } from '@/types';
 
 type AlarmScheduleState = AlarmSetupResult | { status: 'loading' | 'scheduling' };
@@ -17,6 +18,7 @@ export type PersonalVoiceSyncStatus =
   | 'error';
 
 export function useAlarmSchedule(request: MorningRequest | null) {
+  const communityVoices = useAppStore((state) => state.communityVoiceMessages);
   const [state, setState] = useState<AlarmScheduleState>({ status: 'loading' });
   const [personalVoiceSyncStatus, setPersonalVoiceSyncStatus] =
     useState<PersonalVoiceSyncStatus>('not-needed');
@@ -74,16 +76,39 @@ export function useAlarmSchedule(request: MorningRequest | null) {
         const shouldSyncPersonalVoice =
           result.status === 'scheduled' &&
           result.alarm.deliveryMode === 'native' &&
-          Platform.OS === 'ios' &&
-          isSupabaseUuid(requestForSync.id);
+          Platform.OS === 'ios';
         if (!shouldSyncPersonalVoice) {
-          setPersonalVoiceSyncStatus('not-needed');
+          // AlarmKit is intentionally unavailable in Expo Go. Keep the
+          // Personal Voice receive path alive so A can see who sent the voice,
+          // while skipping local alarm registration and its delivery receipt.
+          if (result.status === 'unavailable' && isSupabaseUuid(requestForSync.id)) {
+            setPersonalVoiceSyncStatus('checking');
+            const lookup = await personalAlarmVoiceService.lookupForRequest(
+              requestForSync,
+              requestForSync.userId
+            );
+            if (!isActive) return;
+            if (lookup.status === 'ready') {
+              setPreparedPersonalVoice(lookup.voice);
+              setPersonalVoiceSyncStatus('voice-ready');
+            } else {
+              setPreparedPersonalVoice(null);
+              setPersonalVoiceSyncStatus(
+                lookup.status === 'waiting' ? 'waiting' : 'error'
+              );
+            }
+          } else {
+            setPreparedPersonalVoice(null);
+            setPersonalVoiceSyncStatus('not-needed');
+          }
           return;
         }
         setPersonalVoiceSyncStatus('checking');
         const voiceResult = await personalAlarmVoiceService.syncForRequest(
           requestForSync,
-          requestForSync.userId
+          requestForSync.userId,
+          undefined,
+          communityVoices
         );
         if (!isActive) return;
 
@@ -110,7 +135,7 @@ export function useAlarmSchedule(request: MorningRequest | null) {
     return () => {
       isActive = false;
     };
-  }, [attempt, request]);
+  }, [attempt, communityVoices, request]);
 
   return {
     isNativeAlarmAvailable: alarmService.isNativeAlarmAvailable(),

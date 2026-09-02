@@ -10,8 +10,10 @@ import type {
 
 const thanksColumns =
   'id,sender_id,receiver_id,source_voice_message_id,reaction,text_message,created_at' as const;
+const voiceBucket = 'voice-messages';
+const voiceMarker = '__thanks_voice__:';
 
-function mapThanksRow(row: ThanksMessageRow): ThanksMessage[] {
+async function mapThanksRow(row: ThanksMessageRow): Promise<ThanksMessage[]> {
   const messages: ThanksMessage[] = [
     {
       id: `${row.id}:reaction`,
@@ -24,7 +26,21 @@ function mapThanksRow(row: ThanksMessageRow): ThanksMessage[] {
     },
   ];
 
-  if (row.text_message) {
+  if (row.text_message?.startsWith(voiceMarker)) {
+    const storagePath = row.text_message.slice(voiceMarker.length);
+    const { data } = await getSupabaseClient().storage
+      .from(voiceBucket)
+      .createSignedUrl(storagePath, 60 * 60);
+    messages.push({
+      id: `${row.id}:voice`,
+      senderId: row.sender_id,
+      receiverId: row.receiver_id,
+      sourceVoiceMessageId: row.source_voice_message_id,
+      type: 'voice',
+      audioUri: data?.signedUrl,
+      createdAt: row.created_at,
+    });
+  } else if (row.text_message) {
     messages.push({
       id: `${row.id}:text`,
       senderId: row.sender_id,
@@ -56,12 +72,29 @@ export class SupabaseThanksRepository implements ThanksRepository {
     }
 
     const supabase = getSupabaseClient();
+    let voiceStoragePath: string | null = null;
+    if (input.voiceUri) {
+      const file = new File(input.voiceUri);
+      if (!file.exists) throw new Error('The thanks recording does not exist');
+      const audioData = await file.arrayBuffer();
+      if (audioData.byteLength === 0) throw new Error('The thanks recording is empty');
+      voiceStoragePath =
+        `personal/${input.receiverId}/${input.senderId}/${Crypto.randomUUID()}.m4a`;
+      const { error: uploadError } = await supabase.storage
+        .from(voiceBucket)
+        .upload(voiceStoragePath, audioData, {
+          cacheControl: '3600',
+          contentType: 'audio/mp4',
+          upsert: false,
+        });
+      if (uploadError) throw uploadError;
+    }
     const values = {
       sender_id: input.senderId,
       receiver_id: input.receiverId,
       source_voice_message_id: input.sourceVoiceMessageId,
       reaction: input.reaction,
-      text_message: input.text ?? null,
+      text_message: voiceStoragePath ? `${voiceMarker}${voiceStoragePath}` : input.text ?? null,
     };
     const { data, error } = await supabase
       .from('thanks_messages')
@@ -70,6 +103,13 @@ export class SupabaseThanksRepository implements ThanksRepository {
       .single();
 
     if (!error) return mapThanksRow(data);
+
+    if (voiceStoragePath) {
+      const { error: cleanupError } = await supabase.storage
+        .from(voiceBucket)
+        .remove([voiceStoragePath]);
+      if (cleanupError) logDevelopmentError('thanks.voice.cleanup', cleanupError);
+    }
     if (!isUniqueViolation(error)) throw error;
 
     const { data: existing, error: existingError } = await supabase
@@ -95,7 +135,8 @@ export class SupabaseThanksRepository implements ThanksRepository {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data.flatMap(mapThanksRow);
+    const mapped = await Promise.all(data.map(mapThanksRow));
+    return mapped.flat();
   }
 
   async createIncomingForGives(
@@ -105,3 +146,7 @@ export class SupabaseThanksRepository implements ThanksRepository {
     return [];
   }
 }
+import * as Crypto from 'expo-crypto';
+import { File } from 'expo-file-system';
+
+import { logDevelopmentError } from '@/lib/development-logger';

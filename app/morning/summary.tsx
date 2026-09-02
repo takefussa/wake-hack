@@ -144,7 +144,13 @@ export default function MorningSummaryScreen() {
         >
           <Ionicons
             color={alarmSchedule.state.status === 'scheduled' ? '#66835F' : '#9A765B'}
-            name={alarmSchedule.state.status === 'scheduled' ? 'alarm' : 'warning-outline'}
+            name={
+              alarmSchedule.state.status === 'scheduled'
+                ? 'alarm'
+                : alarmSchedule.state.status === 'unavailable'
+                  ? 'information-circle-outline'
+                  : 'warning-outline'
+            }
             size={21}
           />
           <View style={styles.alarmNoteCopy}>
@@ -162,9 +168,11 @@ export default function MorningSummaryScreen() {
                   ? 'アラームを設定しています…'
                   : alarmSchedule.state.status === 'denied'
                     ? 'アラームの許可が必要です'
-                    : alarmSchedule.state.status === 'expired'
+                  : alarmSchedule.state.status === 'expired'
                       ? '設定時刻を過ぎています'
-                      : 'アラームを設定できませんでした'}
+                      : alarmSchedule.state.status === 'unavailable'
+                        ? '実際のアラームはこの環境では利用できません'
+                        : 'アラームを設定できませんでした'}
             </AppText>
             <AppText style={styles.alarmNoteText}>
               {alarmSchedule.state.status === 'scheduled'
@@ -176,7 +184,7 @@ export default function MorningSummaryScreen() {
                       ? alarmSchedule.state.alarm.sound === 'personal'
                         ? '届いた起床ボイスが停止するまで鳴ります。'
                         : alarmSchedule.state.alarm.sound === 'community'
-                          ? '個人からの声が届くまで、Community Voiceを設定しています。'
+                          ? 'Community Voiceが停止するまで鳴ります。'
                         : alarmSchedule.personalVoiceSyncStatus === 'error'
                           ? '標準音は設定済みですが、起床ボイスを取得できませんでした。'
                           : alarmSchedule.personalVoiceSyncStatus === 'checking'
@@ -190,7 +198,9 @@ export default function MorningSummaryScreen() {
                   ? '端末の設定でアラームを許可してください。'
                   : alarmSchedule.state.status === 'expired'
                     ? '時刻を編集して、未来の時刻を選んでください。'
-                    : '再設定を試すか、端末の設定を確認してください。'}
+                    : alarmSchedule.state.status === 'unavailable'
+                      ? 'Expo GoではAlarmKitだけを無効にしています。朝リクエストやWake Voiceの送受信は利用できます。'
+                      : '再設定を試すか、端末の設定を確認してください。'}
             </AppText>
           </View>
         </View>
@@ -204,14 +214,17 @@ export default function MorningSummaryScreen() {
             <AppText style={styles.alarmActionText}>端末の設定を開く</AppText>
           </Pressable>
         ) : alarmSchedule.state.status === 'error' ||
-          alarmSchedule.state.status === 'unavailable' ||
           alarmSchedule.personalVoiceSyncStatus === 'error' ? (
           <Pressable
             accessibilityRole="button"
             onPress={alarmSchedule.retry}
             style={styles.alarmAction}
           >
-            <AppText style={styles.alarmActionText}>アラームを再設定</AppText>
+            <AppText style={styles.alarmActionText}>
+              {alarmSchedule.state.status === 'error'
+                ? 'アラームを再設定'
+                : 'Wake Voiceを再確認'}
+            </AppText>
           </Pressable>
         ) : null}
 
@@ -236,7 +249,9 @@ export default function MorningSummaryScreen() {
                   : '明日のWake Voiceが届いています'}
               </AppText>
               <AppText style={styles.senderDescription}>
-                内容は起床時まで再生できません。アラームに設定済みです。
+                {alarmSchedule.isNativeAlarmAvailable
+                  ? '内容は起床時まで再生できません。アラームに設定済みです。'
+                  : '内容は起床前には再生できません。実アラームへの登録はDevelopment / Release Buildで行います。'}
               </AppText>
             </View>
           </View>
@@ -253,7 +268,11 @@ export default function MorningSummaryScreen() {
             size={21}
           />
           <AppText style={styles.voiceNoteText}>
-            {hasPersonalAlarm
+            {alarmSchedule.state.status === 'unavailable'
+              ? alarmSchedule.preparedPersonalVoice
+                ? '届いた人の声を確認しました。実アラーム登録だけをこの環境ではスキップします。'
+                : 'Wake Voiceを待っています。音声の送受信はこの環境でも利用できます。'
+              : hasPersonalAlarm
               ? '届いた人の声を実機アラームに設定済みです。'
               : alarmSchedule.state.status === 'scheduled' &&
                   alarmSchedule.state.alarm.sound === 'community'

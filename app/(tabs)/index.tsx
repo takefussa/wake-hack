@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { Waveform } from '@/components/common/waveform';
+import { ReceivedThanksSection } from '@/components/thanks/received-thanks-section';
 import { fonts, shadows, spacing } from '@/constants/theme';
 import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
@@ -322,6 +323,8 @@ export default function HomeScreen() {
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
+  const thanksMessages = useAppStore((state) => state.thanksMessages);
+  const addThanksMessages = useAppStore((state) => state.addThanksMessages);
   const runOnce = useTapLock();
   const alarmSchedule = useAlarmSchedule(currentMorningRequest);
   const preparedVoiceSender = useVoiceSender(
@@ -346,9 +349,21 @@ export default function HomeScreen() {
       <MemoNote name={currentUser.nickname} />
       <BoomboxCard
         request={currentMorningRequest}
-        isVoiceReady={isAlarmVoiceReady || assignedWakeVoice !== null}
+        isVoiceReady={
+          isAlarmVoiceReady ||
+          alarmSchedule.preparedPersonalVoice !== null ||
+          assignedWakeVoice !== null
+        }
         onPress={handleMorningAction}
       />
+      {currentMorningRequest && alarmSchedule.state.status === 'unavailable' ? (
+        <View style={styles.expoGoNotice} testID="alarm-unavailable-notice">
+          <Ionicons color="#8A674E" name="information-circle-outline" size={19} />
+          <AppText style={styles.expoGoNoticeText}>
+            Expo Goでは実際のアラームだけ利用できません。朝リクエストやWake Voiceの送受信は使えます。
+          </AppText>
+        </View>
+      ) : null}
       {alarmSchedule.preparedPersonalVoice ? (
         <Pressable
           accessibilityRole="button"
@@ -390,6 +405,12 @@ export default function HomeScreen() {
         givenVoices={givenVoiceMessages}
         onPressTimeline={() => runOnce(() => router.push('/(tabs)/connections'))}
       />
+      <ReceivedThanksSection
+        givenVoices={givenVoiceMessages}
+        localMessages={thanksMessages}
+        onMessagesLoaded={addThanksMessages}
+        userId={currentUser.id}
+      />
       <CassetteTimeline />
     </NotebookBackground>
   );
@@ -430,6 +451,8 @@ const styles = StyleSheet.create({
   actionButtonPressed: { backgroundColor: '#98432F', transform: [{ translateY: 1 }] },
   playButton: { width: 31, height: 31, borderWidth: 1, borderColor: '#F4D7B1', borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   actionLabel: { flex: 1, color: '#FFF8E8', fontSize: 15, lineHeight: 21 },
+  expoGoNotice: { minHeight: 58, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: '#D4B796', borderRadius: 10, backgroundColor: '#FFF6E7' },
+  expoGoNoticeText: { flex: 1, color: '#755B48', fontSize: 11, lineHeight: 17 },
   receivedVoiceCard: { minHeight: 78, paddingHorizontal: spacing.md, paddingVertical: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: '#A8BC91', borderRadius: 12, backgroundColor: '#F2F5E9', ...shadows.surface },
   receivedVoiceCardPressed: { opacity: 0.72 },
   receivedVoicePlaceholder: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E1EAD6' },
