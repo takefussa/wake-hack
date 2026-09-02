@@ -332,10 +332,14 @@ export class AlarmService {
   async cancelScheduledAlarm(): Promise<void> {
     const stored = parseActiveAlarm(await AsyncStorage.getItem(activeAlarmStorageKey));
     try {
-      if (stored?.deliveryMode === 'native') {
+      const alarmIds = WakeAlarm.getAlarmIds();
+      // AlarmKit returns ERR_UNEXPECTED when an already-consumed alarm ID is
+      // cancelled again. A persisted ID can legitimately be stale after an
+      // alarm fires or is dismissed from the system UI.
+      if (stored?.deliveryMode === 'native' && alarmIds.includes(stored.id)) {
         await WakeAlarm.cancelAlarm(stored.id);
       }
-      for (const id of WakeAlarm.getAlarmIds()) {
+      for (const id of alarmIds) {
         if (id !== stored?.id) await WakeAlarm.cancelAlarm(id);
       }
     } catch (error) {

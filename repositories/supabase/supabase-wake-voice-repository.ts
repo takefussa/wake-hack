@@ -1,7 +1,6 @@
 import { getSupabaseClient } from '@/lib/supabase';
 import type { WakeVoiceRepository } from '@/repositories/interfaces/wake-voice-repository';
 import type {
-  CommunityVoiceRow,
   MorningRequest,
   VoiceMessage,
   VoiceMessageRow,
@@ -33,16 +32,36 @@ function mapReceivedVoice(row: WakeVoiceRow, signedUrl: string): VoiceMessage {
   };
 }
 
-function mapCommunityVoice(row: CommunityVoiceRow, signedUrl: string): VoiceMessage {
+function getString(row: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = row[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return null;
+}
+
+function getDuration(row: Record<string, unknown>): number {
+  const value = row.duration_ms ?? row.duration;
+  return typeof value === 'number' && value > 0 ? value : 5_000;
+}
+
+function mapCommunityVoice(
+  row: Record<string, unknown>,
+  uri: string
+): VoiceMessage | null {
+  const id = getString(row, 'id');
+  const senderId = getString(row, 'sender_id', 'user_id', 'author_id');
+  if (!id || !senderId) return null;
+
   return {
-    id: row.id,
-    senderId: row.sender_id,
-    uri: signedUrl,
-    storagePath: row.storage_path,
-    durationMs: row.duration_ms,
+    id,
+    senderId,
+    uri,
+    storagePath: getString(row, 'storage_path', 'audio_path', 'file_path', 'path') ?? undefined,
+    durationMs: getDuration(row),
     type: 'community',
-    voiceStyle: row.voice_style as VoiceStyle,
-    createdAt: row.created_at,
+    voiceStyle: getString(row, 'voice_style', 'style', 'category') as VoiceStyle | undefined,
+    createdAt: getString(row, 'created_at') ?? new Date(0).toISOString(),
   };
 }
 
@@ -114,38 +133,37 @@ export class SupabaseWakeVoiceRepository implements WakeVoiceRepository {
     receiverId: string
   ): Promise<VoiceMessage> {
     const supabase = getSupabaseClient();
-    const selectColumns = 'id,sender_id,storage_path,duration_ms,voice_style,created_at' as const;
-    let { data: voice, error } = await supabase
+    // Existing Supabase projects created before the merge have a
+    // community_voices table with different column names. Read the row shape
+    // first, rather than asking PostgREST for a column that may not exist.
+    const { data, error } = await supabase
       .from('community_voices')
-      .select(selectColumns)
-      .eq('voice_style', request.preferredVoiceStyle)
+      .select('*')
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(50);
 
     if (error) throw error;
-    if (!voice) {
-      const fallback = await supabase
-        .from('community_voices')
-        .select(selectColumns)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      voice = fallback.data;
-      error = fallback.error;
+    const rows = (data ?? []) as unknown as Record<string, unknown>[];
+    const matching = rows.find(
+      (row) => getString(row, 'voice_style', 'style', 'category') === request.preferredVoiceStyle
+    );
+    const row = matching ?? rows[0];
+    if (!row) return this.fallbackRepository.findCommunityForRequest(request, receiverId);
+
+    const storagePath = getString(row, 'storage_path', 'audio_path', 'file_path', 'path');
+    const directUri = getString(row, 'audio_url', 'voice_url', 'url', 'uri');
+    let uri = directUri;
+    if (storagePath) {
+      const { data: signedUrl, error: signedUrlError } = await supabase.storage
+        .from(voiceBucket)
+        .createSignedUrl(storagePath, signedUrlLifetimeSeconds);
+      if (signedUrlError) throw signedUrlError;
+      uri = signedUrl.signedUrl;
     }
-    if (error) throw error;
+    if (!uri) return this.fallbackRepository.findCommunityForRequest(request, receiverId);
+
+    const voice = mapCommunityVoice(row, uri);
     if (!voice) return this.fallbackRepository.findCommunityForRequest(request, receiverId);
-
-    const { data: signedUrl, error: signedUrlError } = await supabase.storage
-      .from(voiceBucket)
-      .createSignedUrl(voice.storage_path, signedUrlLifetimeSeconds);
-    if (signedUrlError) throw signedUrlError;
-
-    return {
-      ...mapCommunityVoice(voice, signedUrl.signedUrl),
-      receiverId,
-      morningRequestId: request.id,
-    };
+    return { ...voice, receiverId, morningRequestId: request.id };
   }
 }
