@@ -14,6 +14,14 @@ type CreateCommunityVoiceInput = {
   voiceStyle: VoiceStyle;
 };
 
+function isMissingColumnError(error: { code?: string; message?: string } | null): boolean {
+  return (
+    error?.code === '42703' ||
+    error?.code === 'PGRST204' ||
+    error?.message?.includes('column') === true
+  );
+}
+
 /** Stores Community Voice separately from one-to-one Personal Voice. */
 export class CommunityVoiceService {
   async create(input: CreateCommunityVoiceInput): Promise<VoiceMessage> {
@@ -43,20 +51,50 @@ export class CommunityVoiceService {
     if (uploadError) throw uploadError;
 
     try {
-      const { data, error } = await supabase
+      const legacyValues = {
+        id,
+        sender_id: authenticatedUserId,
+        audio_path: storagePath,
+        duration_ms: input.durationMs,
+      };
+      let result = await supabase
         .from('community_voices')
         .insert({
-          id,
-          sender_id: authenticatedUserId,
           // The existing Supabase-social table uses audio_path. A later
-          // migration may add storage_path, but saving must work on the
-          // currently deployed schema too.
-          audio_path: storagePath,
-          duration_ms: input.durationMs,
+          // migration may add voice_style; fall back below when it has not.
+          ...legacyValues,
+          voice_style: input.voiceStyle,
         })
         .select('*')
         .single();
-      if (error) throw error;
+
+      if (isMissingColumnError(result.error)) {
+        // Exact compatibility with the deployed Supabase-social schema.
+        result = await supabase
+          .from('community_voices')
+          .insert(legacyValues)
+          .select('*')
+          .single();
+      }
+
+      // Fresh installations made from migration 014 use storage_path rather
+      // than the legacy audio_path column.
+      if (isMissingColumnError(result.error)) {
+        result = await supabase
+          .from('community_voices')
+          .insert({
+            id,
+            sender_id: authenticatedUserId,
+            storage_path: storagePath,
+            duration_ms: input.durationMs,
+            voice_style: input.voiceStyle,
+          })
+          .select('*')
+          .single();
+      }
+
+      if (result.error) throw result.error;
+      const data = result.data;
 
       return {
         id: data.id,
