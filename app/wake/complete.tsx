@@ -7,8 +7,9 @@ import { StyleSheet, View } from 'react-native';
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
+import { IconButton } from '@/components/common/icon-button';
 import { MorningScreen } from '@/components/wake/morning-screen';
-import { legacyColors as colors, radii, spacing } from '@/constants/theme';
+import { colors, fonts, paperColors, radii, shadows, spacing } from '@/constants/theme';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
@@ -29,10 +30,10 @@ function formatWakeTime(wokeAt?: string): string {
 function SummaryRow({ label, value, last = false }: SummaryRowProps) {
   return (
     <View style={[styles.summaryRow, !last && styles.summaryBorder]}>
-      <AppText variant="secondary" tone="soft">
+      <AppText style={styles.summaryLabel}>
         {label}
       </AppText>
-      <AppText variant="bodyMedium">{value}</AppText>
+      <AppText style={styles.summaryValue}>{value}</AppText>
     </View>
   );
 }
@@ -135,14 +136,31 @@ export default function WakeCompleteScreen() {
     <MorningScreen contentStyle={styles.content} testID="wake-complete-screen">
       <StatusBar style="dark" />
 
+      <View style={styles.navigation}>
+        <IconButton
+          icon="chevron-back"
+          label="起きた証明に戻る"
+          onPress={() =>
+            runOnce(() =>
+              router.replace({ pathname: '/wake/mission', params: { review: '1' } })
+            )
+          }
+        />
+      </View>
+
       <View style={styles.hero}>
         <View style={styles.sunMark}>
           <Ionicons color={colors.textInverse} name="sunny" size={32} />
         </View>
-        <AppText variant="screenTitle" style={styles.centeredText}>
+        <AppText
+          adjustsFontSizeToFit
+          minimumFontScale={0.78}
+          numberOfLines={1}
+          style={[styles.centeredText, styles.heroTitle]}
+        >
           おはようございます
         </AppText>
-        <AppText variant="secondary" tone="soft" style={styles.centeredText}>
+        <AppText style={[styles.centeredText, styles.completeMessage]}>
           今日の朝を始められました。
         </AppText>
         {isPersonal ? (
@@ -156,13 +174,15 @@ export default function WakeCompleteScreen() {
       </View>
 
       <View style={styles.summary}>
+        <View pointerEvents="none" style={styles.greenTape} />
         <SummaryRow label="起床時刻" value={formatWakeTime(wakeSession.wokeAt)} />
         <SummaryRow label="声をくれた相手" last value={senderName} />
       </View>
 
       <View style={styles.actions}>
         <AppButton
-          legacy
+          buttonColor={paperColors.orange}
+          contentColor={paperColors.ink}
           icon="heart-outline"
           label={
             hasSentThanks
@@ -174,11 +194,13 @@ export default function WakeCompleteScreen() {
                 : 'みんなの声にリアクションする'
           }
           onPress={handleThanks}
+          style={styles.primaryAction}
         />
         <AppButton
-          legacy
+          contentColor={colors.success}
           label="ホームに戻る"
           onPress={() => runOnce(() => router.replace('/(tabs)'))}
+          style={styles.homeAction}
           variant="secondary"
         />
       </View>
@@ -189,7 +211,12 @@ export default function WakeCompleteScreen() {
 const styles = StyleSheet.create({
   content: {
     justifyContent: 'space-between',
-    gap: spacing.xxxl,
+    gap: spacing.xl,
+  },
+  navigation: {
+    minHeight: 44,
+    marginLeft: -spacing.md,
+    alignItems: 'flex-start',
   },
   hero: {
     alignItems: 'center',
@@ -199,19 +226,39 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: radii.avatar,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
     backgroundColor: colors.warm,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadows.paper,
+  },
+  heroTitle: {
+    width: '100%',
+    fontFamily: fonts?.handwritten,
+    fontSize: 36,
+    lineHeight: 44,
+  },
+  completeMessage: {
+    fontFamily: fonts?.handwritten,
+    fontSize: 21,
+    lineHeight: 30,
   },
   centeredText: {
     textAlign: 'center',
   },
   summary: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    position: 'relative',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.cardGray,
+    ...shadows.paper,
   },
   summaryRow: {
-    minHeight: 64,
+    minHeight: 74,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -219,9 +266,44 @@ const styles = StyleSheet.create({
   },
   summaryBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: paperColors.ink,
+  },
+  summaryLabel: {
+    fontFamily: fonts?.handwritten,
+    fontSize: 18,
+    lineHeight: 25,
+  },
+  summaryValue: {
+    fontFamily: fonts?.handwritten,
+    fontSize: 22,
+    lineHeight: 29,
   },
   actions: {
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.base,
     gap: spacing.sm,
+    ...shadows.paper,
+  },
+  greenTape: {
+    position: 'absolute',
+    top: -13,
+    left: '34%',
+    right: '34%',
+    zIndex: 2,
+    height: 24,
+    backgroundColor: colors.success,
+    opacity: 0.82,
+    transform: [{ rotate: '-1deg' }],
+  },
+  primaryAction: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+  },
+  homeAction: {
+    borderWidth: 2,
+    borderColor: colors.success,
   },
 });

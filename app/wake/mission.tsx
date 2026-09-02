@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Accelerometer } from 'expo-sensors';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -16,9 +16,17 @@ import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { IconButton } from '@/components/common/icon-button';
 import { MorningScreen } from '@/components/wake/morning-screen';
-import { colors, fonts, radii, spacing } from '@/constants/theme';
+import {
+  colors,
+  fonts,
+  paperColors,
+  radii,
+  shadows,
+  spacing,
+} from '@/constants/theme';
 import {
   resolveWakeProofMission,
+  wakeProofMissions,
   wakeProofPhrase,
   wakeProofShakeGoal,
   wakeProofTapSequence,
@@ -31,12 +39,14 @@ import { useAppStore } from '@/store/use-app-store';
 type MissionStatus = 'active' | 'complete';
 
 export default function WakeMissionScreen() {
+  const params = useLocalSearchParams<{ review?: string | string[] }>();
+  const reviewParam = Array.isArray(params.review) ? params.review[0] : params.review;
+  const isReview = reviewParam === '1';
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
   const completeWakeSession = useAppStore((state) => state.completeWakeSession);
-  const cancelWakeSession = useAppStore((state) => state.cancelWakeSession);
   const runOnce = useTapLock();
   const [phraseInput, setPhraseInput] = useState('');
   const [tapIndex, setTapIndex] = useState(0);
@@ -44,11 +54,20 @@ export default function WakeMissionScreen() {
   const [lastMagnitude, setLastMagnitude] = useState(0);
   const [isShakeAvailable, setIsShakeAvailable] = useState(true);
   const [status, setStatus] = useState<MissionStatus>('active');
+  const [missionOffset, setMissionOffset] = useState(0);
 
-  const mission = useMemo(
+  const defaultMission = useMemo(
     () => resolveWakeProofMission(wakeSession?.id ?? 'wake-session'),
     [wakeSession?.id]
   );
+  const mission = useMemo(() => {
+    const defaultIndex = wakeProofMissions.findIndex(
+      (candidate) => candidate.type === defaultMission.type
+    );
+    return wakeProofMissions[
+      (Math.max(defaultIndex, 0) + missionOffset) % wakeProofMissions.length
+    ];
+  }, [defaultMission.type, missionOffset]);
 
   const hasValidMissionContext = Boolean(
     currentUser &&
@@ -120,21 +139,28 @@ export default function WakeMissionScreen() {
   ) {
     return <Redirect href="/morning/ready" />;
   }
-  if (wakeSession.status === 'completed') {
+  if (wakeSession.status === 'completed' && !isReview) {
     return <Redirect href="/wake/complete" />;
   }
-  if (wakeSession.status !== 'ringing') {
+  if (wakeSession.status !== 'ringing' && !(isReview && wakeSession.status === 'completed')) {
     return <Redirect href="/wake/alarm" />;
   }
 
   function handleBack() {
     runOnce(() => {
-      cancelWakeSession();
-      router.replace('/morning/ready');
+      if (isReview) {
+        router.replace({ pathname: '/wake/alarm', params: { review: '1' } });
+        return;
+      }
+      router.replace('/wake/alarm');
     });
   }
 
   function handleComplete() {
+    if (isReview) {
+      runOnce(() => router.replace('/wake/complete'));
+      return;
+    }
     if (!canComplete) return;
     runOnce(() => {
       const completedSession = completeWakeSession();
@@ -153,6 +179,15 @@ export default function WakeMissionScreen() {
     setTapIndex(0);
   }
 
+  function handleChangeMission() {
+    setPhraseInput('');
+    setTapIndex(0);
+    setShakeCount(0);
+    setLastMagnitude(0);
+    setStatus('active');
+    setMissionOffset((current) => current + 1);
+  }
+
   return (
     <MorningScreen contentStyle={styles.content} testID="wake-mission-screen">
       <StatusBar style="dark" />
@@ -161,9 +196,19 @@ export default function WakeMissionScreen() {
         style={styles.keyboardAvoider}>
         <View style={styles.navigation}>
           <IconButton icon="chevron-back" label="朝の準備に戻る" onPress={handleBack} />
+          <AppButton
+            buttonColor={paperColors.orange}
+            compact
+            contentColor={paperColors.ink}
+            icon="refresh-outline"
+            label="別の証明にする"
+            onPress={handleChangeMission}
+            style={styles.changeMissionButton}
+          />
         </View>
 
         <View style={styles.header}>
+          <View pointerEvents="none" style={styles.greenTape} />
           <View style={styles.iconMark}>
             <Ionicons color={colors.textInverse} name="checkmark-done" size={28} />
           </View>
@@ -179,6 +224,7 @@ export default function WakeMissionScreen() {
         </View>
 
         <View style={styles.missionPanel}>
+          <View pointerEvents="none" style={[styles.greenTape, styles.missionTape]} />
           <AppText variant="sectionTitle" style={styles.centeredText}>
             {mission.title}
           </AppText>
@@ -266,10 +312,13 @@ export default function WakeMissionScreen() {
 
         <View style={styles.footer}>
           <AppButton
-            disabled={!canComplete}
-            icon={canComplete ? 'sunny-outline' : 'lock-closed-outline'}
-            label={canComplete ? '朝をはじめる' : 'ミッション中'}
+            buttonColor={paperColors.orange}
+            contentColor={paperColors.ink}
+            disabled={!isReview && !canComplete}
+            icon={isReview || canComplete ? 'sunny-outline' : 'lock-closed-outline'}
+            label={isReview ? '完了画面に戻る' : canComplete ? '朝をはじめる' : 'ミッション中'}
             onPress={handleComplete}
+            style={styles.primaryAction}
             testID="wake-proof-complete"
             variant="warm"
           />
@@ -282,26 +331,47 @@ export default function WakeMissionScreen() {
 const styles = StyleSheet.create({
   content: {
     justifyContent: 'space-between',
-    gap: spacing.xxl,
+    gap: spacing.xl,
   },
   keyboardAvoider: {
     flex: 1,
     justifyContent: 'space-between',
-    gap: spacing.xxl,
+    gap: spacing.xl,
   },
   navigation: {
     minHeight: 44,
     marginLeft: -spacing.md,
-    alignItems: 'flex-start',
+    marginRight: -spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  changeMissionButton: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    paddingHorizontal: spacing.md,
   },
   header: {
+    position: 'relative',
+    minHeight: 210,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.base,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
+    ...shadows.paper,
   },
   iconMark: {
     width: 58,
     height: 58,
     borderRadius: radii.avatar,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
     backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
@@ -311,14 +381,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   missionPanel: {
+    position: 'relative',
     minHeight: 300,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.68)',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.cardGray,
     padding: spacing.xl,
     justifyContent: 'center',
     gap: spacing.xl,
+    ...shadows.paper,
+  },
+  greenTape: {
+    position: 'absolute',
+    top: -13,
+    left: '34%',
+    right: '34%',
+    zIndex: 2,
+    height: 24,
+    backgroundColor: colors.success,
+    opacity: 0.82,
+    transform: [{ rotate: '-1.5deg' }],
+  },
+  missionTape: {
+    transform: [{ rotate: '1deg' }],
   },
   phraseArea: {
     gap: spacing.lg,
@@ -326,8 +412,8 @@ const styles = StyleSheet.create({
   phraseBadge: {
     minHeight: 104,
     borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.warm,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
     backgroundColor: colors.warmSoft,
     alignItems: 'center',
     justifyContent: 'center',
@@ -340,8 +426,8 @@ const styles = StyleSheet.create({
   },
   input: {
     minHeight: 52,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
     borderRadius: radii.input,
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.lg,
@@ -381,8 +467,8 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: radii.avatar,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -422,6 +508,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warm,
   },
   footer: {
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.base,
     gap: spacing.sm,
+    ...shadows.paper,
+  },
+  primaryAction: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
   },
 });

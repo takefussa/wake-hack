@@ -43,6 +43,7 @@ export default function MorningSummaryScreen() {
   );
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const startWakeSession = useAppStore((state) => state.startWakeSession);
+  const cancelWakeSession = useAppStore((state) => state.cancelWakeSession);
   const completeWakeSession = useAppStore((state) => state.completeWakeSession);
   const runOnce = useTapLock();
   const alarmSchedule = useAlarmSchedule(currentMorningRequest);
@@ -85,6 +86,19 @@ export default function MorningSummaryScreen() {
       setSkipTarget(null);
       return;
     }
+
+    if (type === 'personal') {
+      const cancelledSession = cancelWakeSession();
+      if (!cancelledSession) {
+        setSkipError('[開発用] パーソナルボイスを準備できませんでした。');
+        setSkipTarget(null);
+        return;
+      }
+
+      router.replace('/morning/ready');
+      return;
+    }
+
     const completedSession = completeWakeSession();
     if (!completedSession) {
       setSkipError('[開発用] 朝へのスキップに失敗しました(セッション完了エラー)。');
