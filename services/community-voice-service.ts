@@ -28,15 +28,16 @@ export class CommunityVoiceService {
     if (audioData.byteLength === 0) throw new Error('The local community recording is empty');
 
     const id = Crypto.randomUUID();
-    // Recordings are PCM WAV on iOS so AlarmKit can install them without an
-    // unreliable AAC conversion step.
+    // Preserve the original Supabase-social storage contract: the existing
+    // bucket accepts audio/mp4 metadata even though iOS records PCM WAV bytes.
+    // AlarmKit checks the WAV header after download before installing it.
     const storagePath = `community/${authenticatedUserId}/${id}.wav`;
     const supabase = getSupabaseClient();
     const { error: uploadError } = await supabase.storage
       .from(voiceBucket)
       .upload(storagePath, audioData, {
         cacheControl: '3600',
-        contentType: 'audio/wav',
+        contentType: 'audio/mp4',
         upsert: false,
       });
     if (uploadError) throw uploadError;
@@ -47,11 +48,13 @@ export class CommunityVoiceService {
         .insert({
           id,
           sender_id: authenticatedUserId,
-          storage_path: storagePath,
+          // The existing Supabase-social table uses audio_path. A later
+          // migration may add storage_path, but saving must work on the
+          // currently deployed schema too.
+          audio_path: storagePath,
           duration_ms: input.durationMs,
-          voice_style: input.voiceStyle,
         })
-        .select('id,sender_id,storage_path,duration_ms,voice_style,created_at')
+        .select('*')
         .single();
       if (error) throw error;
 
@@ -59,10 +62,10 @@ export class CommunityVoiceService {
         id: data.id,
         senderId: data.sender_id,
         uri: input.uri,
-        storagePath: data.storage_path,
+        storagePath: data.audio_path ?? data.storage_path ?? storagePath,
         durationMs: data.duration_ms,
         type: 'community',
-        voiceStyle: data.voice_style as VoiceStyle,
+        voiceStyle: input.voiceStyle,
         createdAt: data.created_at,
       };
     } catch (error) {

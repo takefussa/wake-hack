@@ -39,9 +39,10 @@ export type VoiceMessageRow = {
 export type CommunityVoiceRow = {
   id: string;
   sender_id: string;
-  storage_path: string;
+  audio_path?: string | null;
+  storage_path?: string | null;
   duration_ms: number;
-  voice_style: string;
+  voice_style?: string | null;
   created_at: string;
 };
 
@@ -168,9 +169,10 @@ export type Database = {
         Insert: {
           id: string;
           sender_id: string;
-          storage_path: string;
+          audio_path?: string | null;
+          storage_path?: string | null;
           duration_ms: number;
-          voice_style: string;
+          voice_style?: string | null;
           created_at?: string;
         };
         Update: Record<string, never>;
