@@ -234,8 +234,16 @@ export class WakeService {
 
   async prepareCommunityAlarmVoice(
     request: MorningRequest,
-    receiverId: string
+    receiverId: string,
+    localVoices: VoiceMessage[] = []
   ): Promise<CommunityAlarmVoicePreparation> {
+    const matching = localVoices
+      .filter((voice) => voice.type === 'community')
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const selected = matching.find((voice) => voice.voiceStyle === request.preferredVoiceStyle) ?? matching[0];
+    if (selected?.uri) {
+      return { status: 'ready', voice: { ...selected, receiverId, morningRequestId: request.id } };
+    }
     const asset = Asset.fromModule(
       require('../assets/audio/community-wake.wav')
     );

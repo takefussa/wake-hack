@@ -11,17 +11,20 @@ private struct WakeAlarmMetadata: AlarmMetadata {
 }
 
 @available(iOS 26.0, *)
-private struct WakeAlarmStopIntent: LiveActivityIntent {
-  static var title: LocalizedStringResource = "オキタ！を開く"
-  static var openAppWhenRun: Bool = true
+public struct WakeAlarmStopIntent: LiveActivityIntent {
+  public static var title: LocalizedStringResource = "オキタ！を開く"
+  // LiveActivityIntent normally starts the app process in the background.
+  // AlarmKit's Stop action must instead bring the person straight into the
+  // post-wake flow, so explicitly request foreground execution on iOS 26.
+  public static var supportedModes: IntentModes { .foreground(.immediate) }
 
   @Parameter(title: "朝リクエストID")
-  var morningRequestId: String
+  public var morningRequestId: String
 
-  init() { morningRequestId = "" }
-  init(morningRequestId: String) { self.morningRequestId = morningRequestId }
+  public init() { morningRequestId = "" }
+  public init(morningRequestId: String) { self.morningRequestId = morningRequestId }
 
-  func perform() async throws -> some IntentResult {
+  public func perform() async throws -> some IntentResult {
     UserDefaults.standard.set(
       [
         "morningRequestId": morningRequestId,

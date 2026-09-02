@@ -27,6 +27,9 @@ export class ThanksService {
   async send(input: SendThanksInput): Promise<ThanksMessage[]> {
     const reaction = input.reaction.trim();
     const text = input.text?.trim();
+    if (input.voiceUri && !input.voiceDurationMs) {
+      throw new Error('Thanks voice duration is missing');
+    }
     if (!input.senderId || !input.receiverId || !input.sourceVoiceMessageId || !reaction) {
       throw new Error('Thanks input is incomplete');
     }
@@ -105,17 +108,19 @@ export class ThanksService {
       .map((group) => {
         const reaction = group.find((message) => message.type === 'reaction');
         const text = group.find((message) => message.type === 'text');
-        const primary = text ?? reaction ?? group[0];
+        const voice = group.find((message) => message.type === 'voice');
+        const primary = text ?? voice ?? reaction ?? group[0];
         const content = [reaction?.content, text?.content]
           .filter((value): value is string => Boolean(value))
           .filter((value, index, values) => values.indexOf(value) === index)
           .join('\n');
-        return { ...primary, content: content || primary.content };
+        return {
+          ...primary,
+          audioUri: voice?.audioUri,
+          content: content || (voice ? '声のありがとう' : primary.content),
+        };
       })
       .sort((left, right) => {
-        const leftRemote = isSupabaseUuid(left.sourceVoiceMessageId);
-        const rightRemote = isSupabaseUuid(right.sourceVoiceMessageId);
-        if (leftRemote !== rightRemote) return leftRemote ? -1 : 1;
         return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
       });
 

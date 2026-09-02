@@ -19,6 +19,8 @@ export type SendThanksInput = {
   sourceVoiceMessageId: string;
   reaction: string;
   text?: string;
+  voiceUri?: string;
+  voiceDurationMs?: number;
 };
 
 export type ThanksInboxItem = {

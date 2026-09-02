@@ -17,7 +17,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
-import { ThanksInboxRow } from '@/components/thanks/thanks-inbox-row';
 import { voiceStyleOptions } from '@/constants/options';
 import { fontFamilyName } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
@@ -26,10 +25,9 @@ import { rankMorningRequests } from '@/services/matching-service';
 import type { MorningRequestMatch } from '@/services/matching-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
-import { thanksService } from '@/services/thanks-service';
 import { voiceService } from '@/services/voice-service';
 import { useAppStore } from '@/store/use-app-store';
-import type { ThanksInboxItem, UserProfile } from '@/types';
+import type { UserProfile } from '@/types';
 
 type TimelineMode = 'personal' | 'community';
 
@@ -93,10 +91,7 @@ function VoiceOptionsPanel({ options }: { options: readonly string[] }) {
             styles.voiceOptionButton,
             pressed && styles.pressed,
           ]}
-          onPress={() => {
-            // TODO:
-            // 選んだ声のスタイルでコミュニティボイス録音画面へ遷移
-          }}
+          onPress={() => router.push({ pathname: '/community/record', params: { voiceStyle: option } })}
         >
           <AppText style={styles.voiceOptionText}>{option}</AppText>
 
@@ -111,9 +106,7 @@ export default function ConnectionsScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const replaceMorningRequest = useAppStore((state) => state.replaceMorningRequest);
-  const thanksMessages = useAppStore((state) => state.thanksMessages);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
-  const addThanksMessages = useAppStore((state) => state.addThanksMessages);
   const { width, height } = useWindowDimensions();
 
   const horizontalRef = useRef<ScrollView>(null);
@@ -189,9 +182,6 @@ export default function ConnectionsScreen() {
   const [candidates, setCandidates] = useState<RequestCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [thanksItems, setThanksItems] = useState<ThanksInboxItem[]>([]);
-  const [isThanksLoading, setIsThanksLoading] = useState(true);
-  const [thanksError, setThanksError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deliveryItems, setDeliveryItems] = useState<DeliveryStatusItem[]>([]);
 
@@ -244,49 +234,6 @@ export default function ConnectionsScreen() {
   useEffect(() => {
     void loadCandidates();
   }, [loadCandidates]);
-
-  const loadThanks = useCallback(async () => {
-    if (!currentUser) {
-      setIsThanksLoading(false);
-      return;
-    }
-    const userId = currentUser.id;
-    setIsThanksLoading(true);
-
-    try {
-      const availableMessages = await thanksService.getMessagesForUser(
-        userId,
-        thanksMessages
-      );
-      const items = await thanksService.getInboxItems(
-        availableMessages,
-        givenVoiceMessages,
-        userId
-      );
-      addThanksMessages(availableMessages);
-      setThanksItems(items);
-      setThanksError(null);
-    } catch {
-      let localItems: ThanksInboxItem[] = [];
-      try {
-        localItems = await thanksService.getInboxItems(
-          thanksMessages,
-          givenVoiceMessages,
-          userId
-        );
-      } catch {
-        // 古いローカルデータがあっても、「起こす」画面は表示し続ける。
-      }
-      setThanksItems(localItems);
-      setThanksError('新しいありがとうを確認できませんでした。');
-    } finally {
-      setIsThanksLoading(false);
-    }
-  }, [addThanksMessages, currentUser, givenVoiceMessages, thanksMessages]);
-
-  useEffect(() => {
-    void loadThanks();
-  }, [loadThanks]);
 
   const loadDeliveryStatuses = useCallback(async () => {
     if (!currentUser) {
@@ -362,7 +309,6 @@ export default function ConnectionsScreen() {
     try {
       await Promise.all([
         loadCandidates(),
-        loadThanks(),
         loadDeliveryStatuses().catch(() => undefined),
       ]);
     } finally {
@@ -678,36 +624,6 @@ export default function ConnectionsScreen() {
               </View>
             ) : null}
 
-            <View style={styles.thanksSection}>
-              <View style={styles.thanksHeading}>
-                <AppText style={styles.thanksTitle}>届いたありがとう</AppText>
-                {thanksItems.length > 0 ? (
-                  <AppText style={styles.thanksCount}>{thanksItems.length}件</AppText>
-                ) : null}
-              </View>
-              <AppText style={styles.thanksDescription}>
-                あなたが届けた声への返事です。
-              </AppText>
-
-              {thanksError ? (
-                <AppText style={styles.thanksError}>{thanksError}</AppText>
-              ) : null}
-              {isThanksLoading ? (
-                <ActivityIndicator color="#30463E" style={styles.thanksLoader} />
-              ) : null}
-              {!isThanksLoading && thanksItems.length === 0 ? (
-                <AppText style={styles.thanksEmpty}>
-                  返事が届くと、ここに表示されます。
-                </AppText>
-              ) : null}
-              {!isThanksLoading && thanksItems.length > 0 ? (
-                <View style={styles.thanksList}>
-                  {thanksItems.map((item) => (
-                    <ThanksInboxRow item={item} key={item.message.id} />
-                  ))}
-                </View>
-              ) : null}
-            </View>
             </View>
           </Animated.ScrollView>
         </View>

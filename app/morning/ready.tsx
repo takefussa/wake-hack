@@ -147,7 +147,9 @@ export default function TomorrowReadyScreen() {
                   alarmSchedule.state.alarm.deliveryMode === 'native'
                   ? alarmSchedule.state.alarm.sound === 'personal'
                       ? '届いた起床ボイスを設定済みです。停止するまで鳴ります'
-                      : alarmSchedule.personalVoiceSyncStatus === 'error'
+                      : alarmSchedule.state.alarm.sound === 'community'
+                        ? 'Community Voiceを設定済みです。停止するまで鳴ります'
+                        : alarmSchedule.personalVoiceSyncStatus === 'error'
                         ? '標準音は設定済みですが、起床ボイスを取得できませんでした'
                         : alarmSchedule.personalVoiceSyncStatus === 'checking'
                           ? '標準音を設定し、届いた起床ボイスを確認しています'
@@ -163,7 +165,9 @@ export default function TomorrowReadyScreen() {
                   ? 'アラームの使用が許可されていません'
                   : alarmSchedule.state.status === 'expired'
                     ? '設定時刻を過ぎています'
-                    : 'アラームを設定できませんでした'}
+                    : alarmSchedule.state.status === 'unavailable'
+                      ? 'Expo Goでは実際のアラームは利用できません。Wake Voiceの送受信は利用できます'
+                      : 'アラームを設定できませんでした'}
           </AppText>
         </View>
         {alarmSchedule.state.status === 'denied' ? (
@@ -174,11 +178,14 @@ export default function TomorrowReadyScreen() {
             variant="textOnDark"
           />
         ) : alarmSchedule.state.status === 'error' ||
-          alarmSchedule.state.status === 'unavailable' ||
           alarmSchedule.personalVoiceSyncStatus === 'error' ? (
           <AppButton
             icon="refresh-outline"
-            label="アラームを再設定"
+            label={
+              alarmSchedule.state.status === 'error'
+                ? 'アラームを再設定'
+                : 'Wake Voiceを再確認'
+            }
             onPress={alarmSchedule.retry}
             variant="textOnDark"
           />

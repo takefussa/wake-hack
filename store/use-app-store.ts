@@ -29,6 +29,7 @@ type AppStore = PrototypePersistedState & {
   replaceMorningRequest: (request: MorningRequest) => void;
   selectGiveRequest: (requestId: string) => void;
   completeGive: (voiceMessage: VoiceMessage) => boolean;
+  addCommunityVoice: (voiceMessage: VoiceMessage) => void;
   chooseCommunityWake: () => void;
   startWakeSession: (voiceMessage: VoiceMessage, session?: WakeSession) => boolean;
   cancelWakeSession: () => WakeSession | null;
@@ -49,6 +50,7 @@ const initialPersistedState: PrototypePersistedState = {
   selectedGiveRequestId: null,
   currentGiveReceiverIds: [],
   givenVoiceMessages: [],
+  communityVoiceMessages: [],
   assignedWakeVoice: null,
   wakeSession: null,
   thanksMessages: [],
@@ -170,12 +172,25 @@ export const useAppStore = create<AppStore>()(
         }));
         return true;
       },
+      addCommunityVoice: (voiceMessage) =>
+        set((state) => ({
+          communityVoiceMessages: [voiceMessage, ...state.communityVoiceMessages],
+        })),
       chooseCommunityWake: () => {
-        const { currentMorningRequest, currentUser } = get();
+        const { currentMorningRequest, currentUser, communityVoiceMessages } = get();
         if (!currentMorningRequest || !currentUser) return;
         if (currentMorningRequest.personalEligible) return;
 
-        const communityVoice = mockCommunityVoices[0];
+        const localCommunityVoices = communityVoiceMessages
+          .filter((voice) => voice.type === 'community')
+          .sort(
+            (left, right) =>
+              new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+          );
+        const communityVoice =
+          localCommunityVoices.find(
+            (voice) => voice.voiceStyle === currentMorningRequest.preferredVoiceStyle
+          ) ?? localCommunityVoices[0] ?? mockCommunityVoices[0];
 
         set({
           currentMorningRequest: {
@@ -342,6 +357,7 @@ export const useAppStore = create<AppStore>()(
         selectedGiveRequestId: state.selectedGiveRequestId,
         currentGiveReceiverIds: state.currentGiveReceiverIds,
         givenVoiceMessages: state.givenVoiceMessages,
+        communityVoiceMessages: state.communityVoiceMessages,
         assignedWakeVoice: state.assignedWakeVoice,
         wakeSession: state.wakeSession,
         thanksMessages: state.thanksMessages,
