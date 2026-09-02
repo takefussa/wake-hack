@@ -185,7 +185,7 @@ begin
   update public.morning_requests
   set personal_eligible = true,
       updated_at = now()
-  where id = p_sender_morning_request_id;
+  where id = p_morning_request_id;
 
   return next v_voice;
   return;

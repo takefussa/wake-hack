@@ -419,13 +419,15 @@ const styles = StyleSheet.create({
 
   profileImageRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
 
-    gap: 18,
+    gap: 12,
   },
 
   avatarCandidates: {
+    flexShrink: 0,
     alignItems: 'center',
 
     gap: 6,

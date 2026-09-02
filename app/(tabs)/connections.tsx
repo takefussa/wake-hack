@@ -1043,9 +1043,12 @@ const styles = StyleSheet.create({
   },
 
   cassetteName: {
+    width: '100%',
+    flexShrink: 1,
     fontFamily: fontFamilyName,
     color: '#2E2E2E',
     fontSize: 22,
+    textAlign: 'center',
   },
 
   // ラベル下部にある帯にちょうど収まる位置に属性を表示

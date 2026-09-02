@@ -162,10 +162,12 @@ export const useAppStore = create<AppStore>()(
         }
 
         const receiverId = voiceMessage.receiverId;
+        // Sending a voice changes the receiver's request on the backend. It
+        // must not mark the sender's own request as Personal Voice eligible.
+        // That flag is set when this user receives a voice, not when they give
+        // one.
         const eligibleRequest: MorningRequest = {
           ...currentMorningRequest,
-          personalEligible: true,
-          status: voiceMessage.storagePath ? 'open' : 'voice_assigned',
         };
 
         set((state) => ({
