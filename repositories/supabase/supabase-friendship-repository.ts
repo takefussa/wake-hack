@@ -15,6 +15,8 @@ function mapFriendshipRow(row: FriendshipRow): Friendship {
     id: row.id,
     userAId: row.user_a_id,
     userBId: row.user_b_id,
+    userARequested: row.user_a_requested,
+    userBRequested: row.user_b_requested,
     status: row.status,
     morningCount: row.morning_count,
     createdAt: row.created_at,
@@ -51,5 +53,16 @@ export class SupabaseFriendshipRepository implements FriendshipRepository {
 
     if (error) throw error;
     return data.map(mapFriendshipRow);
+  }
+
+  async respond(friendshipId: string): Promise<Friendship> {
+    const { data, error } = await getSupabaseClient()
+      .rpc('respond_to_friendship', {
+        p_friendship_id: friendshipId,
+      })
+      .single();
+
+    if (error) throw error;
+    return mapFriendshipRow(data);
   }
 }

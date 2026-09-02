@@ -2,6 +2,8 @@ export type ProfileRow = {
   id: string;
   nickname: string;
   avatar_id: string;
+  bio: string | null;
+  profile_image_path: string | null;
   user_type: string;
   tags: string[];
   created_at: string;
@@ -55,6 +57,29 @@ export type FriendshipRow = {
   updated_at: string;
 };
 
+export type WakeAssignmentRow = {
+  id: string;
+  morning_request_id: string;
+  voice_message_id: string | null;
+  type: string;
+  community_voice_id: string | null;
+  assigned_at: string;
+};
+
+export type WakeSessionRow = {
+  id: string;
+  user_id: string;
+  morning_request_id: string;
+  wake_assignment_id: string;
+  wake_voice_key: string;
+  alarm_at: string;
+  woke_at: string | null;
+  mission_completed: boolean;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -64,6 +89,8 @@ export type Database = {
           id: string;
           nickname: string;
           avatar_id: string;
+          bio?: string | null;
+          profile_image_path?: string | null;
           user_type: string;
           tags: string[];
           created_at?: string;
@@ -72,6 +99,8 @@ export type Database = {
         Update: {
           nickname?: string;
           avatar_id?: string;
+          bio?: string | null;
+          profile_image_path?: string | null;
           user_type?: string;
           tags?: string[];
           updated_at?: string;
@@ -152,6 +181,42 @@ export type Database = {
         Update: Record<string, never>;
         Relationships: [];
       };
+      wake_assignments: {
+        Row: WakeAssignmentRow;
+        Insert: {
+          id?: string;
+          morning_request_id: string;
+          voice_message_id?: string | null;
+          type: string;
+          community_voice_id?: string | null;
+          assigned_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      wake_sessions: {
+        Row: WakeSessionRow;
+        Insert: {
+          id?: string;
+          user_id: string;
+          morning_request_id: string;
+          wake_assignment_id: string;
+          wake_voice_key: string;
+          alarm_at: string;
+          woke_at?: string | null;
+          mission_completed?: boolean;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          woke_at?: string | null;
+          mission_completed?: boolean;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -172,6 +237,18 @@ export type Database = {
           p_source_voice_message_id: string;
         };
         Returns: FriendshipRow[];
+      };
+      respond_to_friendship: {
+        Args: {
+          p_friendship_id: string;
+        };
+        Returns: FriendshipRow[];
+      };
+      assign_wake_voice: {
+        Args: {
+          p_morning_request_id: string;
+        };
+        Returns: WakeAssignmentRow[];
       };
     };
   };

@@ -22,7 +22,7 @@ export function AppLogo({ compact = false, mode = 'dark' }: AppLogoProps) {
         />
       </View>
       <AppText variant={compact ? 'bodyMedium' : 'sectionTitle'} tone={isDark ? 'light' : 'dark'}>
-        Wake Hack
+        オキタ！
       </AppText>
     </View>
   );

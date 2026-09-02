@@ -7,6 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
+import { IconButton } from '@/components/common/icon-button';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { colors, radii, spacing } from '@/constants/theme';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
@@ -106,13 +107,13 @@ export default function WakeCompleteScreen() {
     return <Redirect href="/morning/ready" />;
   }
   if (wakeSession.status !== 'completed') {
-    return <Redirect href={wakeSession.status === 'mission' ? '/wake/mission' : '/wake/alarm'} />;
+    return <Redirect href="/wake/alarm" />;
   }
 
   const isPersonal = assignedWakeVoice.type === 'personal';
   const senderName = isPersonal
     ? `${sender?.nickname ?? '誰か'}さん`
-    : 'Wake Hackのみんな';
+    : 'オキタ！のみんな';
   const hasSentThanks = currentUser
     ? thanksMessages.some(
         (message) =>
@@ -134,6 +135,14 @@ export default function WakeCompleteScreen() {
   return (
     <MorningScreen contentStyle={styles.content} testID="wake-complete-screen">
       <StatusBar style="dark" />
+
+      <View style={styles.navigation}>
+        <IconButton
+          icon="chevron-back"
+          label="朝の準備に戻る"
+          onPress={() => runOnce(() => router.replace('/morning/ready'))}
+        />
+      </View>
 
       <View style={styles.hero}>
         <View style={styles.sunMark}>
@@ -157,8 +166,7 @@ export default function WakeCompleteScreen() {
 
       <View style={styles.summary}>
         <SummaryRow label="起床時刻" value={formatWakeTime(wakeSession.wokeAt)} />
-        <SummaryRow label="声をくれた相手" value={senderName} />
-        <SummaryRow label="起床ミッション" last value="50歩 完了" />
+        <SummaryRow label="声をくれた相手" last value={senderName} />
       </View>
 
       <View style={styles.actions}>
@@ -190,8 +198,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.xxxl,
   },
+  navigation: {
+    minHeight: 44,
+    marginLeft: -spacing.md,
+    alignItems: 'flex-start',
+  },
   hero: {
-    paddingTop: spacing.xxl,
     alignItems: 'center',
     gap: spacing.lg,
   },

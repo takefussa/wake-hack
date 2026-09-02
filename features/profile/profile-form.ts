@@ -1,9 +1,5 @@
 import { prototypeConfig } from '@/constants/config';
-import type { CreateProfileInput, ProfileTag } from '@/types';
-
-export function toggleProfileTag(tags: ProfileTag[], tag: ProfileTag): ProfileTag[] {
-  return tags.includes(tag) ? tags.filter((item) => item !== tag) : [...tags, tag];
-}
+import type { CreateProfileInput } from '@/types';
 
 export function isProfileInputValid(input: CreateProfileInput): boolean {
   const nicknameLength = input.nickname.trim().length;

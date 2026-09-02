@@ -1,217 +1,1136 @@
-import { Redirect } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { Redirect, router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
-import { LoadingState } from '@/components/common/loading-state';
-import { Screen } from '@/components/common/screen';
-import { StatTile } from '@/components/common/stat-tile';
 import { ThanksInboxRow } from '@/components/thanks/thanks-inbox-row';
-import { prototypeConfig } from '@/constants/config';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { voiceStyleOptions } from '@/constants/options';
+import { fontFamilyName } from '@/constants/theme';
+import { useTapLock } from '@/hooks/use-tap-lock';
+import { rankMorningRequests } from '@/services/matching-service';
+import type { MorningRequestMatch } from '@/services/matching-service';
+import { morningRequestService } from '@/services/morning-request-service';
+import { profileService } from '@/services/profile-service';
 import { thanksService } from '@/services/thanks-service';
 import { useAppStore } from '@/store/use-app-store';
-import type { ThanksInboxItem } from '@/types';
+import type { ThanksInboxItem, UserProfile } from '@/types';
+
+type TimelineMode = 'personal' | 'community';
+
+type RequestCandidate = MorningRequestMatch & {
+  user: UserProfile;
+};
+
+function isUserProfile(profile: UserProfile | null): profile is UserProfile {
+  return profile !== null;
+}
+
+// cassette 画像比率(880x561)から算出したカード1件分の高さの目安
+const CASSETTE_ASPECT_RATIO = 880 / 561;
+const CASSETTE_MARGIN_BOTTOM = 1;
+const PAGE_CONTENT_HORIZONTAL_PADDING = 24;
+const PAGE_CONTENT_BASE_BOTTOM_PADDING = 120;
+const CASSETTE_MIN_SCALE = 0.7;
+const CASSETTE_MIN_OPACITY = 0.4;
+// 焦点からこの割合(0〜1)までは等倍/不透明度を保ち、そこから先で端に向けて縮小・かすませる
+const CASSETTE_SCALE_PLATEAU_RATIO = 0.3;
+const CASSETTE_OPACITY_PLATEAU_RATIO = 0.6;
+
+function VoiceOptionsPanel({ options }: { options: readonly string[] }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 260,
+      useNativeDriver: true,
+    }).start();
+  }, [anim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.voiceOptionsPanel,
+        {
+          opacity: anim,
+          transform: [
+            {
+              translateY: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-16, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      {options.map((option) => (
+        <Pressable
+          key={option}
+          style={({ pressed }) => [
+            styles.voiceOptionButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => {
+            // TODO:
+            // 選んだ声のスタイルでコミュニティボイス録音画面へ遷移
+          }}
+        >
+          <AppText style={styles.voiceOptionText}>{option}</AppText>
+
+          <Ionicons name="chevron-forward" size={18} color="#30463E" />
+        </Pressable>
+      ))}
+    </Animated.View>
+  );
+}
 
 export default function ConnectionsScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
+  const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
+  const replaceMorningRequest = useAppStore((state) => state.replaceMorningRequest);
   const thanksMessages = useAppStore((state) => state.thanksMessages);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const addThanksMessages = useAppStore((state) => state.addThanksMessages);
-  const currentUserId = currentUser?.id;
-  const [inboxItems, setInboxItems] = useState<ThanksInboxItem[]>([]);
+  const { width, height } = useWindowDimensions();
+
+  const horizontalRef = useRef<ScrollView>(null);
+  const personalScrollViewRef = useRef<ScrollView>(null);
+  const runOnce = useTapLock();
+
+  const personalScrollY = useRef(new Animated.Value(0)).current;
+  const [personalViewportTop, setPersonalViewportTop] = useState(0);
+  const [personalViewportHeight, setPersonalViewportHeight] = useState(0);
+
+  const cassetteWidth = width - PAGE_CONTENT_HORIZONTAL_PADDING * 2;
+  const cassetteHeight = cassetteWidth / CASSETTE_ASPECT_RATIO;
+  const cassetteItemHeight = cassetteHeight + CASSETTE_MARGIN_BOTTOM;
+
+  // ヘッダー・タブの下からタブバーの上までの表示領域ではなく、
+  // スマホの画面(ディスプレイ)全体の中央をズームの焦点にする
+  const screenCenterInViewport = height / 2 - personalViewportTop;
+
+  // 一番上のカセットが上端に引っかかって中央(最大ズーム)まで来られない問題を防ぐため、
+  // 1枚目が初期表示のまま画面中央に来るよう上部余白を確保する
+  const personalContentTopPadding = Math.max(
+    0,
+    screenCenterInViewport - cassetteHeight / 2
+  );
+  // 同様に、一番下のカセットも中央まで来られるよう下部余白を確保する
+  const personalContentBottomPadding =
+    PAGE_CONTENT_BASE_BOTTOM_PADDING +
+    Math.max(
+      0,
+      personalViewportHeight - cassetteItemHeight - personalContentTopPadding
+    );
+
+  function getCassetteFocusInputRange(index: number) {
+    const cardCenter =
+      personalContentTopPadding + index * cassetteItemHeight + cassetteHeight / 2;
+    const focusScrollY = cardCenter - screenCenterInViewport;
+
+    return [
+      focusScrollY - cassetteItemHeight,
+      focusScrollY,
+      focusScrollY + cassetteItemHeight,
+    ];
+  }
+
+  function getCassettePlateauInputRange(index: number, plateauRatio: number) {
+    const [rangeStart, focusScrollY, rangeEnd] = getCassetteFocusInputRange(index);
+    const plateauBefore =
+      focusScrollY - (focusScrollY - rangeStart) * plateauRatio;
+    const plateauAfter =
+      focusScrollY + (rangeEnd - focusScrollY) * plateauRatio;
+
+    return [rangeStart, plateauBefore, plateauAfter, rangeEnd];
+  }
+
+  function getCassetteScale(index: number) {
+    return personalScrollY.interpolate({
+      inputRange: getCassettePlateauInputRange(index, CASSETTE_SCALE_PLATEAU_RATIO),
+      outputRange: [CASSETTE_MIN_SCALE, 1, 1, CASSETTE_MIN_SCALE],
+      extrapolate: 'clamp',
+    });
+  }
+
+  function getCassetteOpacity(index: number) {
+    return personalScrollY.interpolate({
+      inputRange: getCassettePlateauInputRange(index, CASSETTE_OPACITY_PLATEAU_RATIO),
+      outputRange: [CASSETTE_MIN_OPACITY, 1, 1, CASSETTE_MIN_OPACITY],
+      extrapolate: 'clamp',
+    });
+  }
+
+  const [mode, setMode] = useState<TimelineMode>('personal');
+  const [showVoiceOptions, setShowVoiceOptions] = useState(false);
+  const [candidates, setCandidates] = useState<RequestCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [thanksItems, setThanksItems] = useState<ThanksInboxItem[]>([]);
+  const [isThanksLoading, setIsThanksLoading] = useState(true);
+  const [thanksError, setThanksError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadCandidates = useCallback(async () => {
+    if (!currentUser || !currentMorningRequest) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const remoteCurrentRequest =
+        await morningRequestService.ensureRemoteRequest(currentMorningRequest);
+      if (remoteCurrentRequest.id !== currentMorningRequest.id) {
+        replaceMorningRequest(remoteCurrentRequest);
+        return;
+      }
+
+      const availableRequests = await morningRequestService.getAvailableRequests(
+        currentUser.id,
+        remoteCurrentRequest.id
+      );
+      const requests = availableRequests.filter(
+        (request) =>
+          !givenVoiceMessages.some(
+            (voice) =>
+              voice.senderId === currentUser.id &&
+              voice.morningRequestId === request.id
+          )
+      );
+      const profiles = (
+        await Promise.all(requests.map((request) => profileService.getProfile(request.userId)))
+      ).filter(isUserProfile);
+      const matches = rankMorningRequests(currentUser, remoteCurrentRequest, requests, profiles);
+
+      setCandidates(
+        matches.flatMap((match) => {
+          const user = profiles.find((profile) => profile.id === match.request.userId);
+          return user ? [{ ...match, user }] : [];
+        })
+      );
+    } catch {
+      setError('朝リクエストを読み込めませんでした。');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentMorningRequest, currentUser, givenVoiceMessages, replaceMorningRequest]);
 
   useEffect(() => {
-    if (!currentUserId) return;
-    const userId = currentUserId;
+    void loadCandidates();
+  }, [loadCandidates]);
 
-    let isMounted = true;
-    async function loadInbox() {
+  const loadThanks = useCallback(async () => {
+    if (!currentUser) {
+      setIsThanksLoading(false);
+      return;
+    }
+    const userId = currentUser.id;
+    setIsThanksLoading(true);
+
+    try {
+      const availableMessages = await thanksService.getMessagesForUser(
+        userId,
+        thanksMessages
+      );
+      const items = await thanksService.getInboxItems(
+        availableMessages,
+        givenVoiceMessages,
+        userId
+      );
+      addThanksMessages(availableMessages);
+      setThanksItems(items);
+      setThanksError(null);
+    } catch {
+      let localItems: ThanksInboxItem[] = [];
       try {
-        const availableMessages = await thanksService.getMessagesForUser(
-          userId,
-          thanksMessages
-        );
-        const items = await thanksService.getInboxItems(
-          availableMessages,
+        localItems = await thanksService.getInboxItems(
+          thanksMessages,
           givenVoiceMessages,
           userId
         );
-        if (isMounted) {
-          addThanksMessages(availableMessages);
-          setInboxItems(items);
-          setLoadError(null);
-        }
       } catch {
-        let localItems: ThanksInboxItem[] = [];
-        try {
-          localItems = await thanksService.getInboxItems(
-            thanksMessages,
-            givenVoiceMessages,
-            userId
-          );
-        } catch {
-          // ローカルデータの一部が古い場合も、タブ自体は表示し続ける。
-        }
-        if (isMounted) {
-          setInboxItems(localItems);
-          setLoadError('新しいありがとうを確認できませんでした。');
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
+        // 古いローカルデータがあっても、「起こす」画面は表示し続ける。
       }
+      setThanksItems(localItems);
+      setThanksError('新しいありがとうを確認できませんでした。');
+    } finally {
+      setIsThanksLoading(false);
     }
+  }, [addThanksMessages, currentUser, givenVoiceMessages, thanksMessages]);
 
-    void loadInbox();
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    addThanksMessages,
-    currentUserId,
-    givenVoiceMessages,
-    thanksMessages,
-  ]);
+  useEffect(() => {
+    void loadThanks();
+  }, [loadThanks]);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
   }
 
+  function moveTo(nextMode: TimelineMode) {
+    const page = nextMode === 'personal' ? 0 : 1;
+
+    horizontalRef.current?.scrollTo({
+      x: page * width,
+      animated: true,
+    });
+
+    setMode(nextMode);
+  }
+
+  function handleSwipeEnd(
+    event: NativeSyntheticEvent<NativeScrollEvent>
+  ) {
+    const x = event.nativeEvent.contentOffset.x;
+    const page = Math.round(x / width);
+
+    setMode(page === 0 ? 'personal' : 'community');
+  }
+
+  async function handleRefresh() {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await Promise.all([loadCandidates(), loadThanks()]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
   return (
-    <Screen contentStyle={styles.content} testID="connections-screen">
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar style="dark" />
+
+      {/* ノート背景(コミュニティのみ) */}
+      {mode === 'community' ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          {Array.from({ length: 35 }).map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.paperLine,
+                {
+                  top: 28 + index * 32,
+                },
+              ]}
+            />
+          ))}
+
+          <View style={styles.marginLine} />
+        </View>
+      ) : null}
+
+      {/* ヘッダー */}
       <View style={styles.header}>
-        <AppText variant="screenTitle">つながり</AppText>
-        <AppText variant="secondary" tone="soft">
-          同じ時間に始まった朝と、声のあとに届いた言葉。
-        </AppText>
-      </View>
-
-      <View style={styles.morningSummary}>
-        <AppText variant="secondary" tone="soft">
-          今朝7時前後に
-        </AppText>
-        <View style={styles.totalRow}>
-          <AppText variant="displayNumber" style={styles.totalNumber}>
-            {prototypeConfig.nearbyWakeCount}
-          </AppText>
-          <AppText variant="secondary" tone="soft">
-            人が朝を始めました
+        <View style={styles.headerCopy}>
+          <AppText style={styles.title}>起こす</AppText>
+          <AppText style={styles.subtitle}>
+            声を届けると、朝は別の誰かの声が届きます。
           </AppText>
         </View>
-        <AppText variant="caption" tone="muted">
-          同じ時間に起きた誰かがいます。
-        </AppText>
+        <Pressable
+          accessibilityLabel="起こす画面を更新"
+          accessibilityRole="button"
+          disabled={isRefreshing}
+          hitSlop={8}
+          onPress={() => void handleRefresh()}
+          style={({ pressed }) => [
+            styles.refreshButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          {isRefreshing ? (
+            <ActivityIndicator color="#30463E" size="small" />
+          ) : (
+            <Ionicons color="#30463E" name="refresh" size={21} />
+          )}
+        </Pressable>
       </View>
 
-      <View style={styles.stats}>
-        <StatTile
-          compact
-          value={prototypeConfig.totalMorningCount.toLocaleString()}
-          label="今朝の合計"
-        />
-        <View style={styles.verticalDivider} />
-        <StatTile compact value="48人" label="大学生" />
-        <View style={styles.verticalDivider} />
-        <StatTile compact value="17人" label="1限あり" />
-      </View>
+      {/* Twitter風 上タブ */}
+      <View style={styles.modeTabs}>
+        <Pressable
+          onPress={() => moveTo('personal')}
+          style={styles.modeButton}
+        >
+          <AppText
+            style={[
+              styles.modeText,
+              mode === 'personal' && styles.modeTextActive,
+            ]}
+          >
+            個人を起こす
+          </AppText>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeading}>
-          <AppText variant="sectionTitle">届いたありがとう</AppText>
-          {inboxItems.length > 0 ? (
-            <AppText variant="caption" tone="muted">
-              {inboxItems.length}件
-            </AppText>
+          {mode === 'personal' ? (
+            <View
+              style={[
+                styles.marker,
+                styles.personalMarker,
+              ]}
+            />
           ) : null}
-        </View>
-        <AppText variant="caption" tone="muted">
-          あなたが届けた声への返事です。
-        </AppText>
+        </Pressable>
 
-        {loadError ? (
-          <AppText variant="caption" style={styles.error}>
-            {loadError}
-          </AppText>
-        ) : null}
-
-        {isLoading ? <LoadingState label="届いた言葉を読み込んでいます" /> : null}
-        {!isLoading && inboxItems.length === 0 ? (
-          <View style={styles.emptyState}>
-            <AppText variant="bodyMedium">まだ返事は届いていません</AppText>
-            <AppText variant="secondary" tone="soft">
-              届けた声が誰かの朝に使われると、ここにありがとうが届きます。
+        <Pressable
+          onPress={() => moveTo('community')}
+          style={styles.modeButton}
+        >
+          <View style={styles.communityLabelRow}>
+            <AppText
+              style={[
+                styles.modeText,
+                mode === 'community' &&
+                  styles.modeTextActive,
+              ]}
+            >
+              みんなを起こす
             </AppText>
+
+            <Ionicons
+              name="megaphone-outline"
+              size={15}
+              color="#6B716C"
+            />
           </View>
-        ) : null}
-        {!isLoading && inboxItems.length > 0 ? (
-          <View style={styles.thanksList}>
-            {inboxItems.map((item) => (
-              <ThanksInboxRow item={item} key={item.message.id} />
-            ))}
-          </View>
-        ) : null}
+
+          {mode === 'community' ? (
+            <View
+              style={[
+                styles.marker,
+                styles.communityMarker,
+              ]}
+            />
+          ) : null}
+        </Pressable>
       </View>
-    </Screen>
+
+      {/* 横スワイプ領域 */}
+      <ScrollView
+        ref={horizontalRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleSwipeEnd}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* PERSONAL */}
+        <View style={[styles.page, { width }]}>
+          <Animated.ScrollView
+            ref={personalScrollViewRef}
+            onLayout={() => {
+              (
+                personalScrollViewRef.current as unknown as {
+                  measureInWindow: (
+                    callback: (x: number, y: number, w: number, h: number) => void
+                  ) => void;
+                } | null
+              )?.measureInWindow((_x, y, _w, h) => {
+                setPersonalViewportTop(y);
+                setPersonalViewportHeight(h);
+              });
+            }}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: personalScrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            <View
+              style={[
+                styles.pageContent,
+                {
+                  paddingTop: personalContentTopPadding,
+                  paddingBottom: personalContentBottomPadding,
+                },
+              ]}
+            >
+            {!currentMorningRequest ? (
+              <View style={styles.stateCard}>
+                <AppText style={styles.stateTitle}>
+                  明日の朝を設定すると表示されます
+                </AppText>
+
+                <AppText style={styles.stateText}>
+                  起きる時間や気分を登録すると、声を届けられる相手がここに並びます。
+                </AppText>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.stateButton,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() =>
+                    runOnce(() => router.push('/morning/setup'))
+                  }
+                >
+                  <AppText style={styles.stateButtonText}>
+                    明日の朝を設定する
+                  </AppText>
+                </Pressable>
+              </View>
+            ) : null}
+
+            {currentMorningRequest && isLoading ? (
+              <View style={styles.stateCard}>
+                <ActivityIndicator color="#30463E" />
+
+                <AppText style={styles.stateText}>
+                  あなたに近い朝を探しています
+                </AppText>
+              </View>
+            ) : null}
+
+            {currentMorningRequest && !isLoading && error ? (
+              <View style={styles.stateCard}>
+                <AppText style={styles.stateTitle}>{error}</AppText>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.stateButton,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => void loadCandidates()}
+                >
+                  <AppText style={styles.stateButtonText}>
+                    もう一度読み込む
+                  </AppText>
+                </Pressable>
+              </View>
+            ) : null}
+
+            {currentMorningRequest &&
+            !isLoading &&
+            !error &&
+            candidates.length === 0 ? (
+              <View style={styles.stateCard}>
+                <AppText style={styles.stateTitle}>
+                  今は個別の朝リクエストがありません
+                </AppText>
+
+                <AppText style={styles.stateText}>
+                  少し時間を置くか、今日はみんなに向けた声で朝を迎えられます。
+                </AppText>
+              </View>
+            ) : null}
+
+            {currentMorningRequest &&
+              !isLoading &&
+              !error &&
+              candidates.map(({ request, user }, index) => (
+                <Pressable
+                  accessibilityLabel={`${user.nickname}さんを起こす`}
+                  accessibilityRole="button"
+                  key={request.id}
+                  onPress={() =>
+                    runOnce(() =>
+                      router.push({
+                        pathname: '/morning/request-detail',
+                        params: { requestId: request.id },
+                      })
+                    )
+                  }
+                  style={({ pressed }) => [
+                    styles.cassetteTouchable,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Animated.View
+                    style={[
+                      styles.cassette,
+                      {
+                        opacity: getCassetteOpacity(index),
+                        transform: [
+                          { rotate: index % 2 === 0 ? '-0.25deg' : '0.25deg' },
+                          { scale: getCassetteScale(index) },
+                        ],
+                      },
+                    ]}
+                  >
+                    <Image
+                      accessibilityIgnoresInvertColors
+                      contentFit="fill"
+                      source={require('../../assets/images/cassette-personal.png')}
+                      style={StyleSheet.absoluteFill}
+                    />
+
+                    <View style={styles.cassetteNameOverlay}>
+                      <AppText numberOfLines={1} style={styles.cassetteName}>
+                        {user.nickname}
+                      </AppText>
+                    </View>
+
+                    <View style={styles.cassetteSideAOverlay}>
+                      <AppText numberOfLines={1} style={styles.cassetteSideValue}>
+                        {user.userType}
+                      </AppText>
+                    </View>
+
+                    <View style={styles.cassetteSideBOverlay}>
+                      <AppText numberOfLines={1} style={styles.cassetteSideValueRight}>
+                        {request.preferredVoiceStyle}
+                      </AppText>
+                    </View>
+                  </Animated.View>
+                </Pressable>
+              ))}
+
+            <View style={styles.thanksSection}>
+              <View style={styles.thanksHeading}>
+                <AppText style={styles.thanksTitle}>届いたありがとう</AppText>
+                {thanksItems.length > 0 ? (
+                  <AppText style={styles.thanksCount}>{thanksItems.length}件</AppText>
+                ) : null}
+              </View>
+              <AppText style={styles.thanksDescription}>
+                あなたが届けた声への返事です。
+              </AppText>
+
+              {thanksError ? (
+                <AppText style={styles.thanksError}>{thanksError}</AppText>
+              ) : null}
+              {isThanksLoading ? (
+                <ActivityIndicator color="#30463E" style={styles.thanksLoader} />
+              ) : null}
+              {!isThanksLoading && thanksItems.length === 0 ? (
+                <AppText style={styles.thanksEmpty}>
+                  返事が届くと、ここに表示されます。
+                </AppText>
+              ) : null}
+              {!isThanksLoading && thanksItems.length > 0 ? (
+                <View style={styles.thanksList}>
+                  {thanksItems.map((item) => (
+                    <ThanksInboxRow item={item} key={item.message.id} />
+                  ))}
+                </View>
+              ) : null}
+            </View>
+            </View>
+          </Animated.ScrollView>
+        </View>
+
+        {/* COMMUNITY */}
+        <View style={[styles.page, { width }]}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.pageContent}
+          >
+            <View style={styles.communityHero}>
+              <View style={styles.communityTape} />
+
+              <Ionicons
+                name="megaphone-outline"
+                size={31}
+                color="#30463E"
+              />
+
+              <AppText style={styles.communityTitle}>
+                みんなの朝にも声を届ける
+              </AppText>
+
+              <AppText style={styles.communityDescription}>
+                特定の誰かではなく、
+                {'\n'}
+                いろんな人の朝に届く声です。
+              </AppText>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.communityRecordButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() => setShowVoiceOptions((prev) => !prev)}
+              >
+                <Ionicons
+                  name="mic"
+                  size={23}
+                  color="#30463E"
+                />
+
+                <AppText style={styles.communityRecordText}>
+                  コミュニティボイスを録る
+                </AppText>
+              </Pressable>
+
+              {showVoiceOptions ? (
+                <VoiceOptionsPanel options={voiceStyleOptions} />
+              ) : null}
+            </View>
+
+            <View style={styles.communityHint}>
+              <Ionicons
+                name="heart"
+                size={17}
+                color="#E58F91"
+              />
+
+              <AppText style={styles.communityHintText}>
+                いろんな人に届くから、
+                {'\n'}
+                いいねがたくさん集まることも。
+              </AppText>
+            </View>
+          </ScrollView>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    gap: spacing.xxl,
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F7F0DE',
   },
+
+  paperLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(117, 163, 177, 0.14)',
+  },
+
+  marginLine: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 44,
+    width: 1,
+    backgroundColor: 'rgba(220, 126, 126, 0.30)',
+  },
+
   header: {
-    gap: spacing.sm,
-  },
-  morningSummary: {
-    paddingVertical: spacing.lg,
-    gap: spacing.sm,
-  },
-  totalRow: {
+    paddingHorizontal: 28,
+    paddingTop: 8,
+    paddingBottom: 14,
     flexDirection: 'row',
-    alignItems: 'baseline',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    alignItems: 'center',
+    gap: 12,
   },
-  totalNumber: {
-    color: colors.indigo,
-    fontFamily: fonts?.rounded,
+
+  headerCopy: {
+    flex: 1,
   },
-  stats: {
-    paddingVertical: spacing.sm,
+
+  refreshButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#D4C7B2',
+    backgroundColor: '#FFFDF7',
+    borderRadius: 10,
+  },
+
+  title: {
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 29,
+  },
+
+  subtitle: {
+    marginTop: 3,
+    fontFamily: fontFamilyName,
+    color: '#6B716C',
+    fontSize: 13,
+  },
+
+  modeTabs: {
+    height: 55,
+    flexDirection: 'row',
+
+    backgroundColor: '#FFFFFF',
+
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: colors.separator,
+    borderColor: '#E7DED1',
+  },
+
+  modeButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    position: 'relative',
+  },
+
+  communityLabelRow: {
     flexDirection: 'row',
-    alignItems: 'stretch',
+    alignItems: 'center',
+    gap: 5,
   },
-  verticalDivider: {
-    width: 1,
-    marginVertical: spacing.md,
-    backgroundColor: colors.separator,
+
+  modeText: {
+    fontFamily: fontFamilyName,
+    color: '#777B77',
+    fontSize: 15,
   },
-  section: {
-    gap: spacing.md,
+
+  modeTextActive: {
+    fontFamily: fontFamilyName,
+    color: '#30463E',
   },
-  sectionHeading: {
+
+  marker: {
+    position: 'absolute',
+    bottom: 5,
+    width: 105,
+    height: 6,
+    opacity: 0.65,
+    borderRadius: 5,
+    transform: [{ rotate: '-1deg' }],
+  },
+
+  personalMarker: {
+    backgroundColor: '#8FC7DE',
+  },
+
+  communityMarker: {
+    backgroundColor: '#F1A7A5',
+  },
+
+  page: {
+    flex: 1,
+  },
+
+  pageContent: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+
+    // 下タブに隠れないようにする
+    paddingBottom: 120,
+  },
+
+  stateCard: {
+    minHeight: 220,
+
+    marginHorizontal: 8,
+    marginBottom: 18,
+
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+
+    backgroundColor: '#FFFDF7',
+
+    borderWidth: 1,
+    borderColor: '#D4C7B2',
+  },
+
+  stateTitle: {
+    textAlign: 'center',
+
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 16,
+  },
+
+  stateText: {
+    textAlign: 'center',
+
+    fontFamily: fontFamilyName,
+    color: '#6B716C',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+
+  stateButton: {
+    marginTop: 8,
+
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+
+    backgroundColor: '#B9DAE8',
+
+    borderWidth: 1,
+    borderColor: '#7FB4C9',
+  },
+
+  stateButtonText: {
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 14,
+  },
+
+  cassetteTouchable: {
+    marginBottom: CASSETTE_MARGIN_BOTTOM,
+  },
+
+  thanksSection: {
+    marginTop: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+    backgroundColor: '#FFFDF7',
+    borderWidth: 1,
+    borderColor: '#D4C7B2',
+  },
+
+  thanksHeading: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: 12,
   },
+
+  thanksTitle: {
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 17,
+  },
+
+  thanksCount: {
+    fontFamily: fontFamilyName,
+    color: '#6B716C',
+    fontSize: 12,
+  },
+
+  thanksDescription: {
+    marginTop: 5,
+    fontFamily: fontFamilyName,
+    color: '#6B716C',
+    fontSize: 12,
+  },
+
+  thanksError: {
+    marginTop: 12,
+    fontFamily: fontFamilyName,
+    color: '#A65353',
+    fontSize: 12,
+  },
+
+  thanksLoader: {
+    marginTop: 20,
+  },
+
+  thanksEmpty: {
+    marginTop: 18,
+    fontFamily: fontFamilyName,
+    color: '#777B77',
+    fontSize: 13,
+  },
+
   thanksList: {
-    borderTopWidth: 1,
-    borderTopColor: colors.separator,
+    marginTop: 10,
   },
-  emptyState: {
-    paddingVertical: spacing.xxl,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.separator,
-    gap: spacing.sm,
+
+  cassette: {
+    position: 'relative',
+
+    width: '100%',
+    aspectRatio: 880 / 561,
+
+    overflow: 'hidden',
   },
-  error: {
-    color: colors.danger,
+
+  cassetteNameOverlay: {
+    position: 'absolute',
+    top: '4%',
+    left: '2%',
+
+    width: '96%',
+    height: '23.4%',
+
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  cassetteName: {
+    fontFamily: fontFamilyName,
+    color: '#2E2E2E',
+    fontSize: 16,
+  },
+
+  cassetteSideAOverlay: {
+    position: 'absolute',
+    top: '59.1%',
+    left: '1%',
+
+    width: '47%',
+    height: '18.3%',
+
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+
+  cassetteSideBOverlay: {
+    position: 'absolute',
+    top: '59.1%',
+    left: '52%',
+
+    width: '47%',
+    height: '18.3%',
+
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingHorizontal: 2,
+  },
+
+  cassetteSideValue: {
+    fontFamily: fontFamilyName,
+    color: '#2E2E2E',
+    fontSize: 15,
+    textAlign: 'center',
+  },
+
+  cassetteSideValueRight: {
+    fontFamily: fontFamilyName,
+    color: '#2E2E2E',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+
+  pressed: {
+    opacity: 0.68,
+  },
+
+  communityHero: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 20,
+
+    alignItems: 'center',
+
+    backgroundColor: '#FFFDF7',
+
+    borderWidth: 1,
+    borderColor: '#CDBFA8',
+  },
+
+  communityTape: {
+    position: 'absolute',
+    top: -9,
+
+    width: 75,
+    height: 20,
+
+    backgroundColor: '#F0B4B2',
+    opacity: 0.72,
+
+    transform: [{ rotate: '-3deg' }],
+  },
+
+  communityTitle: {
+    marginTop: 8,
+
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 19,
+  },
+
+  communityDescription: {
+    marginTop: 7,
+
+    textAlign: 'center',
+
+    fontFamily: fontFamilyName,
+    color: '#6D736E',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+
+  communityRecordButton: {
+    marginTop: 17,
+
+    width: '100%',
+    minHeight: 60,
+
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    gap: 10,
+
+    backgroundColor: '#F1C6C3',
+
+    borderWidth: 1,
+    borderColor: '#D99B98',
+  },
+
+  communityRecordText: {
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 15,
+  },
+
+  communityHint: {
+    marginTop: 15,
+    marginHorizontal: 9,
+
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    gap: 7,
+
+    backgroundColor: '#FFF8F3',
+
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#E4AAA3',
+  },
+
+  communityHintText: {
+    textAlign: 'center',
+
+    fontFamily: fontFamilyName,
+    color: '#766B66',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+  voiceOptionsPanel: {
+    marginTop: 12,
+
+    width: '100%',
+    gap: 8,
+  },
+
+  voiceOptionButton: {
+    minHeight: 50,
+
+    paddingHorizontal: 16,
+
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+
+    backgroundColor: '#FAF1D5',
+
+    borderWidth: 1,
+    borderColor: '#E5C978',
+  },
+
+  voiceOptionText: {
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 14,
   },
 });

@@ -2,8 +2,8 @@ export type OnboardingSceneType = 'receive' | 'give' | 'connection';
 
 export type OnboardingPage = {
   id: string;
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
   scene: OnboardingSceneType;
 };
 

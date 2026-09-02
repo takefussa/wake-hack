@@ -1,20 +1,27 @@
 export type AvatarId = 'luna' | 'sunny' | 'sky' | 'violet' | 'ember' | 'mint';
 
-export type UserType = '大学生' | '受験生' | '社会人' | '社会人1年目' | 'その他';
+export type UserType = '中高生' | '大学生・専門学生' | '社会人' | 'その他';
 
-export type ProfileTag = '一人暮らし' | '朝が苦手' | '朝活したい' | '夜型';
+export type LifeRhythm = '朝型' | '夜型' | '不規則';
 
 export type UserProfile = {
   id: string;
   nickname: string;
   avatarId: AvatarId;
   profileImageUri?: string;
+  profileImagePath?: string;
+  profileDetailsSynced?: boolean;
   bio?: string;
   userType: UserType;
-  tags: ProfileTag[];
+  tags: LifeRhythm[];
   createdAt: string;
 };
 
-export type CreateProfileInput = Omit<UserProfile, 'id' | 'createdAt'>;
+export type CreateProfileInput = Omit<
+  UserProfile,
+  'id' | 'createdAt' | 'profileImagePath' | 'profileDetailsSynced'
+>;
 
-export type UpdateProfileInput = CreateProfileInput;
+export type UpdateProfileInput = CreateProfileInput & {
+  removeProfileImage?: boolean;
+};

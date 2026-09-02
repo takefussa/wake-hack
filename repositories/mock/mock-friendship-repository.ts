@@ -9,10 +9,16 @@ export class MockFriendshipRepository implements FriendshipRepository {
       id: `friendship-${Date.now()}-${input.otherUserId}`,
       userAId: input.requesterId,
       userBId: input.otherUserId,
+      userARequested: true,
+      userBRequested: false,
       status: 'pending',
       morningCount: input.morningCount,
       createdAt: new Date().toISOString(),
     };
+  }
+
+  async respond(friendshipId: string): Promise<Friendship> {
+    throw new Error(`Mock friendship ${friendshipId} must be resolved from local state`);
   }
 
   async getForUser(): Promise<Friendship[]> {
@@ -21,6 +27,11 @@ export class MockFriendshipRepository implements FriendshipRepository {
 
   async match(friendship: Friendship): Promise<Friendship> {
     await new Promise((resolve) => setTimeout(resolve, demoMatchDelayMs));
-    return { ...friendship, status: 'matched' };
+    return {
+      ...friendship,
+      userARequested: true,
+      userBRequested: true,
+      status: 'matched',
+    };
   }
 }

@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 
+import { getNextWakeDate } from '@/features/morning/get-next-wake-date';
 import { isSupabaseUuid } from '@/lib/identifiers';
 import { logDevelopmentError } from '@/lib/development-logger';
 import { MockMorningRequestRepository } from '@/repositories/mock/mock-morning-request-repository';
@@ -27,6 +28,7 @@ export class MorningRequestService {
         id: Crypto.randomUUID(),
         userId,
         ...input,
+        scheduledFor: getNextWakeDate(input.wakeAt).toISOString(),
         personalEligible: false,
         status: 'open',
         voiceCount: 0,
@@ -38,27 +40,46 @@ export class MorningRequestService {
     }
   }
 
+  async updateRequest(
+    request: MorningRequest,
+    input: CreateMorningRequestInput
+  ): Promise<MorningRequest> {
+    if (!isSupabaseUuid(request.id)) {
+      return {
+        ...request,
+        ...input,
+        scheduledFor: getNextWakeDate(input.wakeAt).toISOString(),
+        schedules: [...input.schedules],
+      };
+    }
+
+    try {
+      const updatedRequest = await this.repository.update(request.id, input);
+
+      if (!updatedRequest) {
+        throw new Error('Morning request not found');
+      }
+      return updatedRequest;
+    } catch (error) {
+      logDevelopmentError('morningRequest.update', error);
+      throw error;
+    }
+  }
+
   async getAvailableRequests(
     userId: string,
     currentRequestId?: string
   ): Promise<MorningRequest[]> {
-    let remoteRequests: MorningRequest[] = [];
-    if (!currentRequestId || isSupabaseUuid(currentRequestId)) {
-      try {
-        remoteRequests = await this.repository.getAvailableRequests(userId);
-      } catch (error) {
-        logDevelopmentError('morningRequest.getAvailable.remote', error);
-      }
+    if (currentRequestId && !isSupabaseUuid(currentRequestId)) {
+      return this.mockRepository.getAvailableRequests(userId);
     }
 
-    const mockRequests = await this.mockRepository.getAvailableRequests(userId);
-    const seenUsers = new Set<string>();
-
-    return [...remoteRequests, ...mockRequests].filter((request) => {
-      if (seenUsers.has(request.userId)) return false;
-      seenUsers.add(request.userId);
-      return true;
-    });
+    try {
+      return await this.repository.getAvailableRequests(userId);
+    } catch (error) {
+      logDevelopmentError('morningRequest.getAvailable.remote', error);
+      throw error;
+    }
   }
 
   async getRequest(id: string): Promise<MorningRequest | null> {

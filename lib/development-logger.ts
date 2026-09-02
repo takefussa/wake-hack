@@ -2,7 +2,7 @@ export function logDevelopmentError(scope: string, error: unknown): void {
   if (__DEV__) {
     if (typeof error === 'object' && error !== null) {
       const record = error as Record<string, unknown>;
-      console.error(`[Wake Hack:${scope}]`, {
+      console.error(`[Okita!:${scope}]`, {
         code: record.code,
         message: record.message,
         details: record.details,
@@ -11,6 +11,6 @@ export function logDevelopmentError(scope: string, error: unknown): void {
       return;
     }
 
-    console.error(`[Wake Hack:${scope}]`, error);
+    console.error(`[Okita!:${scope}]`, error);
   }
 }

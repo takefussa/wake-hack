@@ -7,10 +7,12 @@ import type { CreateProfileInput, UpdateProfileInput, UserProfile } from '@/type
 
 function normalizeProfileInput(input: CreateProfileInput): CreateProfileInput {
   return {
-    ...input,
+    avatarId: input.avatarId,
     nickname: input.nickname.trim(),
     profileImageUri: input.profileImageUri?.trim() || undefined,
     bio: input.bio?.trim() || undefined,
+    userType: input.userType,
+    tags: input.tags,
   };
 }
 
@@ -64,9 +66,13 @@ export class ProfileService {
       if (currentProfile.id !== authService.getAuthenticatedUserId()) {
         throw new Error('Profile user does not match the authenticated user');
       }
+      const normalizedInput = normalizeProfileInput(input);
       return await this.repository.update({
         ...currentProfile,
-        ...normalizeProfileInput(input),
+        ...normalizedInput,
+        profileImagePath: input.removeProfileImage
+          ? undefined
+          : currentProfile.profileImagePath,
       });
     } catch (error) {
       logDevelopmentError('profile.update', error);

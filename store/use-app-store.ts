@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { prototypeConfig } from '@/constants/config';
 import { mockCommunityVoices, mockPersonalWakeVoice } from '@/data/mock-voices';
 import { getPrototypeStateRepair } from '@/features/prototype/repair-persisted-state';
 import { bindWakeVoice } from '@/features/wake/bind-wake-voice';
@@ -14,6 +13,7 @@ import type {
   ThanksMessage,
   UserProfile,
   VoiceMessage,
+  WakeSession,
 } from '@/types';
 
 type AppStore = PrototypePersistedState & {
@@ -30,11 +30,9 @@ type AppStore = PrototypePersistedState & {
   selectGiveRequest: (requestId: string) => void;
   completeGive: (voiceMessage: VoiceMessage) => boolean;
   chooseCommunityWake: () => void;
-  startWakeSession: (voiceMessage: VoiceMessage) => boolean;
-  cancelWakeSession: () => void;
-  startWakeMission: () => void;
-  advanceWakeMission: (steps: number) => void;
-  completeMission: () => void;
+  startWakeSession: (voiceMessage: VoiceMessage, session?: WakeSession) => boolean;
+  cancelWakeSession: () => WakeSession | null;
+  completeWakeSession: () => WakeSession | null;
   addThanks: (message: ThanksMessage) => void;
   addThanksMessages: (messages: ThanksMessage[]) => void;
   upsertFriendship: (friendship: Friendship) => void;
@@ -53,7 +51,6 @@ const initialPersistedState: PrototypePersistedState = {
   givenVoiceMessages: [],
   assignedWakeVoice: null,
   wakeSession: null,
-  wakeMissionProgress: 0,
   thanksMessages: [],
   friendships: [],
 };
@@ -72,14 +69,16 @@ export const useAppStore = create<AppStore>()(
           }
 
           const hasSameIdentity = state.currentUser?.id === profile.id;
-          // Phase 1のDB列にない写真URIと一言コメントは、同じ端末のStoreから補完する。
-          const restoredProfile: UserProfile = hasSameIdentity
-            ? {
-                ...profile,
-                profileImageUri: state.currentUser?.profileImageUri,
-                bio: state.currentUser?.bio,
-              }
-            : profile;
+          const restoredProfile: UserProfile =
+            hasSameIdentity &&
+            profile.profileImagePath &&
+            profile.profileImagePath === state.currentUser?.profileImagePath &&
+            !profile.profileImageUri
+              ? {
+                  ...profile,
+                  profileImageUri: state.currentUser.profileImageUri,
+                }
+              : profile;
 
           if (!hasSameIdentity) {
             return {
@@ -119,7 +118,6 @@ export const useAppStore = create<AppStore>()(
           currentGiveReceiverIds: [],
           assignedWakeVoice: null,
           wakeSession: null,
-          wakeMissionProgress: 0,
         }),
       replaceMorningRequest: (request) =>
         set((state) => {
@@ -135,12 +133,21 @@ export const useAppStore = create<AppStore>()(
                 }
               : null,
             wakeSession: null,
-            wakeMissionProgress: 0,
           };
         }),
       selectGiveRequest: (requestId) => set({ selectedGiveRequestId: requestId }),
       completeGive: (voiceMessage) => {
-        const { currentGiveReceiverIds, currentMorningRequest, currentUser } = get();
+        const {
+          currentMorningRequest,
+          currentUser,
+          givenVoiceMessages,
+        } = get();
+        const alreadyGivenToRequest = givenVoiceMessages.some(
+          (givenVoice) =>
+            givenVoice.type === 'personal' &&
+            givenVoice.senderId === currentUser?.id &&
+            givenVoice.morningRequestId === voiceMessage.morningRequestId
+        );
         if (
           !currentMorningRequest ||
           !currentUser ||
@@ -148,7 +155,7 @@ export const useAppStore = create<AppStore>()(
           voiceMessage.senderId !== currentUser.id ||
           !voiceMessage.receiverId ||
           !voiceMessage.morningRequestId ||
-          currentGiveReceiverIds.includes(voiceMessage.receiverId)
+          alreadyGivenToRequest
         ) {
           return false;
         }
@@ -167,11 +174,10 @@ export const useAppStore = create<AppStore>()(
             new Set([...state.currentGiveReceiverIds, receiverId])
           ),
           givenVoiceMessages: [...state.givenVoiceMessages, voiceMessage],
-          assignedWakeVoice: bindWakeVoice(
-            mockPersonalWakeVoice,
-            eligibleRequest.id,
-            currentUser.id
-          ),
+          // Keep the wake assignment unset until the receiver actually has a
+          // valid wake voice ready. This prevents the app from showing a
+          // wake-provider before the voice is genuinely assigned.
+          assignedWakeVoice: state.assignedWakeVoice,
         }));
         return true;
       },
@@ -196,7 +202,7 @@ export const useAppStore = create<AppStore>()(
           ),
         });
       },
-      startWakeSession: (voiceMessage) => {
+      startWakeSession: (voiceMessage, preparedSession) => {
         const { currentMorningRequest, currentUser } = get();
         if (
           !currentMorningRequest ||
@@ -208,73 +214,64 @@ export const useAppStore = create<AppStore>()(
           return false;
         }
 
+        const session: WakeSession = preparedSession ?? {
+          id: `wake-session-${Date.now()}`,
+          userId: currentUser.id,
+          morningRequestId: currentMorningRequest.id,
+          voiceMessageId: voiceMessage.id,
+          alarmAt: currentMorningRequest.wakeAt,
+          scheduledFor: currentMorningRequest.scheduledFor,
+          missionCompleted: false,
+          isDemo: true,
+          status: 'ringing',
+        };
+        if (
+          session.userId !== currentUser.id ||
+          session.morningRequestId !== currentMorningRequest.id ||
+          session.voiceMessageId !== voiceMessage.id
+        ) {
+          return false;
+        }
+
         set({
           assignedWakeVoice: voiceMessage,
-          wakeSession: {
-            id: `wake-session-${Date.now()}`,
-            userId: currentUser.id,
-            morningRequestId: currentMorningRequest.id,
-            voiceMessageId: voiceMessage.id,
-            alarmAt: currentMorningRequest.wakeAt,
-            missionCompleted: false,
-            status: 'ringing',
-          },
-          wakeMissionProgress: 0,
+          wakeSession: session,
+          currentMorningRequest:
+            session.status === 'completed'
+              ? { ...currentMorningRequest, status: 'completed' }
+              : currentMorningRequest,
         });
         return true;
       },
       cancelWakeSession: () => {
         const wakeSession = get().wakeSession;
-        if (!wakeSession || wakeSession.status !== 'ringing') return;
+        if (!wakeSession || wakeSession.status === 'completed') return null;
 
         set({
           wakeSession: null,
-          wakeMissionProgress: 0,
         });
+        return wakeSession;
       },
-      startWakeMission: () => {
-        const wakeSession = get().wakeSession;
-        if (!wakeSession || wakeSession.status !== 'ringing') return;
+      completeWakeSession: () => {
+        const { currentMorningRequest, wakeSession } = get();
+        if (!wakeSession || wakeSession.status !== 'ringing') return null;
+
+        const completedSession: WakeSession = {
+          ...wakeSession,
+          status: 'completed',
+          wokeAt: wakeSession.isDemo
+            ? createDemoWokeAt(wakeSession.alarmAt)
+            : new Date().toISOString(),
+          missionCompleted: true,
+        };
 
         set({
-          wakeSession: {
-            ...wakeSession,
-            status: 'mission',
-          },
-        });
-      },
-      advanceWakeMission: (steps) => {
-        const { wakeMissionProgress, wakeSession } = get();
-        if (!wakeSession || wakeSession.status !== 'mission' || steps <= 0) return;
-
-        set({
-          wakeMissionProgress: Math.min(
-            prototypeConfig.wakeMissionSteps,
-            wakeMissionProgress + steps
-          ),
-        });
-      },
-      completeMission: () => {
-        const { currentMorningRequest, wakeMissionProgress, wakeSession } = get();
-        if (
-          !wakeSession ||
-          wakeSession.status !== 'mission' ||
-          wakeMissionProgress < prototypeConfig.wakeMissionSteps
-        ) {
-          return;
-        }
-
-        set({
-          wakeSession: {
-            ...wakeSession,
-            missionCompleted: true,
-            status: 'completed',
-            wokeAt: createDemoWokeAt(wakeSession.alarmAt),
-          },
+          wakeSession: completedSession,
           currentMorningRequest: currentMorningRequest
             ? { ...currentMorningRequest, status: 'completed' }
             : null,
         });
+        return completedSession;
       },
       addThanks: (message) =>
         set((state) => ({ thanksMessages: [message, ...state.thanksMessages] })),
@@ -321,6 +318,8 @@ export const useAppStore = create<AppStore>()(
             existing.id === nextFriendship.id &&
             existing.userAId === nextFriendship.userAId &&
             existing.userBId === nextFriendship.userBId &&
+            existing.userARequested === nextFriendship.userARequested &&
+            existing.userBRequested === nextFriendship.userBRequested &&
             existing.status === nextFriendship.status &&
             existing.morningCount === nextFriendship.morningCount &&
             existing.createdAt === nextFriendship.createdAt
@@ -356,7 +355,6 @@ export const useAppStore = create<AppStore>()(
         givenVoiceMessages: state.givenVoiceMessages,
         assignedWakeVoice: state.assignedWakeVoice,
         wakeSession: state.wakeSession,
-        wakeMissionProgress: state.wakeMissionProgress,
         thanksMessages: state.thanksMessages,
         friendships: state.friendships,
       }),
