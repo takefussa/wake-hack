@@ -9,7 +9,9 @@ import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { Waveform } from '@/components/common/waveform';
 import { fonts, shadows, spacing } from '@/constants/theme';
+import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
+import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -44,7 +46,7 @@ function MemoNote({ name }: { name: string }) {
 
 type BoomboxCardProps = {
   request: MorningRequest | null;
-  wakeVoice: VoiceMessage | null;
+  isVoiceReady: boolean;
   onPress: () => void;
 };
 
@@ -75,9 +77,9 @@ function getWakeDayDisplay(request: MorningRequest | null, now: Date) {
   };
 }
 
-function BoomboxCard({ request, wakeVoice, onPress }: BoomboxCardProps) {
+function BoomboxCard({ request, isVoiceReady, onPress }: BoomboxCardProps) {
   const [now, setNow] = useState(() => new Date());
-  const isReady = wakeVoice !== null;
+  const isReady = isVoiceReady;
   const { dateLabel, relativeDayLabel } = getWakeDayDisplay(request, now);
   const buttonLabel = request ? '朝を確認する' : '設定する';
 
@@ -321,6 +323,13 @@ export default function HomeScreen() {
   const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const runOnce = useTapLock();
+  const alarmSchedule = useAlarmSchedule(currentMorningRequest);
+  const preparedVoiceSender = useVoiceSender(
+    alarmSchedule.preparedPersonalVoice
+  );
+  const isAlarmVoiceReady =
+    alarmSchedule.state.status === 'scheduled' &&
+    alarmSchedule.state.alarm.sound !== 'default';
 
   if (!currentUser) return <Redirect href="/onboarding" />;
 
@@ -335,7 +344,46 @@ export default function HomeScreen() {
   return (
     <NotebookBackground>
       <MemoNote name={currentUser.nickname} />
-      <BoomboxCard request={currentMorningRequest} wakeVoice={assignedWakeVoice} onPress={handleMorningAction} />
+      <BoomboxCard
+        request={currentMorningRequest}
+        isVoiceReady={isAlarmVoiceReady || assignedWakeVoice !== null}
+        onPress={handleMorningAction}
+      />
+      {alarmSchedule.preparedPersonalVoice ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={handleMorningAction}
+          style={({ pressed }) => [
+            styles.receivedVoiceCard,
+            pressed && styles.receivedVoiceCardPressed,
+          ]}
+          testID="home-prepared-personal-voice"
+        >
+          {preparedVoiceSender ? (
+            <Avatar
+              avatarId={preparedVoiceSender.avatarId}
+              imageUri={preparedVoiceSender.profileImageUri}
+              name={preparedVoiceSender.nickname}
+              size={48}
+            />
+          ) : (
+            <View style={styles.receivedVoicePlaceholder}>
+              <Ionicons color="#66835F" name="person" size={22} />
+            </View>
+          )}
+          <View style={styles.receivedVoiceCopy}>
+            <AppText style={styles.receivedVoiceTitle}>
+              {preparedVoiceSender
+                ? `${preparedVoiceSender.nickname}さんから明日のWake Voiceが届いています`
+                : '明日のWake Voiceが届いています'}
+            </AppText>
+            <AppText style={styles.receivedVoiceDescription}>
+              起床時まで内容は再生できません
+            </AppText>
+          </View>
+          <Ionicons color="#66835F" name="lock-closed" size={18} />
+        </Pressable>
+      ) : null}
       <TomorrowWakeCard
         currentUserId={currentUser.id}
         receiverIds={currentGiveReceiverIds}
@@ -382,6 +430,12 @@ const styles = StyleSheet.create({
   actionButtonPressed: { backgroundColor: '#98432F', transform: [{ translateY: 1 }] },
   playButton: { width: 31, height: 31, borderWidth: 1, borderColor: '#F4D7B1', borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   actionLabel: { flex: 1, color: '#FFF8E8', fontSize: 15, lineHeight: 21 },
+  receivedVoiceCard: { minHeight: 78, paddingHorizontal: spacing.md, paddingVertical: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: '#A8BC91', borderRadius: 12, backgroundColor: '#F2F5E9', ...shadows.surface },
+  receivedVoiceCardPressed: { opacity: 0.72 },
+  receivedVoicePlaceholder: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E1EAD6' },
+  receivedVoiceCopy: { flex: 1 },
+  receivedVoiceTitle: { color: '#34483E', fontSize: 13, lineHeight: 19 },
+  receivedVoiceDescription: { marginTop: 2, color: '#697366', fontSize: 10, lineHeight: 15 },
   wakePlanWrap: { position: 'relative', marginTop: spacing.xs },
   wakePlanTape: { position: 'absolute', zIndex: 1, top: -9, right: 28, width: 82, height: 20, backgroundColor: 'rgba(180, 207, 169, 0.72)', transform: [{ rotate: '1.5deg' }] },
   wakePlanCard: { overflow: 'hidden', borderWidth: 1.5, borderColor: '#697366', borderRadius: 14, backgroundColor: 'rgba(255, 251, 237, 0.94)', ...shadows.surface },

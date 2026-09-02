@@ -21,11 +21,13 @@ import { ThanksInboxRow } from '@/components/thanks/thanks-inbox-row';
 import { voiceStyleOptions } from '@/constants/options';
 import { fontFamilyName } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
+import { isSupabaseUuid } from '@/lib/identifiers';
 import { rankMorningRequests } from '@/services/matching-service';
 import type { MorningRequestMatch } from '@/services/matching-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
 import { thanksService } from '@/services/thanks-service';
+import { voiceService } from '@/services/voice-service';
 import { useAppStore } from '@/store/use-app-store';
 import type { ThanksInboxItem, UserProfile } from '@/types';
 
@@ -33,6 +35,12 @@ type TimelineMode = 'personal' | 'community';
 
 type RequestCandidate = MorningRequestMatch & {
   user: UserProfile;
+};
+
+type DeliveryStatusItem = {
+  voiceId: string;
+  recipient: UserProfile;
+  alarmReceivedAt: string | null;
 };
 
 function isUserProfile(profile: UserProfile | null): profile is UserProfile {
@@ -185,6 +193,7 @@ export default function ConnectionsScreen() {
   const [isThanksLoading, setIsThanksLoading] = useState(true);
   const [thanksError, setThanksError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deliveryItems, setDeliveryItems] = useState<DeliveryStatusItem[]>([]);
 
   const loadCandidates = useCallback(async () => {
     if (!currentUser || !currentMorningRequest) {
@@ -209,10 +218,9 @@ export default function ConnectionsScreen() {
       );
       const requests = availableRequests.filter(
         (request) =>
+          request.voiceCount === 0 &&
           !givenVoiceMessages.some(
-            (voice) =>
-              voice.senderId === currentUser.id &&
-              voice.morningRequestId === request.id
+            (voice) => voice.morningRequestId === request.id
           )
       );
       const profiles = (
@@ -280,6 +288,50 @@ export default function ConnectionsScreen() {
     void loadThanks();
   }, [loadThanks]);
 
+  const loadDeliveryStatuses = useCallback(async () => {
+    if (!currentUser) {
+      setDeliveryItems([]);
+      return;
+    }
+
+    const sentVoices = givenVoiceMessages
+      .filter(
+        (voice) =>
+          voice.type === 'personal' &&
+          voice.senderId === currentUser.id &&
+          !!voice.receiverId &&
+          isSupabaseUuid(voice.id)
+      )
+      .slice(-3)
+      .reverse();
+
+    const items = await Promise.all(
+      sentVoices.map(async (voice): Promise<DeliveryStatusItem | null> => {
+        const recipient = await profileService.getProfile(voice.receiverId!);
+        let alarmReceivedAt = voice.alarmReceivedAt ?? null;
+        try {
+          alarmReceivedAt = await voiceService.getAlarmReceivedAt(voice.id);
+        } catch {
+          // A missing receipt migration or a temporary network failure means
+          // the last known state remains "waiting".
+        }
+        return recipient
+          ? { voiceId: voice.id, recipient, alarmReceivedAt }
+          : null;
+      })
+    );
+    setDeliveryItems(
+      items.filter((item): item is DeliveryStatusItem => item !== null)
+    );
+  }, [currentUser, givenVoiceMessages]);
+
+  useEffect(() => {
+    void loadDeliveryStatuses().catch(() => {
+      // The delivery receipt migration may not be installed yet or the device
+      // may be offline. The timeline remains usable in either case.
+    });
+  }, [loadDeliveryStatuses]);
+
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
   }
@@ -308,7 +360,11 @@ export default function ConnectionsScreen() {
     if (isRefreshing) return;
     setIsRefreshing(true);
     try {
-      await Promise.all([loadCandidates(), loadThanks()]);
+      await Promise.all([
+        loadCandidates(),
+        loadThanks(),
+        loadDeliveryStatuses().catch(() => undefined),
+      ]);
     } finally {
       setIsRefreshing(false);
     }
@@ -592,6 +648,35 @@ export default function ConnectionsScreen() {
                   </Animated.View>
                 </Pressable>
               ))}
+
+            {deliveryItems.length > 0 ? (
+              <View style={styles.deliverySection}>
+                <AppText style={styles.thanksTitle}>最近届けた声</AppText>
+                <AppText style={styles.thanksDescription}>
+                  相手のAlarmKitへ設定できたかを表示します。
+                </AppText>
+                <View style={styles.deliveryList}>
+                  {deliveryItems.map((item) => (
+                    <View key={item.voiceId} style={styles.deliveryRow}>
+                      <Ionicons
+                        color={item.alarmReceivedAt ? '#66835F' : '#9A765B'}
+                        name={
+                          item.alarmReceivedAt
+                            ? 'checkmark-circle'
+                            : 'time-outline'
+                        }
+                        size={20}
+                      />
+                      <AppText style={styles.deliveryText}>
+                        {item.alarmReceivedAt
+                          ? `${item.recipient.nickname}さんに届きました`
+                          : `${item.recipient.nickname}さんの受け取り待ち`}
+                      </AppText>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
 
             <View style={styles.thanksSection}>
               <View style={styles.thanksHeading}>
@@ -886,6 +971,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFDF7',
     borderWidth: 1,
     borderColor: '#D4C7B2',
+  },
+
+  deliverySection: {
+    marginTop: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+    backgroundColor: '#FFFDF7',
+    borderWidth: 1,
+    borderColor: '#A8BC91',
+  },
+
+  deliveryList: {
+    marginTop: 12,
+    gap: 9,
+  },
+
+  deliveryRow: {
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    paddingHorizontal: 11,
+    backgroundColor: '#F2F5E9',
+  },
+
+  deliveryText: {
+    flex: 1,
+    fontFamily: fontFamilyName,
+    color: '#405348',
+    fontSize: 13,
   },
 
   thanksHeading: {

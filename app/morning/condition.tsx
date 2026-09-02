@@ -31,6 +31,12 @@ function isCustomSchedule(schedule: ScheduleType) {
   return schedule.startsWith(customSchedulePrefix);
 }
 
+function hasAlarmTimePassed(scheduledFor: string | undefined): boolean {
+  if (!scheduledFor) return false;
+  const scheduledForMs = new Date(scheduledFor).getTime();
+  return Number.isFinite(scheduledForMs) && scheduledForMs <= Date.now();
+}
+
 type PaperChoiceProps = {
   label: string;
   selected: boolean;
@@ -139,12 +145,26 @@ export default function TomorrowConditionScreen() {
         preferredVoiceStyle: voiceStyle,
       };
 
-      const request = currentMorningRequest
-        ? await morningRequestService.updateRequest(currentMorningRequest, input)
-        : await morningRequestService.createRequest(currentUserId, input);
+      const startsNewMorning =
+        !!currentMorningRequest &&
+        (currentMorningRequest.status === 'completed' ||
+          hasAlarmTimePassed(currentMorningRequest.scheduledFor));
+
+      if (currentMorningRequest && startsNewMorning) {
+        await morningRequestService.markCompleted(currentMorningRequest.id);
+        // The previous Personal Voice is consumed once its alarm time has
+        // passed. Remove its AlarmKit registration and local sound before
+        // creating the next request.
+        await alarmService.cancelScheduledAlarm();
+      }
+
+      const request =
+        currentMorningRequest && !startsNewMorning
+          ? await morningRequestService.updateRequest(currentMorningRequest, input)
+          : await morningRequestService.createRequest(currentUserId, input);
       await alarmService.scheduleForRequest(request);
 
-      if (currentMorningRequest) {
+      if (currentMorningRequest && !startsNewMorning) {
         replaceMorningRequest(request);
         router.replace('/morning/summary');
       } else {

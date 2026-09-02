@@ -5,8 +5,10 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { Avatar } from '@/components/common/avatar';
 import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
+import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { useAppStore } from '@/store/use-app-store';
 
 type SummaryRowProps = {
@@ -37,6 +39,9 @@ export default function MorningSummaryScreen() {
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const runOnce = useTapLock();
   const alarmSchedule = useAlarmSchedule(currentMorningRequest);
+  const preparedVoiceSender = useVoiceSender(
+    alarmSchedule.preparedPersonalVoice
+  );
   const hasPersonalAlarm =
     alarmSchedule.state.status === 'scheduled' &&
     alarmSchedule.state.alarm.sound === 'personal';
@@ -148,6 +153,8 @@ export default function MorningSummaryScreen() {
                 ? alarmSchedule.state.alarm.deliveryMode === 'native'
                   ? alarmSchedule.state.alarm.sound === 'personal'
                     ? '人の声アラームを設定しました'
+                    : alarmSchedule.state.alarm.sound === 'community'
+                      ? 'Community Voiceを設定しました'
                     : '実アラームを設定しました'
                   : '通知アラームを設定しました'
                 : alarmSchedule.state.status === 'loading' ||
@@ -168,6 +175,8 @@ export default function MorningSummaryScreen() {
                     alarmSchedule.state.alarm.deliveryMode === 'native'
                       ? alarmSchedule.state.alarm.sound === 'personal'
                         ? '届いた起床ボイスが停止するまで鳴ります。'
+                        : alarmSchedule.state.alarm.sound === 'community'
+                          ? '個人からの声が届くまで、Community Voiceを設定しています。'
                         : alarmSchedule.personalVoiceSyncStatus === 'error'
                           ? '標準音は設定済みですが、起床ボイスを取得できませんでした。'
                           : alarmSchedule.personalVoiceSyncStatus === 'checking'
@@ -206,6 +215,33 @@ export default function MorningSummaryScreen() {
           </Pressable>
         ) : null}
 
+        {alarmSchedule.preparedPersonalVoice ? (
+          <View style={styles.senderCard} testID="prepared-personal-voice">
+            {preparedVoiceSender ? (
+              <Avatar
+                avatarId={preparedVoiceSender.avatarId}
+                imageUri={preparedVoiceSender.profileImageUri}
+                name={preparedVoiceSender.nickname}
+                size={50}
+              />
+            ) : (
+              <View style={styles.senderPlaceholder}>
+                <Ionicons color="#66835F" name="person" size={23} />
+              </View>
+            )}
+            <View style={styles.senderCopy}>
+              <AppText style={styles.senderTitle}>
+                {preparedVoiceSender
+                  ? `${preparedVoiceSender.nickname}さんから明日のWake Voiceが届いています`
+                  : '明日のWake Voiceが届いています'}
+              </AppText>
+              <AppText style={styles.senderDescription}>
+                内容は起床時まで再生できません。アラームに設定済みです。
+              </AppText>
+            </View>
+          </View>
+        ) : null}
+
         <View style={styles.voiceNote}>
           <Ionicons
             color={hasPersonalAlarm || assignedWakeVoice ? '#66835F' : '#9A765B'}
@@ -219,6 +255,9 @@ export default function MorningSummaryScreen() {
           <AppText style={styles.voiceNoteText}>
             {hasPersonalAlarm
               ? '届いた人の声を実機アラームに設定済みです。'
+              : alarmSchedule.state.status === 'scheduled' &&
+                  alarmSchedule.state.alarm.sound === 'community'
+                ? '最新のCommunity Voiceを実機アラームに設定済みです。'
               : assignedWakeVoice
                 ? '朝に届く声も準備できています。'
               : '朝に届く声を待っています。'}
@@ -465,6 +504,40 @@ const styles = StyleSheet.create({
   voiceNoteText: {
     color: '#526158',
     fontSize: 13,
+  },
+  senderCard: {
+    minHeight: 88,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FFFDF5',
+    borderWidth: 1,
+    borderColor: '#A8BC91',
+  },
+  senderPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E7EFD9',
+  },
+  senderCopy: {
+    flex: 1,
+  },
+  senderTitle: {
+    color: '#30463E',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  senderDescription: {
+    marginTop: 3,
+    color: '#657169',
+    fontSize: 11,
+    lineHeight: 17,
   },
   nextButton: {
     minHeight: 62,

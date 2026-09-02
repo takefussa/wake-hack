@@ -16,8 +16,9 @@ export type ActiveAlarm = {
   morningRequestId: string;
   scheduledFor: string;
   deliveryMode: AlarmDeliveryMode;
-  sound: 'default' | 'personal';
+  sound: 'default' | 'personal' | 'community';
   voiceMessageId?: string;
+  voiceSenderId?: string;
   soundFileName?: string;
 };
 
@@ -58,7 +59,10 @@ function parseActiveAlarm(value: string | null): ActiveAlarm | null {
     };
     return {
       ...alarm,
-      sound: alarm.sound === 'personal' ? 'personal' : 'default',
+      sound:
+        alarm.sound === 'personal' || alarm.sound === 'community'
+          ? alarm.sound
+          : 'default',
     };
   } catch (error) {
     logDevelopmentError('alarm.parseStored', error);
@@ -114,8 +118,6 @@ export class AlarmService {
     if (!wakeDate) return { status: 'expired' };
 
     try {
-      await this.cancelScheduledAlarm();
-
       if (this.isNativeAlarmAvailable()) {
         let authorization = WakeAlarm.getAuthorizationStatus();
         if (authorization === 'notDetermined') {
@@ -123,11 +125,49 @@ export class AlarmService {
         }
 
         if (authorization === 'authorized') {
+          const active = await this.getActiveAlarm();
+          if (
+            active?.deliveryMode === 'native' &&
+            active.sound !== 'default' &&
+            active.morningRequestId === request.id &&
+            active.voiceMessageId &&
+            active.soundFileName
+          ) {
+            try {
+              const rescheduled =
+                await WakeAlarm.rescheduleAlarmWithPreparedVoice(
+                  active.id,
+                  Crypto.randomUUID(),
+                  wakeDate.getTime(),
+                  '朝の声が届いています',
+                  active.soundFileName,
+                  request.id
+                );
+              const alarm: ActiveAlarm = {
+                ...active,
+                id: rescheduled.id,
+                scheduledFor: new Date(rescheduled.scheduledFor).toISOString(),
+              };
+              await AsyncStorage.setItem(
+                activeAlarmStorageKey,
+                JSON.stringify(alarm)
+              );
+              return { status: 'scheduled', alarm };
+            } catch (error) {
+              // If the prepared file cannot be reused, the default alarm is
+              // still scheduled below and foreground sync can download the
+              // exact request voice again.
+              logDevelopmentError('alarm.rescheduleWakeVoice', error);
+            }
+          }
+
+          await this.cancelScheduledAlarm();
           try {
             const scheduled = await WakeAlarm.scheduleAlarm(
               Crypto.randomUUID(),
               wakeDate.getTime(),
-              '朝の時間です'
+              '朝の時間です',
+              request.id
             );
             const alarm: ActiveAlarm = {
               id: scheduled.id,
@@ -162,6 +202,18 @@ export class AlarmService {
 
     const scheduledForMs = new Date(alarm.scheduledFor).getTime();
     if (!Number.isFinite(scheduledForMs) || scheduledForMs <= Date.now()) {
+      try {
+        if (alarm.deliveryMode === 'native') {
+          await WakeAlarm.cancelAlarm(alarm.id);
+        }
+      } catch (error) {
+        logDevelopmentError('alarm.consumeExpired', error);
+      }
+      if (alarm.soundFileName) {
+        await WakeAlarm.removeSoundFile(alarm.soundFileName).catch((error) => {
+          logDevelopmentError('alarm.consumeExpiredVoice', error);
+        });
+      }
       await AsyncStorage.removeItem(activeAlarmStorageKey);
       return null;
     }
@@ -169,6 +221,11 @@ export class AlarmService {
     if (alarm.deliveryMode === 'native') {
       try {
         if (!WakeAlarm.getAlarmIds().includes(alarm.id)) {
+          if (alarm.soundFileName) {
+            await WakeAlarm.removeSoundFile(alarm.soundFileName).catch((error) => {
+              logDevelopmentError('alarm.consumeMissingVoice', error);
+            });
+          }
           await AsyncStorage.removeItem(activeAlarmStorageKey);
           return null;
         }
@@ -183,8 +240,33 @@ export class AlarmService {
     morningRequestId: string;
     voiceMessageId: string;
     remoteUrl: string;
+    senderId: string;
   }): Promise<ActiveAlarm | null> {
-    if (Platform.OS !== 'ios' || !this.isNativeAlarmAvailable()) return null;
+    return this.replaceWithWakeVoice({ ...input, sound: 'personal' });
+  }
+
+  async replaceWithCommunityVoice(input: {
+    morningRequestId: string;
+    voiceMessageId: string;
+    remoteUrl: string;
+  }): Promise<ActiveAlarm | null> {
+    return this.replaceWithWakeVoice({
+      ...input,
+      senderId: 'community',
+      sound: 'community',
+    });
+  }
+
+  private async replaceWithWakeVoice(input: {
+    morningRequestId: string;
+    voiceMessageId: string;
+    remoteUrl: string;
+    senderId: string;
+    sound: 'personal' | 'community';
+  }): Promise<ActiveAlarm | null> {
+    if (Platform.OS !== 'ios' || !this.isNativeAlarmAvailable()) {
+      throw new Error('Native AlarmKit is unavailable');
+    }
 
     const active = await this.getActiveAlarm();
     if (
@@ -192,14 +274,16 @@ export class AlarmService {
       active.deliveryMode !== 'native' ||
       active.morningRequestId !== input.morningRequestId
     ) {
-      return null;
+      throw new Error('No matching native alarm is scheduled');
     }
-    if (active.sound === 'personal' && active.voiceMessageId === input.voiceMessageId) {
+    if (active.sound === input.sound && active.voiceMessageId === input.voiceMessageId) {
       return active;
     }
 
     const fireDateMs = new Date(active.scheduledFor).getTime();
-    if (!Number.isFinite(fireDateMs) || fireDateMs <= Date.now() + 8_000) return null;
+    if (!Number.isFinite(fireDateMs) || fireDateMs <= Date.now() + 8_000) {
+      throw new Error('Not enough time remains to install the Wake Voice');
+    }
 
     try {
       const previousSoundFileName = active.soundFileName;
@@ -207,17 +291,21 @@ export class AlarmService {
         active.id,
         Crypto.randomUUID(),
         fireDateMs,
-        '朝の声が届いています',
+        input.sound === 'personal'
+          ? '朝の声が届いています'
+          : 'Community Voiceで朝を始めます',
         input.remoteUrl,
-        input.voiceMessageId
+        input.voiceMessageId,
+        input.morningRequestId
       );
       const alarm: ActiveAlarm = {
         id: replacement.id,
         morningRequestId: input.morningRequestId,
         scheduledFor: new Date(replacement.scheduledFor).toISOString(),
         deliveryMode: 'native',
-        sound: 'personal',
+        sound: input.sound,
         voiceMessageId: input.voiceMessageId,
+        voiceSenderId: input.senderId,
         soundFileName: replacement.soundFileName,
       };
       await AsyncStorage.setItem(activeAlarmStorageKey, JSON.stringify(alarm));
@@ -230,8 +318,8 @@ export class AlarmService {
     } catch (error) {
       // The default native alarm stays scheduled unless the replacement was
       // completely prepared, so a failed download never leaves the user silent.
-      logDevelopmentError('alarm.replaceWithPersonalVoice', error);
-      return null;
+      logDevelopmentError('alarm.replaceWithWakeVoice', error);
+      throw error;
     }
   }
 
@@ -253,6 +341,25 @@ export class AlarmService {
       });
     }
     await AsyncStorage.removeItem(activeAlarmStorageKey);
+  }
+
+  async consumeStoppedAlarm(): Promise<ActiveAlarm | null> {
+    const stopped = WakeAlarm.consumeStoppedAlarm();
+    if (!stopped) return null;
+
+    const stored = parseActiveAlarm(
+      await AsyncStorage.getItem(activeAlarmStorageKey)
+    );
+    if (!stored || stored.morningRequestId !== stopped.morningRequestId) {
+      return null;
+    }
+    await AsyncStorage.removeItem(activeAlarmStorageKey);
+    if (stored.soundFileName) {
+      await WakeAlarm.removeSoundFile(stored.soundFileName).catch((error) => {
+        logDevelopmentError('alarm.consumeStoppedVoice', error);
+      });
+    }
+    return stored;
   }
 
   async openSettings(): Promise<void> {

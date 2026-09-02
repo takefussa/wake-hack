@@ -1,4 +1,5 @@
 import * as Crypto from 'expo-crypto';
+import { Asset } from 'expo-asset';
 
 import { logDevelopmentError } from '@/lib/development-logger';
 import { isSupabaseUuid } from '@/lib/identifiers';
@@ -37,6 +38,11 @@ export type PersonalAlarmVoicePreparation =
         | 'waiting'
         | 'ineligible';
     };
+
+export type CommunityAlarmVoicePreparation = {
+  status: 'ready';
+  voice: VoiceMessage;
+};
 
 export type WakeExperience =
   WakeVoiceAssignment & {
@@ -223,6 +229,36 @@ export class WakeService {
     return {
       status: 'ready',
       voice: candidate,
+    };
+  }
+
+  async prepareCommunityAlarmVoice(
+    request: MorningRequest,
+    receiverId: string
+  ): Promise<CommunityAlarmVoicePreparation> {
+    const asset = Asset.fromModule(
+      require('../assets/audio/community-wake.wav')
+    );
+    if (!asset.localUri) {
+      await asset.downloadAsync();
+    }
+    const uri = asset.localUri ?? asset.uri;
+    if (!uri) {
+      throw new Error('The bundled Community Voice could not be prepared');
+    }
+
+    return {
+      status: 'ready',
+      voice: {
+        id: 'community-wake-bundled-v1',
+        senderId: 'community',
+        receiverId,
+        morningRequestId: request.id,
+        uri,
+        durationMs: 6_846,
+        type: 'community',
+        createdAt: '2026-08-20T01:00:00.000Z',
+      },
     };
   }
 

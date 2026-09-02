@@ -1,5 +1,6 @@
 import AlarmKit
 import ActivityKit
+import AppIntents
 import AVFoundation
 import ExpoModulesCore
 import Foundation
@@ -7,6 +8,29 @@ import SwiftUI
 
 private struct WakeAlarmMetadata: AlarmMetadata {
   let source: String
+}
+
+@available(iOS 26.0, *)
+private struct WakeAlarmStopIntent: LiveActivityIntent {
+  static var title: LocalizedStringResource = "オキタ！を開く"
+  static var openAppWhenRun: Bool = true
+
+  @Parameter(title: "朝リクエストID")
+  var morningRequestId: String
+
+  init() { morningRequestId = "" }
+  init(morningRequestId: String) { self.morningRequestId = morningRequestId }
+
+  func perform() async throws -> some IntentResult {
+    UserDefaults.standard.set(
+      [
+        "morningRequestId": morningRequestId,
+        "stoppedAt": ISO8601DateFormatter().string(from: Date())
+      ],
+      forKey: "wake-hack-stopped-alarm"
+    )
+    return .result()
+  }
 }
 
 private enum WakeAlarmFileError: LocalizedError {
@@ -62,7 +86,7 @@ public final class WakeAlarmModule: Module {
     }
 
     AsyncFunction("scheduleAlarm") {
-      (idString: String, fireDateMs: Double, title: String) async throws -> [String: Any] in
+      (idString: String, fireDateMs: Double, title: String, morningRequestId: String) async throws -> [String: Any] in
       guard #available(iOS 26.0, *) else {
         throw Exception(
           name: "WakeAlarmUnavailable",
@@ -87,6 +111,7 @@ public final class WakeAlarmModule: Module {
       let configuration = Self.makeConfiguration(
         fireDate: fireDate,
         title: title,
+        morningRequestId: morningRequestId,
         sound: .default
       )
 
@@ -107,7 +132,8 @@ public final class WakeAlarmModule: Module {
         fireDateMs: Double,
         title: String,
         remoteUrlString: String,
-        voiceId: String
+        voiceId: String,
+        morningRequestId: String
       ) async throws -> [String: Any] in
       guard #available(iOS 26.0, *) else {
         throw Exception(
@@ -148,6 +174,7 @@ public final class WakeAlarmModule: Module {
       let configuration = Self.makeConfiguration(
         fireDate: fireDate,
         title: title,
+        morningRequestId: morningRequestId,
         sound: .named(soundFileName)
       )
 
@@ -186,6 +213,67 @@ public final class WakeAlarmModule: Module {
       }
     }
 
+    AsyncFunction("rescheduleAlarmWithPreparedVoice") {
+      (
+        oldIdString: String,
+        newIdString: String,
+        fireDateMs: Double,
+        title: String,
+        soundFileName: String,
+        morningRequestId: String
+      ) async throws -> [String: Any] in
+      guard #available(iOS 26.0, *) else {
+        throw Exception(
+          name: "WakeAlarmUnavailable",
+          description: "AlarmKit requires iOS 26 or later."
+        )
+      }
+      guard
+        let oldId = UUID(uuidString: oldIdString),
+        let newId = UUID(uuidString: newIdString)
+      else {
+        throw Exception(
+          name: "WakeAlarmInvalidIdentifier",
+          description: "The alarm identifier is invalid."
+        )
+      }
+
+      let fireDate = Date(timeIntervalSince1970: fireDateMs / 1_000)
+      guard fireDate.timeIntervalSinceNow >= 5 else {
+        throw Exception(
+          name: "WakeAlarmInvalidDate",
+          description: "The alarm date must be in the future."
+        )
+      }
+      let soundURL = try Self.preparedSoundURL(fileName: soundFileName)
+      guard FileManager.default.fileExists(atPath: soundURL.path) else {
+        throw WakeAlarmFileError.invalidResponse
+      }
+
+      let configuration = Self.makeConfiguration(
+        fireDate: fireDate,
+        title: title,
+        morningRequestId: morningRequestId,
+        sound: .named(soundFileName)
+      )
+      let replacement = try await AlarmManager.shared.schedule(
+        id: newId,
+        configuration: configuration
+      )
+      do {
+        try AlarmManager.shared.cancel(id: oldId)
+      } catch {
+        try? AlarmManager.shared.cancel(id: newId)
+        throw error
+      }
+
+      return [
+        "id": replacement.id.uuidString,
+        "scheduledFor": fireDateMs,
+        "soundFileName": soundFileName
+      ]
+    }
+
     AsyncFunction("cancelAlarm") { (idString: String) throws in
       guard #available(iOS 26.0, *) else {
         return
@@ -209,12 +297,20 @@ public final class WakeAlarmModule: Module {
       }
       return try AlarmManager.shared.alarms.map { $0.id.uuidString }
     }
+
+    Function("consumeStoppedAlarm") { () -> [String: String]? in
+      let key = "wake-hack-stopped-alarm"
+      let value = UserDefaults.standard.dictionary(forKey: key) as? [String: String]
+      UserDefaults.standard.removeObject(forKey: key)
+      return value
+    }
   }
 
   @available(iOS 26.0, *)
   private static func makeConfiguration(
     fireDate: Date,
     title: String,
+    morningRequestId: String,
     sound: AlertConfiguration.AlertSound
   ) -> AlarmManager.AlarmConfiguration<WakeAlarmMetadata> {
     let alertTitle = LocalizedStringResource(stringLiteral: title)
@@ -240,6 +336,7 @@ public final class WakeAlarmModule: Module {
     return AlarmManager.AlarmConfiguration<WakeAlarmMetadata>.alarm(
       schedule: .fixed(fireDate),
       attributes: attributes,
+      stopIntent: WakeAlarmStopIntent(morningRequestId: morningRequestId),
       sound: sound
     )
   }
@@ -320,7 +417,11 @@ public final class WakeAlarmModule: Module {
     }
 
     do {
-      try convertToLinearPCMWAV(from: sourceURL, to: destinationURL)
+      if try isLinearPCMWaveFile(sourceURL) {
+        try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+      } else {
+        try convertToLinearPCMWAV(from: sourceURL, to: destinationURL)
+      }
       let attributes = try FileManager.default.attributesOfItem(atPath: destinationURL.path)
       guard (attributes[.size] as? NSNumber)?.intValue ?? 0 > 0 else {
         throw WakeAlarmFileError.audioConversionFailed
@@ -330,6 +431,17 @@ public final class WakeAlarmModule: Module {
       try? FileManager.default.removeItem(at: destinationURL)
       throw error
     }
+  }
+
+  private static func isLinearPCMWaveFile(_ url: URL) throws -> Bool {
+    let handle = try FileHandle(forReadingFrom: url)
+    defer { try? handle.close() }
+    let header = try handle.read(upToCount: 12) ?? Data()
+    guard header.count == 12 else { return false }
+
+    let riff = Data("RIFF".utf8)
+    let wave = Data("WAVE".utf8)
+    return header.prefix(4) == riff && header.suffix(4) == wave
   }
 
   private static func convertToLinearPCMWAV(from sourceURL: URL, to destinationURL: URL) throws {
@@ -448,6 +560,13 @@ public final class WakeAlarmModule: Module {
   }
 
   private static func removePreparedSound(fileName: String) throws {
+    let fileURL = try preparedSoundURL(fileName: fileName)
+    if FileManager.default.fileExists(atPath: fileURL.path) {
+      try FileManager.default.removeItem(at: fileURL)
+    }
+  }
+
+  private static func preparedSoundURL(fileName: String) throws -> URL {
     guard
       !fileName.isEmpty,
       fileName == URL(fileURLWithPath: fileName).lastPathComponent,
@@ -456,10 +575,7 @@ public final class WakeAlarmModule: Module {
     else {
       throw WakeAlarmFileError.invalidVoiceIdentifier
     }
-    let fileURL = try soundDirectoryURL().appendingPathComponent(fileName)
-    if FileManager.default.fileExists(atPath: fileURL.path) {
-      try FileManager.default.removeItem(at: fileURL)
-    }
+    return try soundDirectoryURL().appendingPathComponent(fileName)
   }
 
   @available(iOS 26.0, *)
