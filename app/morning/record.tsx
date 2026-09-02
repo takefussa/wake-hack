@@ -230,39 +230,45 @@ export default function RecordVoiceScreen() {
                     <AppText variant="caption" tone="muted">
                       最大10秒
                     </AppText>
-                    {stateLabel ? (
-                      <AppText variant="secondary" tone="soft" style={styles.stateLabel}>
-                        {stateLabel}
-                      </AppText>
-                    ) : null}
+                    <AppText
+                      variant="secondary"
+                      tone="soft"
+                      style={[styles.stateLabel, !stateLabel && styles.hiddenLabel]}
+                    >
+                      {stateLabel ?? ' '}
+                    </AppText>
                   </View>
 
-                  {recorder.recording ? (
-                    <View style={styles.sendSection}>
-                      {isTooShort ? (
-                        <AppText variant="caption" tone="muted" style={styles.sendNote}>
+                  <View style={styles.actionArea}>
+                    {recorder.recording ? (
+                      <View style={styles.sendSection}>
+                        <AppText
+                          variant="caption"
+                          tone="muted"
+                          style={[styles.sendNote, !isTooShort && styles.hiddenLabel]}
+                        >
                           2秒以上録音すると送信できます
                         </AppText>
-                      ) : null}
-                      <AppButton
-                        disabled={isSending}
-                        icon="paper-plane-outline"
-                        label={
-                          isSending
-                            ? '届けています…'
-                            : isTooShort
-                              ? '2秒以上録音してください'
-                              : 'この声を届ける'
-                        }
-                        onPress={() => void handleSend()}
-                        testID="send-personal-voice"
-                      />
-                    </View>
-                  ) : (
-                    <AppText variant="secondary" tone="soft" style={styles.description}>
-                      長く考えなくて大丈夫です。今のあなたの声を、短く届けます。
-                    </AppText>
-                  )}
+                        <AppButton
+                          disabled={isSending}
+                          icon="paper-plane-outline"
+                          label={
+                            isSending
+                              ? '届けています…'
+                              : isTooShort
+                                ? '2秒以上録音してください'
+                                : 'この声を届ける'
+                          }
+                          onPress={() => void handleSend()}
+                          testID="send-personal-voice"
+                        />
+                      </View>
+                    ) : (
+                      <AppText variant="secondary" tone="soft" style={styles.description}>
+                        長く考えなくて大丈夫です。今のあなたの声を、短く届けます。
+                      </AppText>
+                    )}
+                  </View>
                 </>
               )}
 
@@ -271,30 +277,26 @@ export default function RecordVoiceScreen() {
                   {pageError}
                 </AppText>
               ) : null}
+
+              {recorder.permissionState === 'granted' ? (
+                <View style={styles.dock}>
+                  <BoomboxRecorder
+                    disabled={recorder.isBusy}
+                    durationMs={displayDurationMs}
+                    hasRecording={recorder.recording !== null}
+                    isPlaying={recorder.isPlaying}
+                    playbackProgress={recorder.playbackProgress}
+                    isRecording={recorder.isRecording}
+                    onRetake={handleRetakeFromBoombox}
+                    onStart={() => void recorder.startRecording()}
+                    onStop={() => void recorder.stopRecording()}
+                    onTogglePlayback={() => void recorder.togglePlayback()}
+                  />
+                </View>
+              ) : null}
             </>
           ) : null}
       </ScrollView>
-
-      {!isLoading &&
-      request &&
-      recipient &&
-      !hasAlreadyGiven &&
-      recorder.permissionState === 'granted' ? (
-        <View style={styles.dock}>
-          <BoomboxRecorder
-            disabled={recorder.isBusy}
-            durationMs={displayDurationMs}
-            hasRecording={recorder.recording !== null}
-            isPlaying={recorder.isPlaying}
-            playbackProgress={recorder.playbackProgress}
-            isRecording={recorder.isRecording}
-            onRetake={handleRetakeFromBoombox}
-            onStart={() => void recorder.startRecording()}
-            onStop={() => void recorder.stopRecording()}
-            onTogglePlayback={() => void recorder.togglePlayback()}
-          />
-        </View>
-      ) : null}
     </Screen>
   );
 }
@@ -311,9 +313,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   statusCard: {
     padding: spacing.lg,
@@ -329,6 +331,13 @@ const styles = StyleSheet.create({
   },
   stateLabel: {
     marginTop: spacing.sm,
+  },
+  hiddenLabel: {
+    opacity: 0,
+  },
+  actionArea: {
+    minHeight: 84,
+    justifyContent: 'flex-start',
   },
   description: {
     textAlign: 'center',
@@ -350,6 +359,8 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   dock: {
+    marginTop: -spacing.lg,
+    marginHorizontal: -spacing.xl,
     paddingBottom: spacing.sm,
   },
 });
