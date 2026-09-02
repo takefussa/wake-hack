@@ -7,6 +7,7 @@ export function bindWakeVoice(
 ): VoiceMessage {
   return {
     ...voice,
+    sourceVoiceId: voice.sourceVoiceId ?? voice.id,
     id: `${voice.id}-${morningRequestId}`,
     receiverId,
     morningRequestId,
