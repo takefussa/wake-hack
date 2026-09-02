@@ -136,9 +136,13 @@ const CURVED_LABEL_PERSPECTIVE = 300;
 function CurvedLabel({ text, style }: { text: string; style?: StyleProp<TextStyle> }) {
   const characters = Array.from(text);
   const mid = (characters.length - 1) / 2;
+  // Keep longer voice-style labels inside the cassette handle. Each character
+  // is rendered separately for the curved effect, so adjustsFontSizeToFit on
+  // a parent Text cannot prevent the row from overflowing.
+  const scale = Math.min(1, 5.2 / Math.max(characters.length, 1));
 
   return (
-    <View style={styles.curvedLabelRow}>
+    <View style={[styles.curvedLabelRow, { transform: [{ scale }] }]}>
       {characters.map((character, index) => {
         const t = mid === 0 ? 0 : (index - mid) / mid;
         const rotateY = `${t * CURVED_LABEL_ARC_ANGLE}deg`;
@@ -1093,13 +1097,13 @@ const styles = StyleSheet.create({
 
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 10,
   },
 
   cassetteVoiceStyleValue: {
     fontFamily: fontFamilyName,
     color: '#2E2E2E',
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
   },
 
