@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Redirect, router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useRef, useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
@@ -10,6 +10,7 @@ import { AppText } from '@/components/common/app-text';
 import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
 import { legacyColors as colors, fonts, spacing } from '@/constants/theme';
+import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -27,9 +28,14 @@ function centeredSquare(diameter: number, centerX: number, centerY: number) {
   };
 }
 
+function formatAlarmTime(scheduledFor: string): string {
+  return new Intl.DateTimeFormat('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(scheduledFor));
+}
+
 export default function TomorrowReadyScreen() {
-  const params = useLocalSearchParams<{ requestId?: string | string[] }>();
-  const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const currentUser = useAppStore((state) => state.currentUser);
@@ -40,6 +46,17 @@ export default function TomorrowReadyScreen() {
   const [heroLayout, setHeroLayout] = useState({ width: 0, height: 0 });
   const isStartingWakeRef = useRef(false);
   const runOnce = useTapLock();
+  const alarmSchedule = useAlarmSchedule(currentMorningRequest);
+  const isCommunity = assignedWakeVoice?.type === 'community';
+  const isCurrentUserReceiver =
+    !!currentUser &&
+    !!assignedWakeVoice &&
+    assignedWakeVoice.receiverId === currentUser.id;
+  const wakeProviderCopy = isCurrentUserReceiver
+    ? isCommunity
+      ? 'みんなの声で起きます'
+      : 'あなたを起こす人が決まりました'
+    : 'まだ誰が起こすか決まっていません';
 
   function handleHeroLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;
@@ -50,7 +67,15 @@ export default function TomorrowReadyScreen() {
     return <Redirect href="/morning/setup" />;
   }
   if (!assignedWakeVoice) {
-    return <Redirect href="/morning/give-choice" />;
+    return (
+      <Redirect
+        href={
+          currentMorningRequest.personalEligible
+            ? '/morning/summary'
+            : '/morning/give-choice'
+        }
+      />
+    );
   }
   if (
     assignedWakeVoice.receiverId !== currentUser.id ||
@@ -59,14 +84,8 @@ export default function TomorrowReadyScreen() {
     return <Redirect href="/morning/give-choice" />;
   }
 
-  const isCommunity = assignedWakeVoice.type === 'community';
-
   function handleBack() {
     runOnce(() => {
-      if (requestId) {
-        router.replace({ pathname: '/morning/give-complete', params: { requestId } });
-        return;
-      }
       router.replace('/(tabs)');
     });
   }
@@ -78,16 +97,21 @@ export default function TomorrowReadyScreen() {
     setIsStartingWake(true);
     setWakeError(null);
     try {
-      const assignment = await wakeService.assignWakeVoice(
+      const experience = await wakeService.startWakeExperience(
         currentMorningRequest,
         currentUser.id,
-        givenVoiceMessages
+        givenVoiceMessages,
+        { isDemo: true }
       );
-      const didStart = startWakeSession(assignment.voice);
+      const didStart = startWakeSession(experience.voice, experience.session);
       if (!didStart) {
         throw new Error('Wake session could not start');
       }
-      router.push('/wake/alarm');
+      router.push(
+        experience.session.status === 'completed'
+          ? '/wake/complete'
+          : '/wake/alarm'
+      );
     } catch {
       setWakeError('朝の声を準備できませんでした。もう一度お試しください。');
       isStartingWakeRef.current = false;
@@ -130,6 +154,9 @@ export default function TomorrowReadyScreen() {
               </AppText>
             </View>
             <AppText variant="caption" tone="lightMuted">
+              {wakeProviderCopy}
+            </AppText>
+            <AppText variant="caption" tone="lightMuted">
               明日の朝
             </AppText>
             <AppText variant="time" tone="light" style={styles.time}>
@@ -137,15 +164,11 @@ export default function TomorrowReadyScreen() {
             </AppText>
             <View style={styles.divider} />
             <AppText variant="bodyMedium" tone="light" style={styles.readyCopy}>
-              {isCommunity ? (
-                'みんなに向けて届けられた声で、朝を始めます。'
-              ) : (
-                <>
-                  あなたに向けた声を準備しました。
-                  {'\n'}
-                  誰から届くかは朝までのお楽しみです。
-                </>
-              )}
+              {isCommunity
+                ? 'みんなに向けて届けられた声で、朝を始めます。'
+                : isCurrentUserReceiver
+                  ? '起こす人が確定しました。朝はその人の声で目覚めます。'
+                  : '誰かの声が届いたら、その人があなたを起こします。'}
             </AppText>
           </View>
         </View>
@@ -173,6 +196,57 @@ export default function TomorrowReadyScreen() {
           <AppText variant="secondary" tone="lightMuted" style={styles.footerCopy}>
             あとは、ゆっくり休んでください。
           </AppText>
+          <View style={styles.alarmStatus} testID="ready-alarm-status">
+            <Ionicons color={colors.textInverseSecondary} name="alarm-outline" size={18} />
+            <AppText variant="caption" tone="lightMuted" style={styles.alarmStatusCopy}>
+              {alarmSchedule.state.status === 'scheduled'
+                ? `${formatAlarmTime(alarmSchedule.state.alarm.scheduledFor)}に${
+                    alarmSchedule.state.alarm.deliveryMode === 'native'
+                    ? alarmSchedule.state.alarm.sound === 'personal'
+                        ? '届いた起床ボイスを設定済みです。停止するまで鳴ります'
+                        : alarmSchedule.state.alarm.sound === 'community'
+                          ? 'Community Voiceを設定済みです。停止するまで鳴ります'
+                          : alarmSchedule.personalVoiceSyncStatus === 'error'
+                          ? '標準音は設定済みですが、起床ボイスを取得できませんでした'
+                          : alarmSchedule.personalVoiceSyncStatus === 'checking'
+                            ? '標準音を設定し、届いた起床ボイスを確認しています'
+                            : alarmSchedule.personalVoiceSyncStatus === 'waiting'
+                              ? '標準音は設定済みです。寝る前にアプリを開くと届いた声を確認します'
+                              : '実アラームを設定済みです。停止するまで鳴ります'
+                      : '通知音を設定済みです（サイレントモードでは鳴らない場合があります）'
+                  }`
+                : alarmSchedule.state.status === 'loading' ||
+                    alarmSchedule.state.status === 'scheduling'
+                  ? 'アラームを確認しています'
+                  : alarmSchedule.state.status === 'denied'
+                    ? 'アラームの使用が許可されていません'
+                    : alarmSchedule.state.status === 'expired'
+                      ? '設定時刻を過ぎています'
+                      : alarmSchedule.state.status === 'unavailable'
+                        ? 'Expo Goでは実際のアラームは利用できません。Wake Voiceの送受信は利用できます'
+                        : 'アラームを設定できませんでした'}
+            </AppText>
+          </View>
+          {alarmSchedule.state.status === 'denied' ? (
+            <AppButton
+              icon="settings-outline"
+              label="端末の設定を開く"
+              onPress={() => void alarmSchedule.openSettings()}
+              variant="textOnDark"
+            />
+          ) : alarmSchedule.state.status === 'error' ||
+            alarmSchedule.personalVoiceSyncStatus === 'error' ? (
+            <AppButton
+              icon="refresh-outline"
+              label={
+                alarmSchedule.state.status === 'error'
+                  ? 'アラームを再設定'
+                  : 'Wake Voiceを再確認'
+              }
+              onPress={alarmSchedule.retry}
+              variant="textOnDark"
+            />
+          ) : null}
           {wakeError ? (
             <AppText variant="caption" style={styles.error}>
               {wakeError}
@@ -319,6 +393,16 @@ const styles = StyleSheet.create({
   },
   footerCopy: {
     textAlign: 'center',
+  },
+  alarmStatus: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  alarmStatusCopy: {
+    flexShrink: 1,
   },
   error: {
     color: colors.warmSoft,

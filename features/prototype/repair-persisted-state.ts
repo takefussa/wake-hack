@@ -1,5 +1,3 @@
-import { mockPersonalWakeVoice } from '@/data/mock-voices';
-import { bindWakeVoice } from '@/features/wake/bind-wake-voice';
 import { createDemoWokeAt } from '@/features/wake/create-demo-woke-at';
 import type {
   MorningRequest,
@@ -19,6 +17,7 @@ export function getPrototypeStateRepair(
       selectedGiveRequestId: null,
       currentGiveReceiverIds: [],
       givenVoiceMessages: [],
+      communityVoiceMessages: [],
       assignedWakeVoice: null,
       wakeSession: null,
       thanksMessages: [],
@@ -54,32 +53,32 @@ export function getPrototypeStateRepair(
 
   const assignedVoice = state.assignedWakeVoice;
   if (!assignedVoice) {
-    const restoredPersonalVoice = normalizedRequest.personalEligible
-      ? bindWakeVoice(mockPersonalWakeVoice, normalizedRequest.id, state.currentUser.id)
-      : null;
     return {
       currentMorningRequest: normalizedRequest,
-      assignedWakeVoice: restoredPersonalVoice,
+      assignedWakeVoice: null,
       wakeSession: null,
     };
   }
 
-  const compatibleAssignedVoice =
-    assignedVoice.type === 'personal' && assignedVoice.uri.startsWith('mock://personal/')
-      ? bindWakeVoice(
-          mockPersonalWakeVoice,
-          assignedVoice.morningRequestId ?? normalizedRequest.id,
-          assignedVoice.receiverId ?? state.currentUser.id
-        )
-      : assignedVoice;
+  if (
+    assignedVoice.type === 'personal' &&
+    assignedVoice.uri.startsWith('mock://personal/')
+  ) {
+    return {
+      currentMorningRequest: normalizedRequest,
+      assignedWakeVoice: null,
+      wakeSession: null,
+    };
+  }
+
   const normalizedVoice: VoiceMessage = {
-    ...compatibleAssignedVoice,
+    ...assignedVoice,
     receiverId:
-      !compatibleAssignedVoice.receiverId ||
-      compatibleAssignedVoice.receiverId === 'current-user'
+      !assignedVoice.receiverId ||
+      assignedVoice.receiverId === 'current-user'
         ? state.currentUser.id
-        : compatibleAssignedVoice.receiverId,
-    morningRequestId: compatibleAssignedVoice.morningRequestId ?? normalizedRequest.id,
+        : assignedVoice.receiverId,
+    morningRequestId: assignedVoice.morningRequestId ?? normalizedRequest.id,
   };
   const voiceIsValid =
     normalizedVoice.receiverId === state.currentUser.id &&
@@ -119,15 +118,20 @@ export function getPrototypeStateRepair(
   }
 
   const hasLegacyMissionStatus = (session.status as string) === 'mission';
+  const sessionWithMission: WakeSession = {
+    ...session,
+    missionCompleted:
+      session.status === 'completed' || Boolean(session.missionCompleted),
+  };
   const normalizedSession: WakeSession =
     session.status === 'completed'
       ? {
-          ...session,
+          ...sessionWithMission,
           wokeAt: session.wokeAt ?? createDemoWokeAt(session.alarmAt),
         }
       : hasLegacyMissionStatus
-        ? { ...session, status: 'ringing' }
-        : session;
+        ? { ...sessionWithMission, status: 'ringing' }
+        : sessionWithMission;
 
   return {
     currentMorningRequest: normalizedRequest,

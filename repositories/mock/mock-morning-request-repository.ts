@@ -31,7 +31,12 @@ export class MockMorningRequestRepository implements MorningRequestRepository {
 
   async getAvailableRequests(userId: string): Promise<MorningRequest[]> {
     return this.requests
-      .filter((request) => request.userId !== userId && request.status === 'open')
+      .filter(
+        (request) =>
+          request.userId !== userId &&
+          request.status === 'open' &&
+          request.voiceCount === 0
+      )
       .map((request) => ({ ...request, schedules: [...request.schedules] }));
   }
 
@@ -61,6 +66,10 @@ export class MockMorningRequestRepository implements MorningRequestRepository {
       personalEligible: false,
       status: 'voice_assigned',
     });
+  }
+
+  async markCompleted(id: string): Promise<MorningRequest | null> {
+    return this.patchRequest(id, { status: 'completed' });
   }
 
   async reset(): Promise<void> {

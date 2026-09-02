@@ -42,4 +42,7 @@ app-example
 /ios
 /android
 
+# Local Expo module build output
+/modules/**/build/
+
 .env

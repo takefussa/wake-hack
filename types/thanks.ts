@@ -13,14 +13,14 @@ export type ThanksMessage = {
   createdAt: string;
 };
 
-export type CreateThanksMessageInput = Omit<ThanksMessage, 'id' | 'createdAt'>;
-
 export type SendThanksInput = {
   senderId: string;
   receiverId: string;
   sourceVoiceMessageId: string;
   reaction: string;
   text?: string;
+  voiceUri?: string;
+  voiceDurationMs?: number;
 };
 
 export type ThanksInboxItem = {

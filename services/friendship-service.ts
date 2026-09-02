@@ -1,22 +1,44 @@
 import { demoWakeSenderId } from '@/data/demo-scenario';
+import { isSupabaseUuid } from '@/lib/identifiers';
+import { logDevelopmentError } from '@/lib/development-logger';
 import type { FriendshipRepository } from '@/repositories/interfaces/friendship-repository';
 import { MockFriendshipRepository } from '@/repositories/mock/mock-friendship-repository';
+import { SupabaseFriendshipRepository } from '@/repositories/supabase/supabase-friendship-repository';
 import type { Friendship } from '@/types';
 
 export class FriendshipService {
-  constructor(private readonly repository: FriendshipRepository) {}
+  constructor(
+    private readonly repository: FriendshipRepository,
+    private readonly mockRepository: MockFriendshipRepository
+  ) {}
 
-  async request(userAId: string, userBId: string): Promise<Friendship> {
-    if (!userAId || !userBId || userAId === userBId) {
+  async request(
+    requesterId: string,
+    otherUserId: string,
+    sourceVoiceMessageId: string
+  ): Promise<Friendship> {
+    if (!requesterId || !otherUserId || requesterId === otherUserId) {
       throw new Error('Friendship users are invalid');
     }
 
-    return this.repository.createPending({ userAId, userBId, morningCount: 1 });
-  }
+    const repository =
+      isSupabaseUuid(requesterId) &&
+      isSupabaseUuid(otherUserId) &&
+      isSupabaseUuid(sourceVoiceMessageId)
+        ? this.repository
+        : this.mockRepository;
 
-  async addOkimate(userAId: string, userBId: string): Promise<Friendship> {
-    const pending = await this.request(userAId, userBId);
-    return this.repository.match(pending);
+    try {
+      return await repository.request({
+        requesterId,
+        otherUserId,
+        sourceVoiceMessageId,
+        morningCount: 1,
+      });
+    } catch (error) {
+      logDevelopmentError('friendship.request', error);
+      throw error;
+    }
   }
 
   shouldAutoMatch(friendship: Friendship): boolean {
@@ -27,9 +49,96 @@ export class FriendshipService {
   }
 
   async resolveDemoMatch(friendship: Friendship): Promise<Friendship> {
-    if (!this.shouldAutoMatch(friendship)) return friendship;
-    return this.repository.match(friendship);
+    if (
+      !this.shouldAutoMatch(friendship) ||
+      (isSupabaseUuid(friendship.userAId) && isSupabaseUuid(friendship.userBId))
+    ) {
+      return friendship;
+    }
+    return this.mockRepository.match(friendship);
+  }
+
+  hasRequested(friendship: Friendship, userId: string): boolean {
+    if (friendship.status === 'matched') return true;
+    if (friendship.userAId === userId || friendship.userAId === 'current-user') {
+      return friendship.userARequested ?? true;
+    }
+    if (friendship.userBId === userId || friendship.userBId === 'current-user') {
+      return friendship.userBRequested ?? true;
+    }
+    return true;
+  }
+
+  async respond(userId: string, friendship: Friendship): Promise<Friendship> {
+    const isParticipant =
+      friendship.userAId === userId ||
+      friendship.userBId === userId ||
+      friendship.userAId === 'current-user' ||
+      friendship.userBId === 'current-user';
+    if (!isParticipant || friendship.status !== 'pending') {
+      throw new Error('Friendship response is invalid');
+    }
+    if (this.hasRequested(friendship, userId)) {
+      throw new Error('Friendship response has already been sent');
+    }
+
+    try {
+      if (
+        isSupabaseUuid(userId) &&
+        isSupabaseUuid(friendship.userAId) &&
+        isSupabaseUuid(friendship.userBId) &&
+        isSupabaseUuid(friendship.id)
+      ) {
+        return await this.repository.respond(friendship.id);
+      }
+      return await this.mockRepository.match(friendship);
+    } catch (error) {
+      logDevelopmentError('friendship.respond', error);
+      throw error;
+    }
+  }
+
+  async getForUser(
+    userId: string,
+    localFriendships: Friendship[]
+  ): Promise<Friendship[]> {
+    if (!isSupabaseUuid(userId)) return localFriendships;
+
+    try {
+      const remoteFriendships = await this.repository.getForUser(userId);
+      const localMockFriendships = localFriendships.filter(
+        (friendship) =>
+          !isSupabaseUuid(friendship.userAId) ||
+          !isSupabaseUuid(friendship.userBId)
+      );
+      return [...remoteFriendships, ...localMockFriendships];
+    } catch (error) {
+      logDevelopmentError('friendship.getForUser', error);
+      throw error;
+    }
+  }
+
+  async getBetween(
+    userId: string,
+    otherUserId: string,
+    localFriendships: Friendship[]
+  ): Promise<Friendship | null> {
+    const available =
+      isSupabaseUuid(userId) && isSupabaseUuid(otherUserId)
+        ? await this.getForUser(userId, localFriendships)
+        : localFriendships;
+
+    return (
+      available.find(
+        (friendship) =>
+          (friendship.userAId === userId && friendship.userBId === otherUserId) ||
+          (friendship.userAId === otherUserId && friendship.userBId === userId)
+      ) ?? null
+    );
   }
 }
 
-export const friendshipService = new FriendshipService(new MockFriendshipRepository());
+export const friendshipService = new FriendshipService(
+  new SupabaseFriendshipRepository(),
+  new MockFriendshipRepository()
+);

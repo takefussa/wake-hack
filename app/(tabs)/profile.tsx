@@ -8,6 +8,7 @@ import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { fonts, paperColors, shadows, spacing } from '@/constants/theme';
+import { alarmService } from '@/services/alarm-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -39,6 +40,7 @@ export default function ProfileScreen() {
     isResettingRef.current = true;
     setIsResetting(true);
     try {
+      await alarmService.cancelScheduledAlarm();
       await profileService.deleteCurrentProfile();
       await morningRequestService.resetPrototypeData();
       await resetPrototype();

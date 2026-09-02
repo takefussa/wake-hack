@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
@@ -40,7 +40,11 @@ export default function OnboardingScreen() {
 
       <NotebookWallpaper />
 
-      <View style={styles.content}>
+      <ScrollView
+        bounces={false}
+        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        showsVerticalScrollIndicator={false}>
         {pageIndex > 0 && (
           <Pressable
             accessibilityLabel="前のページに戻る"
@@ -55,8 +59,6 @@ export default function OnboardingScreen() {
             <AppText style={styles.backButtonText}>戻る</AppText>
           </Pressable>
         )}
-
-      
 
         <OnboardingScene scene={page.scene} />
 
@@ -100,7 +102,7 @@ export default function OnboardingScreen() {
             <Ionicons name="arrow-forward" size={22} color="#30463E" />
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -132,7 +134,7 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 28,
     paddingTop: 20,
     paddingBottom: 20,
