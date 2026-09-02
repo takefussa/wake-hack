@@ -237,9 +237,24 @@ export class WakeService {
     receiverId: string,
     localVoices: VoiceMessage[] = []
   ): Promise<CommunityAlarmVoicePreparation> {
-    // Supabase is the shared source of truth: use the newest matching
-    // Community Voice recorded by any user before considering an old local
-    // copy or the bundled fallback.
+    const matching = localVoices
+      .filter((voice) => voice.type === 'community')
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // A freshly recorded local voice without a storage path means its shared
+    // upload failed. It must still be usable as the immediate Community Voice
+    // on this device, just as it was before the merge.
+    const unsyncedLocal = matching.find(
+      (voice) => !voice.storagePath && voice.voiceStyle === request.preferredVoiceStyle
+    ) ?? matching.find((voice) => !voice.storagePath);
+    if (unsyncedLocal?.uri) {
+      return {
+        status: 'ready',
+        voice: { ...unsyncedLocal, receiverId, morningRequestId: request.id },
+      };
+    }
+
+    // Supabase is the shared source of truth once an upload exists: choose
+    // the newest matching Community Voice before older local copies.
     try {
       const remoteVoice = await this.repository.findCommunityForRequest(
         request,
@@ -252,9 +267,6 @@ export class WakeService {
       logDevelopmentError('wake.findCommunity', error);
     }
 
-    const matching = localVoices
-      .filter((voice) => voice.type === 'community')
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const selected = matching.find((voice) => voice.voiceStyle === request.preferredVoiceStyle) ?? matching[0];
     if (selected?.uri) {
       return { status: 'ready', voice: { ...selected, receiverId, morningRequestId: request.id } };
