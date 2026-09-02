@@ -25,6 +25,7 @@ import {
 } from '@/features/wake/wake-proof-missions';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useTapLock } from '@/hooks/use-tap-lock';
+import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
 
 type MissionStatus = 'active' | 'complete';
@@ -136,7 +137,10 @@ export default function WakeMissionScreen() {
   function handleComplete() {
     if (!canComplete) return;
     runOnce(() => {
-      completeWakeSession();
+      const completedSession = completeWakeSession();
+      if (completedSession) {
+        void wakeService.completeWakeSession(completedSession);
+      }
       router.replace('/wake/complete');
     });
   }

@@ -63,7 +63,13 @@ export default function ThanksSendScreen() {
   }
 
   async function handleSend() {
-    if (!currentUser || !assignedWakeVoice || !reaction || isSendingRef.current) return;
+    if (
+      !currentUser ||
+      !assignedWakeVoice ||
+      !reaction ||
+      isSendingRef.current ||
+      !text.trim()
+    ) return;
 
     isSendingRef.current = true;
     setIsSending(true);
@@ -140,12 +146,7 @@ export default function ThanksSendScreen() {
 
       <View style={styles.section}>
         <View style={styles.labelRow}>
-          <View style={styles.optionalLabel}>
-            <AppText variant="sectionTitle">メッセージ</AppText>
-            <AppText variant="caption" tone="muted">
-              任意
-            </AppText>
-          </View>
+          <AppText variant="sectionTitle">メッセージ</AppText>
           <AppText variant="caption" tone="muted">
             {text.length}/{prototypeConfig.thanksTextMaxLength}
           </AppText>
@@ -172,7 +173,7 @@ export default function ThanksSendScreen() {
 
       <AppButton
         legacy
-        disabled={!reaction || isSending}
+        disabled={!reaction || isSending || !text.trim()}
         icon="heart-outline"
         label={isSending ? '届けています…' : 'ありがとうを届ける'}
         onPress={() => void handleSend()}
@@ -220,11 +221,6 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     justifyContent: 'space-between',
     gap: spacing.md,
-  },
-  optionalLabel: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.sm,
   },
   input: {
     minHeight: 112,

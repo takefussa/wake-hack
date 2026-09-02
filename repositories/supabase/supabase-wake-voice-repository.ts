@@ -7,7 +7,9 @@ const signedUrlLifetimeSeconds = 15 * 60;
 const voiceColumns =
   'id,sender_id,receiver_id,morning_request_id,storage_path,duration_ms,type,created_at' as const;
 
-function mapReceivedVoice(row: VoiceMessageRow, signedUrl: string): VoiceMessage {
+type WakeVoiceRow = Omit<VoiceMessageRow, 'alarm_received_at'>;
+
+function mapReceivedVoice(row: WakeVoiceRow, signedUrl: string): VoiceMessage {
   if (row.type !== 'personal') {
     throw new Error(`Unsupported remote voice type: ${row.type}`);
   }
@@ -28,6 +30,25 @@ function mapReceivedVoice(row: VoiceMessageRow, signedUrl: string): VoiceMessage
 export class SupabaseWakeVoiceRepository implements WakeVoiceRepository {
   constructor(private readonly fallbackRepository: WakeVoiceRepository) {}
 
+  async findPersonalById(
+    voiceMessageId: string,
+    request: MorningRequest,
+    receiverId: string
+  ): Promise<VoiceMessage | null> {
+    const supabase = getSupabaseClient();
+    const { data: voice, error } = await supabase
+      .from('voice_messages')
+      .select(voiceColumns)
+      .eq('id', voiceMessageId)
+      .eq('receiver_id', receiverId)
+      .eq('morning_request_id', request.id)
+      .eq('type', 'personal')
+      .maybeSingle();
+
+    if (error) throw error;
+    return voice ? this.createPlayableVoice(voice) : null;
+  }
+
   async findPersonalForRequest(
     request: MorningRequest,
     receiverId: string
@@ -39,19 +60,34 @@ export class SupabaseWakeVoiceRepository implements WakeVoiceRepository {
       .eq('receiver_id', receiverId)
       .eq('morning_request_id', request.id)
       .eq('type', 'personal')
-      .order('created_at', { ascending: true })
+      // A corrected recording supersedes an earlier recording for the same
+      // wake request.
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (error) throw error;
     if (!voice) return null;
 
-    const { data: signedUrl, error: signedUrlError } = await supabase.storage
+    return this.createPlayableVoice(voice);
+  }
+
+  async findPersonalForAlarm(
+    request: MorningRequest,
+    receiverId: string
+  ): Promise<VoiceMessage | null> {
+    // A voice belongs to one morning request. Once that alarm has fired, a
+    // newly-created request must wait for a newly-recorded voice.
+    return this.findPersonalForRequest(request, receiverId);
+  }
+
+  private async createPlayableVoice(row: WakeVoiceRow): Promise<VoiceMessage> {
+    const { data: signedUrl, error: signedUrlError } = await getSupabaseClient().storage
       .from(voiceBucket)
-      .createSignedUrl(voice.storage_path, signedUrlLifetimeSeconds);
+      .createSignedUrl(row.storage_path, signedUrlLifetimeSeconds);
 
     if (signedUrlError) throw signedUrlError;
-    return mapReceivedVoice(voice, signedUrl.signedUrl);
+    return mapReceivedVoice(row, signedUrl.signedUrl);
   }
 
   findCommunityForRequest(

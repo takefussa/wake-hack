@@ -11,6 +11,8 @@ export type VoiceMessage = {
   type: VoiceMessageType;
   transcript?: string;
   createdAt: string;
+  alarmReceivedAt?: string;
+  voiceStyle?: VoiceStyle;
 };
 
 export type CreatePersonalVoiceInput = {
@@ -21,3 +23,4 @@ export type CreatePersonalVoiceInput = {
   uri: string;
   durationMs: number;
 };
+import type { VoiceStyle } from './morning';

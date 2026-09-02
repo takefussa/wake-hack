@@ -5,9 +5,12 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { Avatar } from '@/components/common/avatar';
 import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { paperColors, shadows } from '@/constants/theme';
+import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
+import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { useAppStore } from '@/store/use-app-store';
 
 type SummaryRowProps = {
@@ -37,6 +40,13 @@ export default function MorningSummaryScreen() {
   );
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const runOnce = useTapLock();
+  const alarmSchedule = useAlarmSchedule(currentMorningRequest);
+  const preparedVoiceSender = useVoiceSender(
+    alarmSchedule.preparedPersonalVoice
+  );
+  const hasPersonalAlarm =
+    alarmSchedule.state.status === 'scheduled' &&
+    alarmSchedule.state.alarm.sound === 'personal';
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -119,15 +129,150 @@ export default function MorningSummaryScreen() {
           />
         </View>
 
+        <View
+          style={[
+            styles.alarmNote,
+            alarmSchedule.state.status === 'scheduled' && styles.alarmNoteReady,
+          ]}
+          testID="alarm-status"
+        >
+          <Ionicons
+            color={alarmSchedule.state.status === 'scheduled' ? '#66835F' : '#9A765B'}
+            name={
+              alarmSchedule.state.status === 'scheduled'
+                ? 'alarm'
+                : alarmSchedule.state.status === 'unavailable'
+                  ? 'information-circle-outline'
+                  : 'warning-outline'
+            }
+            size={21}
+          />
+          <View style={styles.alarmNoteCopy}>
+            <AppText style={styles.alarmNoteTitle}>
+              {alarmSchedule.state.status === 'scheduled'
+                ? alarmSchedule.state.alarm.deliveryMode === 'native'
+                  ? alarmSchedule.state.alarm.sound === 'personal'
+                    ? '人の声アラームを設定しました'
+                    : alarmSchedule.state.alarm.sound === 'community'
+                      ? 'Community Voiceを設定しました'
+                    : '実アラームを設定しました'
+                  : '通知アラームを設定しました'
+                : alarmSchedule.state.status === 'loading' ||
+                    alarmSchedule.state.status === 'scheduling'
+                  ? 'アラームを設定しています…'
+                  : alarmSchedule.state.status === 'denied'
+                    ? 'アラームの許可が必要です'
+                  : alarmSchedule.state.status === 'expired'
+                      ? '設定時刻を過ぎています'
+                      : alarmSchedule.state.status === 'unavailable'
+                        ? '実際のアラームはこの環境では利用できません'
+                        : 'アラームを設定できませんでした'}
+            </AppText>
+            <AppText style={styles.alarmNoteText}>
+              {alarmSchedule.state.status === 'scheduled'
+                ? `${new Intl.DateTimeFormat('ja-JP', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }).format(new Date(alarmSchedule.state.alarm.scheduledFor))} に${
+                    alarmSchedule.state.alarm.deliveryMode === 'native'
+                      ? alarmSchedule.state.alarm.sound === 'personal'
+                        ? '届いた起床ボイスが停止するまで鳴ります。'
+                        : alarmSchedule.state.alarm.sound === 'community'
+                          ? 'Community Voiceが停止するまで鳴ります。'
+                        : alarmSchedule.personalVoiceSyncStatus === 'error'
+                          ? '標準音は設定済みですが、起床ボイスを取得できませんでした。'
+                          : alarmSchedule.personalVoiceSyncStatus === 'checking'
+                            ? '標準音を確保し、届いた起床ボイスを確認しています。'
+                            : alarmSchedule.personalVoiceSyncStatus === 'waiting'
+                              ? '標準音は設定済みです。寝る前にもう一度アプリを開くと、届いた声を確認します。'
+                              : '停止するまで音が鳴ります。'
+                      : '端末の通知音が1回鳴ります。'
+                  }`
+                : alarmSchedule.state.status === 'denied'
+                  ? '端末の設定でアラームを許可してください。'
+                  : alarmSchedule.state.status === 'expired'
+                    ? '時刻を編集して、未来の時刻を選んでください。'
+                    : alarmSchedule.state.status === 'unavailable'
+                      ? 'Expo GoではAlarmKitだけを無効にしています。朝リクエストやWake Voiceの送受信は利用できます。'
+                      : '再設定を試すか、端末の設定を確認してください。'}
+            </AppText>
+          </View>
+        </View>
+
+        {alarmSchedule.state.status === 'denied' ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void alarmSchedule.openSettings()}
+            style={styles.alarmAction}
+          >
+            <AppText style={styles.alarmActionText}>端末の設定を開く</AppText>
+          </Pressable>
+        ) : alarmSchedule.state.status === 'error' ||
+          alarmSchedule.personalVoiceSyncStatus === 'error' ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={alarmSchedule.retry}
+            style={styles.alarmAction}
+          >
+            <AppText style={styles.alarmActionText}>
+              {alarmSchedule.state.status === 'error'
+                ? 'アラームを再設定'
+                : 'Wake Voiceを再確認'}
+            </AppText>
+          </Pressable>
+        ) : null}
+
+        {alarmSchedule.preparedPersonalVoice ? (
+          <View style={styles.senderCard} testID="prepared-personal-voice">
+            {preparedVoiceSender ? (
+              <Avatar
+                avatarId={preparedVoiceSender.avatarId}
+                imageUri={preparedVoiceSender.profileImageUri}
+                name={preparedVoiceSender.nickname}
+                size={50}
+              />
+            ) : (
+              <View style={styles.senderPlaceholder}>
+                <Ionicons color="#66835F" name="person" size={23} />
+              </View>
+            )}
+            <View style={styles.senderCopy}>
+              <AppText style={styles.senderTitle}>
+                {preparedVoiceSender
+                  ? `${preparedVoiceSender.nickname}さんから明日のWake Voiceが届いています`
+                  : '明日のWake Voiceが届いています'}
+              </AppText>
+              <AppText style={styles.senderDescription}>
+                {alarmSchedule.isNativeAlarmAvailable
+                  ? '内容は起床時まで再生できません。アラームに設定済みです。'
+                  : '内容は起床前には再生できません。実アラームへの登録はDevelopment / Release Buildで行います。'}
+              </AppText>
+            </View>
+          </View>
+        ) : null}
+
         <View style={styles.voiceNote}>
           <Ionicons
             color={paperColors.ink}
-            name={assignedWakeVoice ? 'checkmark-circle-outline' : 'time-outline'}
+            name={
+              hasPersonalAlarm || assignedWakeVoice
+                ? 'checkmark-circle-outline'
+                : 'time-outline'
+            }
             size={21}
           />
           <AppText style={styles.voiceNoteText}>
-            {assignedWakeVoice
-              ? '朝に届く声も準備できています。'
+            {alarmSchedule.state.status === 'unavailable'
+              ? alarmSchedule.preparedPersonalVoice
+                ? '届いた人の声を確認しました。実アラーム登録だけをこの環境ではスキップします。'
+                : 'Wake Voiceを待っています。音声の送受信はこの環境でも利用できます。'
+              : hasPersonalAlarm
+              ? '届いた人の声を実機アラームに設定済みです。'
+              : alarmSchedule.state.status === 'scheduled' &&
+                  alarmSchedule.state.alarm.sound === 'community'
+                ? '最新のCommunity Voiceを実機アラームに設定済みです。'
+              : assignedWakeVoice
+                ? '朝に届く声も準備できています。'
               : '朝に届く声を待っています。'}
           </AppText>
         </View>
@@ -137,7 +282,7 @@ export default function MorningSummaryScreen() {
           onPress={() =>
             runOnce(() =>
               router.replace(
-                assignedWakeVoice ? '/(tabs)' : '/(tabs)/connections'
+                assignedWakeVoice ? '/morning/ready' : '/(tabs)/connections'
               )
             )
           }
@@ -148,7 +293,7 @@ export default function MorningSummaryScreen() {
           testID="morning-summary-next"
         >
           <AppText style={styles.nextButtonText}>
-            {assignedWakeVoice ? 'ホームへ戻る' : 'タイムラインへ'}
+            {assignedWakeVoice ? '朝の準備を見る' : 'タイムラインへ'}
           </AppText>
           <Ionicons color="#30463E" name="arrow-forward" size={22} />
         </Pressable>
@@ -339,9 +484,84 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     ...shadows.paper,
   },
+  alarmNote: {
+    minHeight: 76,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#F7E8BD',
+    borderWidth: 1,
+    borderColor: '#D7BE80',
+  },
+  alarmNoteReady: {
+    backgroundColor: '#E7EFD9',
+    borderColor: '#A8BC91',
+  },
+  alarmNoteCopy: {
+    flex: 1,
+  },
+  alarmNoteTitle: {
+    color: '#30463E',
+    fontSize: 15,
+  },
+  alarmNoteText: {
+    marginTop: 3,
+    color: '#657169',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  alarmAction: {
+    alignSelf: 'center',
+    marginTop: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderBottomWidth: 2,
+    borderBottomColor: '#8EC3DE',
+  },
+  alarmActionText: {
+    color: '#405348',
+    fontSize: 14,
+  },
   voiceNoteText: {
     color: '#526158',
     fontSize: 13,
+  },
+  senderCard: {
+    minHeight: 88,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FFFDF5',
+    borderWidth: 1,
+    borderColor: '#A8BC91',
+  },
+  senderPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E7EFD9',
+  },
+  senderCopy: {
+    flex: 1,
+  },
+  senderTitle: {
+    color: '#30463E',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  senderDescription: {
+    marginTop: 3,
+    color: '#657169',
+    fontSize: 11,
+    lineHeight: 17,
   },
   nextButton: {
     minHeight: 62,

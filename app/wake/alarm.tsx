@@ -12,6 +12,8 @@ import { legacyColors as colors, fonts, spacing } from '@/constants/theme';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
+import { alarmService } from '@/services/alarm-service';
+import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function WakeAlarmScreen() {
@@ -51,6 +53,7 @@ export default function WakeAlarmScreen() {
   function handleWakeUp() {
     runOnce(() => {
       stopPlaybackRef.current();
+      void alarmService.cancelScheduledAlarm();
       router.replace('/wake/mission');
     });
   }
@@ -58,7 +61,10 @@ export default function WakeAlarmScreen() {
   function handleBack() {
     runOnce(() => {
       stopPlaybackRef.current();
-      cancelWakeSession();
+      const canceledSession = cancelWakeSession();
+      if (canceledSession) {
+        void wakeService.cancelWakeSession(canceledSession);
+      }
       router.replace('/morning/ready');
     });
   }
