@@ -7,7 +7,6 @@ import { StyleSheet, View } from 'react-native';
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
-import { IconButton } from '@/components/common/icon-button';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { legacyColors as colors, radii, spacing } from '@/constants/theme';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
@@ -136,14 +135,6 @@ export default function WakeCompleteScreen() {
     <MorningScreen contentStyle={styles.content} testID="wake-complete-screen">
       <StatusBar style="dark" />
 
-      <View style={styles.navigation}>
-        <IconButton
-          icon="chevron-back"
-          label="朝の準備に戻る"
-          onPress={() => runOnce(() => router.replace('/morning/ready'))}
-        />
-      </View>
-
       <View style={styles.hero}>
         <View style={styles.sunMark}>
           <Ionicons color={colors.textInverse} name="sunny" size={32} />
@@ -199,11 +190,6 @@ const styles = StyleSheet.create({
   content: {
     justifyContent: 'space-between',
     gap: spacing.xxxl,
-  },
-  navigation: {
-    minHeight: 44,
-    marginLeft: -spacing.md,
-    alignItems: 'flex-start',
   },
   hero: {
     alignItems: 'center',
