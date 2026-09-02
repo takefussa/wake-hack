@@ -54,7 +54,26 @@ export function useAlarmSchedule(request: MorningRequest | null) {
     async function scheduleAndSync() {
       try {
         let requestForSync = activeRequest;
-        if (isSupabaseUuid(activeRequest.id)) {
+        if (!isSupabaseUuid(activeRequest.id)) {
+          // Requests created before the Supabase-social merge can still be
+          // persisted locally. Migrate them before deciding which alarm voice
+          // is eligible; otherwise Personal Voice sync is skipped as
+          // "ineligible" and the device keeps the default alarm forever.
+          try {
+            const remoteRequest = await morningRequestService.ensureRemoteRequest(
+              activeRequest
+            );
+            requestForSync = remoteRequest;
+            if (remoteRequest.id !== activeRequest.id) {
+              useAppStore.getState().replaceMorningRequest(remoteRequest);
+            }
+          } catch (error) {
+            // Keep the local request usable if the network is unavailable.
+            // It will be retried when the app becomes active or the user
+            // presses the refresh button.
+            logDevelopmentError('alarmSchedule.migrateRequest', error);
+          }
+        } else {
           try {
             const latestRequest = await morningRequestService.getRequest(
               activeRequest.id
