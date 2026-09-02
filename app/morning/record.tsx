@@ -16,6 +16,7 @@ import { colors, radii, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { formatRecordingDuration } from '@/features/voice/format-duration';
 import { giveService } from '@/services/give-service';
+import { isSupabaseUuid } from '@/lib/identifiers';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
 import { useVoiceRecorder } from '@/hooks/use-voice-recorder';
@@ -98,7 +99,14 @@ export default function RecordVoiceScreen() {
 
   const currentUserId = currentUser.id;
   const currentMorningRequestId = currentMorningRequest.id;
-  const hasAlreadyGiven = recipient !== null && currentGiveReceiverIds.includes(recipient.id);
+  // Supabase requests are authoritative on the server. The old local-only
+  // receiver list can survive a request edit and incorrectly block a new
+  // recording for the same person. Keep the guard only for mock requests.
+  const hasAlreadyGiven =
+    request !== null &&
+    !isSupabaseUuid(request.id) &&
+    recipient !== null &&
+    currentGiveReceiverIds.includes(recipient.id);
   const isTooShort =
     recorder.recording !== null &&
     recorder.recording.durationMs < prototypeConfig.recordingMinMs;
