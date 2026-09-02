@@ -33,6 +33,7 @@ export type VoiceMessageRow = {
   duration_ms: number;
   type: string;
   created_at: string;
+  alarm_received_at: string | null;
 };
 
 export type ThanksMessageRow = {
@@ -145,9 +146,11 @@ export type Database = {
           duration_ms: number;
           type?: string;
           created_at?: string;
+          alarm_received_at?: string | null;
         };
         Update: {
           storage_path?: string;
+          alarm_received_at?: string | null;
         };
         Relationships: [];
       };
@@ -249,6 +252,13 @@ export type Database = {
           p_morning_request_id: string;
         };
         Returns: WakeAssignmentRow[];
+      };
+      acknowledge_personal_voice_alarm: {
+        Args: {
+          p_voice_id: string;
+          p_morning_request_id: string;
+        };
+        Returns: string;
       };
     };
   };

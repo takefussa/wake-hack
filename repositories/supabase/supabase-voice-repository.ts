@@ -33,6 +33,7 @@ function mapVoiceRow(
     durationMs: row.duration_ms,
     type: 'personal',
     createdAt: row.created_at,
+    alarmReceivedAt: row.alarm_received_at ?? undefined,
   };
 }
 
@@ -130,5 +131,33 @@ export class SupabaseVoiceRepository
 
       throw error;
     }
+  }
+
+  async getAlarmReceivedAt(voiceMessageId: string): Promise<string | null> {
+    const { data, error } = await getSupabaseClient()
+      .from('voice_messages')
+      .select('alarm_received_at')
+      .eq('id', voiceMessageId)
+      .eq('type', 'personal')
+      .maybeSingle();
+
+    if (error) throw error;
+    return data?.alarm_received_at ?? null;
+  }
+
+  async acknowledgeAlarmReceived(
+    voiceMessageId: string,
+    morningRequestId: string
+  ): Promise<string> {
+    const { data, error } = await getSupabaseClient().rpc(
+      'acknowledge_personal_voice_alarm',
+      {
+        p_voice_id: voiceMessageId,
+        p_morning_request_id: morningRequestId,
+      }
+    );
+
+    if (error) throw error;
+    return data;
   }
 }

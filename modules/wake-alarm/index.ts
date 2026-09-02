@@ -13,6 +13,11 @@ export type ScheduledWakeAlarm = {
   soundFileName?: string;
 };
 
+export type StoppedWakeAlarm = {
+  morningRequestId: string;
+  stoppedAt: string;
+};
+
 type WakeAlarmNativeModule = {
   isAvailable(): boolean;
   getAuthorizationStatus(): WakeAlarmAuthorizationStatus;
@@ -20,7 +25,16 @@ type WakeAlarmNativeModule = {
   scheduleAlarm(
     id: string,
     fireDateMs: number,
-    title: string
+    title: string,
+    morningRequestId: string
+  ): Promise<ScheduledWakeAlarm>;
+  rescheduleAlarmWithPreparedVoice(
+    oldId: string,
+    newId: string,
+    fireDateMs: number,
+    title: string,
+    soundFileName: string,
+    morningRequestId: string
   ): Promise<ScheduledWakeAlarm>;
   replaceAlarmWithVoice(
     oldId: string,
@@ -28,11 +42,13 @@ type WakeAlarmNativeModule = {
     fireDateMs: number,
     title: string,
     remoteUrl: string,
-    voiceId: string
+    voiceId: string,
+    morningRequestId: string
   ): Promise<ScheduledWakeAlarm>;
   cancelAlarm(id: string): Promise<void>;
   removeSoundFile(fileName: string): Promise<void>;
   getAlarmIds(): string[];
+  consumeStoppedAlarm(): StoppedWakeAlarm | null;
   openSettings?(): Promise<void>;
 };
 
@@ -55,12 +71,13 @@ export const WakeAlarm = {
   async scheduleAlarm(
     id: string,
     fireDateMs: number,
-    title: string
+    title: string,
+    morningRequestId: string
   ): Promise<ScheduledWakeAlarm> {
     if (!nativeModule) {
       throw new Error('AlarmKit is unavailable on this device.');
     }
-    return nativeModule.scheduleAlarm(id, fireDateMs, title);
+    return nativeModule.scheduleAlarm(id, fireDateMs, title, morningRequestId);
   },
 
   async replaceAlarmWithVoice(
@@ -69,7 +86,8 @@ export const WakeAlarm = {
     fireDateMs: number,
     title: string,
     remoteUrl: string,
-    voiceId: string
+    voiceId: string,
+    morningRequestId: string
   ): Promise<ScheduledWakeAlarm> {
     if (!nativeModule) {
       throw new Error('AlarmKit is unavailable on this device.');
@@ -80,7 +98,29 @@ export const WakeAlarm = {
       fireDateMs,
       title,
       remoteUrl,
-      voiceId
+      voiceId,
+      morningRequestId
+    );
+  },
+
+  async rescheduleAlarmWithPreparedVoice(
+    oldId: string,
+    newId: string,
+    fireDateMs: number,
+    title: string,
+    soundFileName: string,
+    morningRequestId: string
+  ): Promise<ScheduledWakeAlarm> {
+    if (!nativeModule) {
+      throw new Error('AlarmKit is unavailable on this device.');
+    }
+    return nativeModule.rescheduleAlarmWithPreparedVoice(
+      oldId,
+      newId,
+      fireDateMs,
+      title,
+      soundFileName,
+      morningRequestId
     );
   },
 
@@ -94,6 +134,10 @@ export const WakeAlarm = {
 
   getAlarmIds(): string[] {
     return nativeModule?.getAlarmIds() ?? [];
+  },
+
+  consumeStoppedAlarm(): StoppedWakeAlarm | null {
+    return nativeModule?.consumeStoppedAlarm() ?? null;
   },
 
   async openSettings(): Promise<void> {

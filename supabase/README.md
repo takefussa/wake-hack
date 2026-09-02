@@ -14,6 +14,7 @@
 10. SQL Editorで`migrations/009_profile_details.sql`を実行する
 11. SQL Editorで`migrations/010_custom_morning_schedules.sql`を実行する
 12. SQL Editorで`migrations/011_wake_assignments_and_sessions.sql`を実行する
+13. SQL Editorで`migrations/012_alarm_voice_delivery.sql`を実行する
 
 実行後、次を確認します。
 
@@ -25,6 +26,7 @@
 - `respond_to_friendship`が`authenticated`からのみ実行可能
 - `assign_wake_voice`が`authenticated`からのみ実行可能
 - `wake_assignments.morning_request_id`と`wake_sessions.morning_request_id`が一意
+- `acknowledge_personal_voice_alarm`が`authenticated`からのみ実行可能
 - `.env`には公開URLとPublishable Keyだけを設定
 
 `service_role`やSecret Keyはアプリへ設定しません。

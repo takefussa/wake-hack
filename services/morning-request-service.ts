@@ -161,6 +161,19 @@ export class MorningRequestService {
     }
   }
 
+  async markCompleted(id: string): Promise<void> {
+    const repository = isSupabaseUuid(id)
+      ? this.repository
+      : this.mockRepository;
+    try {
+      const request = await repository.markCompleted(id);
+      if (!request) throw new Error('Current morning request not found');
+    } catch (error) {
+      logDevelopmentError('morningRequest.markCompleted', error);
+      throw error;
+    }
+  }
+
   async resetPrototypeData(): Promise<void> {
     this.legacyMigrationPromises.clear();
     await this.mockRepository.reset();

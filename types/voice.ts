@@ -11,6 +11,7 @@ export type VoiceMessage = {
   type: VoiceMessageType;
   transcript?: string;
   createdAt: string;
+  alarmReceivedAt?: string;
 };
 
 export type CreatePersonalVoiceInput = {

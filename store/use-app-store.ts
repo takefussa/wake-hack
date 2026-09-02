@@ -137,25 +137,14 @@ export const useAppStore = create<AppStore>()(
         }),
       selectGiveRequest: (requestId) => set({ selectedGiveRequestId: requestId }),
       completeGive: (voiceMessage) => {
-        const {
-          currentMorningRequest,
-          currentUser,
-          givenVoiceMessages,
-        } = get();
-        const alreadyGivenToRequest = givenVoiceMessages.some(
-          (givenVoice) =>
-            givenVoice.type === 'personal' &&
-            givenVoice.senderId === currentUser?.id &&
-            givenVoice.morningRequestId === voiceMessage.morningRequestId
-        );
+        const { currentMorningRequest, currentUser } = get();
         if (
           !currentMorningRequest ||
           !currentUser ||
           voiceMessage.type !== 'personal' ||
           voiceMessage.senderId !== currentUser.id ||
           !voiceMessage.receiverId ||
-          !voiceMessage.morningRequestId ||
-          alreadyGivenToRequest
+          !voiceMessage.morningRequestId
         ) {
           return false;
         }

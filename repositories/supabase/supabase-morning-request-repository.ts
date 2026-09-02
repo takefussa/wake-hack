@@ -151,6 +151,7 @@ export class SupabaseMorningRequestRepository
       .from('morning_requests')
       .select(morningRequestColumns)
       .eq('status', 'open')
+      .eq('voice_count', 0)
       .neq('user_id', userId)
       .order('voice_count', { ascending: true })
       .order('created_at', { ascending: false })
@@ -195,6 +196,13 @@ export class SupabaseMorningRequestRepository
     );
   }
 
+  async markCompleted(id: string): Promise<MorningRequest | null> {
+    return this.updateOwnRequest(id, {
+      status: 'completed',
+      updated_at: new Date().toISOString(),
+    });
+  }
+
   async reset(): Promise<void> {
     const userId = authService.getAuthenticatedUserId();
     const { error } = await getSupabaseClient()
@@ -208,7 +216,7 @@ export class SupabaseMorningRequestRepository
   private async updateOwnRequest(
     id: string,
     values: {
-      personal_eligible: boolean;
+      personal_eligible?: boolean;
       status?: MorningRequestStatus;
       updated_at: string;
     },

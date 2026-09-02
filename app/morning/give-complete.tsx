@@ -10,8 +10,10 @@ import { Avatar } from '@/components/common/avatar';
 import { LoadingState } from '@/components/common/loading-state';
 import { Screen } from '@/components/common/screen';
 import { colors, radii, spacing } from '@/constants/theme';
+import { isSupabaseUuid } from '@/lib/identifiers';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
+import { voiceService } from '@/services/voice-service';
 import { useAppStore } from '@/store/use-app-store';
 import type { UserProfile } from '@/types';
 
@@ -21,17 +23,19 @@ export default function GiveCompleteScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
-  const [recipient, setRecipient] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const isNavigatingRef = useRef(false);
-
   const completedVoice = givenVoiceMessages.find(
     (voice) =>
       voice.senderId === currentUser?.id &&
       voice.morningRequestId === requestId &&
       typeof voice.receiverId === 'string'
   );
+  const [recipient, setRecipient] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [alarmReceivedAt, setAlarmReceivedAt] = useState<string | null>(
+    completedVoice?.alarmReceivedAt ?? null
+  );
+  const isNavigatingRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -63,6 +67,31 @@ export default function GiveCompleteScreen() {
       isMounted = false;
     };
   }, [requestId]);
+
+  useEffect(() => {
+    if (!completedVoice || !isSupabaseUuid(completedVoice.id)) return;
+
+    const voiceMessageId = completedVoice.id;
+    let isMounted = true;
+    async function refreshDelivery() {
+      try {
+        const receivedAt = await voiceService.getAlarmReceivedAt(
+          voiceMessageId
+        );
+        if (isMounted) setAlarmReceivedAt(receivedAt);
+      } catch {
+        // Keep showing "waiting" if the device is temporarily offline. This
+        // status is refreshed without Push whenever B leaves this screen open.
+      }
+    }
+
+    void refreshDelivery();
+    const interval = setInterval(() => void refreshDelivery(), 5_000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [completedVoice]);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -122,6 +151,32 @@ export default function GiveCompleteScreen() {
                 明日の朝、少しだけ力になりますように。
               </AppText>
             </View>
+
+            <View
+              style={[
+                styles.deliveryStatus,
+                alarmReceivedAt && styles.deliveryStatusReceived,
+              ]}
+              testID="personal-voice-delivery-status"
+            >
+              <Ionicons
+                color={alarmReceivedAt ? colors.success : colors.textSecondary}
+                name={alarmReceivedAt ? 'checkmark-circle' : 'time-outline'}
+                size={21}
+              />
+              <View style={styles.deliveryCopy}>
+                <AppText variant="bodyMedium">
+                  {alarmReceivedAt
+                    ? `${recipient.nickname}さんに届きました`
+                    : `${recipient.nickname}さんの受け取り待ち`}
+                </AppText>
+                <AppText variant="secondary" tone="soft">
+                  {alarmReceivedAt
+                    ? 'Wake Voiceの保存とアラーム設定が完了しています。'
+                    : '相手がアプリを開くと自動で受け取ります。'}
+                </AppText>
+              </View>
+            </View>
           </View>
 
           <View style={styles.actions}>
@@ -171,6 +226,24 @@ const styles = StyleSheet.create({
   copy: {
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  deliveryStatus: {
+    width: '100%',
+    maxWidth: 420,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  deliveryStatusReceived: {
+    borderColor: colors.success,
+  },
+  deliveryCopy: {
+    flex: 1,
+    gap: 2,
   },
   centeredText: {
     textAlign: 'center',

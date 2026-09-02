@@ -4,11 +4,12 @@ import type { MorningRequest, VoiceMessage, VoiceMessageRow } from '@/types';
 
 const voiceBucket = 'voice-messages';
 const signedUrlLifetimeSeconds = 15 * 60;
-const recentAlarmVoiceLifetimeMs = 24 * 60 * 60 * 1_000;
 const voiceColumns =
   'id,sender_id,receiver_id,morning_request_id,storage_path,duration_ms,type,created_at' as const;
 
-function mapReceivedVoice(row: VoiceMessageRow, signedUrl: string): VoiceMessage {
+type WakeVoiceRow = Omit<VoiceMessageRow, 'alarm_received_at'>;
+
+function mapReceivedVoice(row: WakeVoiceRow, signedUrl: string): VoiceMessage {
   if (row.type !== 'personal') {
     throw new Error(`Unsupported remote voice type: ${row.type}`);
   }
@@ -59,7 +60,9 @@ export class SupabaseWakeVoiceRepository implements WakeVoiceRepository {
       .eq('receiver_id', receiverId)
       .eq('morning_request_id', request.id)
       .eq('type', 'personal')
-      .order('created_at', { ascending: true })
+      // A corrected recording supersedes an earlier recording for the same
+      // wake request.
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
@@ -73,27 +76,12 @@ export class SupabaseWakeVoiceRepository implements WakeVoiceRepository {
     request: MorningRequest,
     receiverId: string
   ): Promise<VoiceMessage | null> {
-    const exactVoice = await this.findPersonalForRequest(request, receiverId);
-    if (exactVoice) return exactVoice;
-
-    const createdAfter = new Date(
-      Date.now() - recentAlarmVoiceLifetimeMs
-    ).toISOString();
-    const { data: voice, error } = await getSupabaseClient()
-      .from('voice_messages')
-      .select(voiceColumns)
-      .eq('receiver_id', receiverId)
-      .eq('type', 'personal')
-      .gte('created_at', createdAfter)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) throw error;
-    return voice ? this.createPlayableVoice(voice) : null;
+    // A voice belongs to one morning request. Once that alarm has fired, a
+    // newly-created request must wait for a newly-recorded voice.
+    return this.findPersonalForRequest(request, receiverId);
   }
 
-  private async createPlayableVoice(row: VoiceMessageRow): Promise<VoiceMessage> {
+  private async createPlayableVoice(row: WakeVoiceRow): Promise<VoiceMessage> {
     const { data: signedUrl, error: signedUrlError } = await getSupabaseClient().storage
       .from(voiceBucket)
       .createSignedUrl(row.storage_path, signedUrlLifetimeSeconds);
