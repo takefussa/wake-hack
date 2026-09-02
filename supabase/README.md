@@ -16,6 +16,7 @@
 12. SQL Editorで`migrations/011_wake_assignments_and_sessions.sql`を実行する
 13. SQL Editorで`migrations/012_alarm_voice_delivery.sql`を実行する
 14. SQL Editorで`migrations/013_fix_personal_voice_receiver.sql`を実行する（Personal Voice送信時に受信者の朝リクエストを対象にする修正）
+15. SQL Editorで`migrations/014_community_voice_delivery.sql`を実行する（Community VoiceをSupabaseへ保存し、実機アラームで再生するため）
 
 実行後、次を確認します。
 

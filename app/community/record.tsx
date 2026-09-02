@@ -14,6 +14,7 @@ import { prototypeConfig } from '@/constants/config';
 import { colors, radii, spacing } from '@/constants/theme';
 import { formatRecordingDuration } from '@/features/voice/format-duration';
 import { useVoiceRecorder } from '@/hooks/use-voice-recorder';
+import { communityVoiceService } from '@/services/community-voice-service';
 import { useAppStore } from '@/store/use-app-store';
 import type { VoiceStyle } from '@/types';
 
@@ -85,16 +86,22 @@ export default function CommunityRecordScreen() {
     } catch {
       // Keep the recorder URI if the device cannot copy the file.
     }
-    addCommunityVoice({
-      id: `community-${Date.now()}-${user.id}`,
-      senderId: user.id,
-      uri: voiceUri,
-      durationMs: recorder.recording.durationMs,
-      type: 'community',
-      voiceStyle: style,
-      createdAt: new Date().toISOString(),
-    });
-    router.replace('/(tabs)/connections');
+    try {
+      const voice = await communityVoiceService.create({
+        senderId: user.id,
+        uri: voiceUri,
+        durationMs: recorder.recording.durationMs,
+        voiceStyle: style,
+      });
+      // Keep a local copy for immediate use, while the authoritative copy is
+      // now shared through Supabase and can be used on A's device.
+      addCommunityVoice(voice);
+      router.replace('/(tabs)/connections');
+    } catch {
+      setError('コミュニティボイスを保存できませんでした。通信を確認してもう一度お試しください。');
+      sending.current = false;
+      setIsSending(false);
+    }
   }
 
   return (

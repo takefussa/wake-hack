@@ -237,6 +237,21 @@ export class WakeService {
     receiverId: string,
     localVoices: VoiceMessage[] = []
   ): Promise<CommunityAlarmVoicePreparation> {
+    // Supabase is the shared source of truth: use the newest matching
+    // Community Voice recorded by any user before considering an old local
+    // copy or the bundled fallback.
+    try {
+      const remoteVoice = await this.repository.findCommunityForRequest(
+        request,
+        receiverId
+      );
+      if (remoteVoice.storagePath && remoteVoice.uri) {
+        return { status: 'ready', voice: remoteVoice };
+      }
+    } catch (error) {
+      logDevelopmentError('wake.findCommunity', error);
+    }
+
     const matching = localVoices
       .filter((voice) => voice.type === 'community')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

@@ -36,6 +36,15 @@ export type VoiceMessageRow = {
   alarm_received_at: string | null;
 };
 
+export type CommunityVoiceRow = {
+  id: string;
+  sender_id: string;
+  storage_path: string;
+  duration_ms: number;
+  voice_style: string;
+  created_at: string;
+};
+
 export type ThanksMessageRow = {
   id: string;
   sender_id: string;
@@ -152,6 +161,19 @@ export type Database = {
           storage_path?: string;
           alarm_received_at?: string | null;
         };
+        Relationships: [];
+      };
+      community_voices: {
+        Row: CommunityVoiceRow;
+        Insert: {
+          id: string;
+          sender_id: string;
+          storage_path: string;
+          duration_ms: number;
+          voice_style: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
         Relationships: [];
       };
       thanks_messages: {

@@ -1,6 +1,12 @@
 import { getSupabaseClient } from '@/lib/supabase';
 import type { WakeVoiceRepository } from '@/repositories/interfaces/wake-voice-repository';
-import type { MorningRequest, VoiceMessage, VoiceMessageRow } from '@/types';
+import type {
+  CommunityVoiceRow,
+  MorningRequest,
+  VoiceMessage,
+  VoiceMessageRow,
+  VoiceStyle,
+} from '@/types';
 
 const voiceBucket = 'voice-messages';
 const signedUrlLifetimeSeconds = 15 * 60;
@@ -23,6 +29,19 @@ function mapReceivedVoice(row: WakeVoiceRow, signedUrl: string): VoiceMessage {
     storagePath: row.storage_path,
     durationMs: row.duration_ms,
     type: 'personal',
+    createdAt: row.created_at,
+  };
+}
+
+function mapCommunityVoice(row: CommunityVoiceRow, signedUrl: string): VoiceMessage {
+  return {
+    id: row.id,
+    senderId: row.sender_id,
+    uri: signedUrl,
+    storagePath: row.storage_path,
+    durationMs: row.duration_ms,
+    type: 'community',
+    voiceStyle: row.voice_style as VoiceStyle,
     createdAt: row.created_at,
   };
 }
@@ -90,10 +109,43 @@ export class SupabaseWakeVoiceRepository implements WakeVoiceRepository {
     return mapReceivedVoice(row, signedUrl.signedUrl);
   }
 
-  findCommunityForRequest(
+  async findCommunityForRequest(
     request: MorningRequest,
     receiverId: string
   ): Promise<VoiceMessage> {
-    return this.fallbackRepository.findCommunityForRequest(request, receiverId);
+    const supabase = getSupabaseClient();
+    const selectColumns = 'id,sender_id,storage_path,duration_ms,voice_style,created_at' as const;
+    let { data: voice, error } = await supabase
+      .from('community_voices')
+      .select(selectColumns)
+      .eq('voice_style', request.preferredVoiceStyle)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!voice) {
+      const fallback = await supabase
+        .from('community_voices')
+        .select(selectColumns)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      voice = fallback.data;
+      error = fallback.error;
+    }
+    if (error) throw error;
+    if (!voice) return this.fallbackRepository.findCommunityForRequest(request, receiverId);
+
+    const { data: signedUrl, error: signedUrlError } = await supabase.storage
+      .from(voiceBucket)
+      .createSignedUrl(voice.storage_path, signedUrlLifetimeSeconds);
+    if (signedUrlError) throw signedUrlError;
+
+    return {
+      ...mapCommunityVoice(voice, signedUrl.signedUrl),
+      receiverId,
+      morningRequestId: request.id,
+    };
   }
 }
