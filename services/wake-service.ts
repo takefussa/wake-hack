@@ -2,6 +2,7 @@ import { logDevelopmentError } from '@/lib/development-logger';
 import type { WakeVoiceRepository } from '@/repositories/interfaces/wake-voice-repository';
 import { MockWakeVoiceRepository } from '@/repositories/mock/mock-wake-voice-repository';
 import { SupabaseWakeVoiceRepository } from '@/repositories/supabase/supabase-wake-voice-repository';
+import { communityVoiceService } from '@/services/community-voice-service';
 import type { MorningRequest, VoiceMessage } from '@/types';
 
 export type WakeVoiceAssignmentMode = 'personal' | 'community' | 'community_fallback';
@@ -53,7 +54,7 @@ export class WakeService {
       }
     }
 
-    const communityVoice = await this.repository.findCommunityForRequest(
+    const communityVoice = await communityVoiceService.getCommunityWakeVoice(
       request,
       receiverId
     );

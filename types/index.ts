@@ -1,4 +1,5 @@
 export * from './database';
+export * from './community-voice';
 export * from './friendship';
 export * from './morning';
 export * from './prototype';

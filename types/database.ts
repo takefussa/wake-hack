@@ -33,6 +33,33 @@ export type VoiceMessageRow = {
   created_at: string;
 };
 
+export type CommunityVoiceRow = {
+  id: string;
+  sender_id: string;
+  audio_path: string;
+  duration_ms: number;
+  wake_style: string;
+  moderation_status: string;
+  play_count: number;
+  thanks_count: number;
+  created_at: string;
+};
+
+export type CommunityVoiceThanksRow = {
+  id: string;
+  voice_id: string;
+  user_id: string;
+  created_at: string;
+};
+
+export type CommunityVoiceDeliveryRow = {
+  id: string;
+  voice_id: string;
+  receiver_id: string;
+  delivered_at: string;
+  played_at: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -100,6 +127,55 @@ export type Database = {
         };
         Relationships: [];
       };
+      community_voices: {
+        Row: CommunityVoiceRow;
+        Insert: {
+          id: string;
+          sender_id: string;
+          audio_path: string;
+          duration_ms: number;
+          wake_style: string;
+          moderation_status?: string;
+          play_count?: number;
+          thanks_count?: number;
+          created_at?: string;
+        };
+        Update: {
+          audio_path?: string;
+          duration_ms?: number;
+          wake_style?: string;
+          moderation_status?: string;
+          play_count?: number;
+          thanks_count?: number;
+        };
+        Relationships: [];
+      };
+      community_voice_thanks: {
+        Row: CommunityVoiceThanksRow;
+        Insert: {
+          id?: string;
+          voice_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      community_voice_deliveries: {
+        Row: CommunityVoiceDeliveryRow;
+        Insert: {
+          id?: string;
+          voice_id: string;
+          receiver_id: string;
+          delivered_at?: string;
+          played_at?: string | null;
+        };
+        Update: {
+          delivered_at?: string;
+          played_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -113,6 +189,34 @@ export type Database = {
           p_duration_ms: number;
         };
         Returns: VoiceMessageRow[];
+      };
+      create_community_voice: {
+        Args: {
+          p_voice_id: string;
+          p_audio_path: string;
+          p_duration_ms: number;
+          p_wake_style: string;
+          p_moderation_status: string;
+        };
+        Returns: CommunityVoiceRow[];
+      };
+      assign_community_voice: {
+        Args: {
+          p_wake_style: string;
+        };
+        Returns: (CommunityVoiceRow & { delivery_id: string })[];
+      };
+      mark_community_voice_played: {
+        Args: {
+          p_delivery_id: string;
+        };
+        Returns: undefined;
+      };
+      thank_community_voice: {
+        Args: {
+          p_voice_id: string;
+        };
+        Returns: undefined;
       };
     };
   };

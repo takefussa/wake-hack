@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -17,6 +17,7 @@ import { legacyColors as colors, fonts, radii, spacing } from '@/constants/theme
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
+import { communityVoiceService } from '@/services/community-voice-service';
 import { thanksService } from '@/services/thanks-service';
 import { useAppStore } from '@/store/use-app-store';
 
@@ -32,7 +33,30 @@ export default function ThanksSendScreen() {
   const [text, setText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [remoteHasSentThanks, setRemoteHasSentThanks] = useState(false);
   const isSendingRef = useRef(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkCommunityThanks() {
+      if (!currentUser || assignedWakeVoice?.type !== 'community') {
+        setRemoteHasSentThanks(false);
+        return;
+      }
+
+      const hasThanks = await communityVoiceService.hasThanks(
+        assignedWakeVoice.sourceVoiceId ?? assignedWakeVoice.id,
+        currentUser.id
+      );
+      if (isMounted) setRemoteHasSentThanks(hasThanks);
+    }
+
+    void checkCommunityThanks();
+    return () => {
+      isMounted = false;
+    };
+  }, [assignedWakeVoice, currentUser]);
 
   if (!currentUser || !currentMorningRequest || !assignedWakeVoice || !wakeSession) {
     return <Redirect href="/morning/ready" />;
@@ -52,11 +76,13 @@ export default function ThanksSendScreen() {
   }
 
   const isPersonal = assignedWakeVoice.type === 'personal';
-  const hasSentThanks = thanksMessages.some(
-    (message) =>
-      message.senderId === currentUser.id &&
-      message.sourceVoiceMessageId === assignedWakeVoice.id
-  );
+  const hasSentThanks =
+    remoteHasSentThanks ||
+    thanksMessages.some(
+      (message) =>
+        message.senderId === currentUser.id &&
+        message.sourceVoiceMessageId === assignedWakeVoice.id
+    );
 
   if (hasSentThanks) {
     return <Redirect href={isPersonal ? '/friend/request' : '/(tabs)/connections'} />;
@@ -69,6 +95,12 @@ export default function ThanksSendScreen() {
     setIsSending(true);
     setError(null);
     try {
+      if (!isPersonal) {
+        await communityVoiceService.sendThanks(
+          assignedWakeVoice.sourceVoiceId ?? assignedWakeVoice.id,
+          currentUser.id
+        );
+      }
       const messages = await thanksService.send({
         senderId: currentUser.id,
         receiverId: isPersonal ? assignedWakeVoice.senderId : 'community',
