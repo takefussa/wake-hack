@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
 import type { PropsWithChildren } from 'react';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
@@ -333,6 +333,10 @@ export default function HomeScreen() {
   const isAlarmVoiceReady =
     alarmSchedule.state.status === 'scheduled' &&
     alarmSchedule.state.alarm.sound !== 'default';
+  const isRefreshingWakeVoice =
+    alarmSchedule.state.status === 'loading' ||
+    alarmSchedule.state.status === 'scheduling' ||
+    alarmSchedule.personalVoiceSyncStatus === 'checking';
 
   if (!currentUser) return <Redirect href="/onboarding" />;
 
@@ -346,6 +350,26 @@ export default function HomeScreen() {
 
   return (
     <NotebookBackground>
+      <View style={styles.homeHeader}>
+        <Pressable
+          accessibilityLabel="ホームを更新"
+          accessibilityRole="button"
+          disabled={isRefreshingWakeVoice}
+          hitSlop={8}
+          onPress={alarmSchedule.retry}
+          style={({ pressed }) => [
+            styles.refreshButton,
+            pressed && styles.refreshButtonPressed,
+          ]}
+          testID="home-refresh-wake-voice"
+        >
+          {isRefreshingWakeVoice ? (
+            <ActivityIndicator color="#30463E" size="small" />
+          ) : (
+            <Ionicons color="#30463E" name="refresh" size={21} />
+          )}
+        </Pressable>
+      </View>
       <MemoNote name={currentUser.nickname} />
       <BoomboxCard
         request={currentMorningRequest}
@@ -422,6 +446,9 @@ const styles = StyleSheet.create({
   paperLine: { height: 32, borderBottomWidth: 1, borderBottomColor: 'rgba(92,135,144,0.16)' },
   marginLine: { position: 'absolute', top: 0, bottom: 0, left: 28, width: 1, backgroundColor: 'rgba(194,94,74,0.28)' },
   content: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxxl, paddingBottom: spacing.xxxl, gap: spacing.xxl },
+  homeHeader: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
+  refreshButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D4C7B2', backgroundColor: '#FFFDF7', borderRadius: 10 },
+  refreshButtonPressed: { opacity: 0.65 },
   memoWrap: { alignSelf: 'center', width: '92%', transform: [{ rotate: '-1.5deg' }] },
   tape: { position: 'absolute', zIndex: 1, top: -10, left: '37%', width: 78, height: 22, backgroundColor: 'rgba(218,190,126,0.55)', transform: [{ rotate: '2deg' }] },
   memo: { paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, backgroundColor: '#FFF6C9', alignItems: 'center', ...shadows.surface },
