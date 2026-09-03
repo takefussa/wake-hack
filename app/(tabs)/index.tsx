@@ -137,7 +137,7 @@ function BoomboxCard({ request, isVoiceReady, onPress }: BoomboxCardProps) {
 
 type TomorrowRecipient = {
   profile: UserProfile;
-  request: MorningRequest | null;
+  request: MorningRequest;
 };
 
 type TomorrowWakeCardProps = {
@@ -155,6 +155,12 @@ function TomorrowWakeCard({
 }: TomorrowWakeCardProps) {
   const [recipients, setRecipients] = useState<TomorrowRecipient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -192,7 +198,16 @@ function TomorrowWakeCard({
             morningRequestService.getRequest(voice.morningRequestId as string),
           ]);
 
-          return profile ? { profile, request } : null;
+          // A request is no longer a tomorrow delivery once its alarm time
+          // has passed or the receiver has completed the wake session. The
+          // remote RLS policy also hides completed/assigned requests from the
+          // sender, so a missing request is intentionally treated as stale.
+          if (!profile || !request || request.status === 'completed') return null;
+          if (request.scheduledFor) {
+            const scheduledFor = new Date(request.scheduledFor).getTime();
+            if (Number.isFinite(scheduledFor) && scheduledFor <= now) return null;
+          }
+          return { profile, request };
         })
       );
 
@@ -203,11 +218,15 @@ function TomorrowWakeCard({
       setIsLoading(false);
     }
 
-    void loadRecipients();
+    void loadRecipients().catch(() => {
+      if (!isMounted) return;
+      setRecipients([]);
+      setIsLoading(false);
+    });
     return () => {
       isMounted = false;
     };
-  }, [currentUserId, givenVoices, receiverIds]);
+  }, [currentUserId, givenVoices, now, receiverIds]);
 
   return (
     <View style={styles.wakePlanWrap}>
@@ -485,7 +504,7 @@ const styles = StyleSheet.create({
   stepCopy: { color: paperColors.ink, fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 2 },
   recipientList: { paddingHorizontal: spacing.lg },
   recipientRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  recipientRowBorder: { borderTopWidth: 1, borderTopColor: paperColors.ink, borderStyle: 'dashed' },
+  recipientRowBorder: { borderTopWidth: 1, borderTopColor: paperColors.ink, borderStyle: 'solid' },
   recipientAvatar: { width: 46, height: 46, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 23, backgroundColor: paperColors.olive, alignItems: 'center', justifyContent: 'center' },
   recipientAvatarPressed: { opacity: 0.6, transform: [{ scale: 0.96 }] },
   recipientAvatarText: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 16, lineHeight: 21 },

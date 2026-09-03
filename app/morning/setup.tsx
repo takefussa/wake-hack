@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   },
 
   quickChoiceEditing: {
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderColor: paperColors.ruleBlue,
   },
 
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
     backgroundColor: paperColors.noteBlue,
     borderWidth: 1,
     borderColor: paperColors.ruleBlue,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderRadius: 3,
   },
 

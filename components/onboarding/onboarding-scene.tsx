@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     width: '86%',
     borderBottomWidth: 1,
     borderBottomColor: '#969B91',
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
   },
 
   voiceDuration: {
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
     left: 58,
     width: 150,
     borderTopWidth: 1.5,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderColor: '#52685F',
     transform: [{ rotate: '-50deg' }],
   },
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
     right: 58,
     width: 150,
     borderTopWidth: 1.5,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderColor: '#52685F',
     transform: [{ rotate: '50deg' }],
   },
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
     right: 105,
     bottom: 44,
     borderTopWidth: 1.5,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderColor: '#52685F',
   },
 

@@ -82,6 +82,8 @@ export function ProfilePhotoPicker({
 const styles = StyleSheet.create({
   container: {
     alignItems: 'flex-start',
+    flexShrink: 1,
+    maxWidth: '100%',
     gap: 14,
   },
   preview: {
@@ -104,6 +106,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
+    maxWidth: '100%',
     gap: spacing.sm,
   },
   pressed: {

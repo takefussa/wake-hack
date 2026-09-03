@@ -419,19 +419,18 @@ const styles = StyleSheet.create({
 
   profileImageRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
     gap: 18,
   },
 
   avatarCandidates: {
+    width: 96,
+    flexShrink: 0,
     alignItems: 'center',
-
     gap: 6,
-
     marginTop: 0,
-    marginRight: 4,
   },
 
   avatarHint: {
@@ -504,7 +503,7 @@ const styles = StyleSheet.create({
     backgroundColor: paperColors.paleYellow,
 
     borderWidth: 2,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderColor: paperColors.ink,
     borderRadius: 10,
     ...shadows.paper,
