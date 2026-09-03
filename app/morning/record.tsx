@@ -5,14 +5,14 @@ import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
+import { IconButton } from '@/components/common/icon-button';
 import { LoadingState } from '@/components/common/loading-state';
 import { Screen } from '@/components/common/screen';
-import { ScreenHeader } from '@/components/common/screen-header';
 import { BoomboxRecorder } from '@/components/voice/boombox-recorder';
 import { MicrophonePermissionGate } from '@/components/voice/microphone-permission-gate';
 import { RecordingRecipient } from '@/components/voice/recording-recipient';
 import { prototypeConfig } from '@/constants/config';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, fonts, paperColors, shadows, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { formatRecordingDuration } from '@/features/voice/format-duration';
 import { giveService } from '@/services/give-service';
@@ -186,7 +186,18 @@ export default function RecordVoiceScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         style={styles.scrollArea}>
-          <ScreenHeader onBack={() => void handleBack()} title="声を届ける" />
+          <View style={styles.navigation}>
+            <IconButton
+              icon="chevron-back"
+              label="この人の明日の朝へ戻る"
+              onPress={() => void handleBack()}
+            />
+          </View>
+
+          <View style={styles.heading}>
+            <AppText style={styles.title}>声を届ける</AppText>
+            <View pointerEvents="none" style={styles.titleUnderline} />
+          </View>
 
           {isLoading ? <LoadingState label="相手の朝を確認しています" /> : null}
 
@@ -221,6 +232,7 @@ export default function RecordVoiceScreen() {
               ) : (
                 <>
                   <View style={styles.statusCard}>
+                    <View pointerEvents="none" style={styles.blueTape} />
                     <AppText variant="caption" tone="muted">
                       この人の明日の朝へ
                     </AppText>
@@ -250,6 +262,8 @@ export default function RecordVoiceScreen() {
                           2秒以上録音すると送信できます
                         </AppText>
                         <AppButton
+                          buttonColor={paperColors.salmon}
+                          contentColor={paperColors.ink}
                           disabled={isSending}
                           icon="paper-plane-outline"
                           label={
@@ -260,6 +274,7 @@ export default function RecordVoiceScreen() {
                                 : 'この声を届ける'
                           }
                           onPress={() => void handleSend()}
+                          style={styles.sendButton}
                           testID="send-personal-voice"
                         />
                       </View>
@@ -315,16 +330,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
-    gap: spacing.md,
+    gap: spacing.lg,
+  },
+  navigation: {
+    minHeight: 44,
+    marginLeft: -spacing.md,
+    alignItems: 'flex-start',
+  },
+  heading: {
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  title: {
+    fontFamily: fonts?.handwritten,
+    color: paperColors.ink,
+    fontSize: 36,
+    lineHeight: 44,
+    textAlign: 'center',
+  },
+  titleUnderline: {
+    width: 180,
+    height: 7,
+    marginTop: spacing.xs,
+    borderRadius: 4,
+    backgroundColor: paperColors.ruleBlue,
+    opacity: 0.8,
+    transform: [{ rotate: '-1deg' }],
   },
   statusCard: {
+    position: 'relative',
     padding: spacing.lg,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    backgroundColor: paperColors.cardGray,
     alignItems: 'center',
     gap: spacing.xs,
+    ...shadows.paper,
+  },
+  blueTape: {
+    position: 'absolute',
+    top: -12,
+    left: '36%',
+    right: '36%',
+    zIndex: 2,
+    height: 23,
+    backgroundColor: paperColors.tape,
+    transform: [{ rotate: '1deg' }],
   },
   time: {
     marginTop: spacing.xs,
@@ -337,13 +389,23 @@ const styles = StyleSheet.create({
   },
   actionArea: {
     minHeight: 84,
+    padding: spacing.md,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.base,
     justifyContent: 'flex-start',
+    ...shadows.paper,
   },
   description: {
     textAlign: 'center',
   },
   sendSection: {
     gap: spacing.sm,
+  },
+  sendButton: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
   },
   sendNote: {
     textAlign: 'center',
