@@ -1,8 +1,9 @@
 import type { AvatarId } from '@/types/user';
+import type { ModerationStatus, VoiceSafetyCategory } from '@/types/voice-safety';
 
 export type WakeStyle = 'gentle' | 'cheerful' | 'strict' | 'funny';
 
-export type CommunityVoiceModerationStatus = 'pending' | 'approved' | 'rejected';
+export type CommunityVoiceModerationStatus = ModerationStatus;
 
 export type CommunityVoice = {
   id: string;
@@ -14,6 +15,9 @@ export type CommunityVoice = {
   durationMs: number;
   wakeStyle: WakeStyle;
   moderationStatus: CommunityVoiceModerationStatus;
+  moderationCategory?: VoiceSafetyCategory | null;
+  moderationReason?: string | null;
+  moderatedAt?: string | null;
   playCount: number;
   thanksCount: number;
   createdAt: string;

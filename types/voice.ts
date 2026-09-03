@@ -11,6 +11,10 @@ export type VoiceMessage = {
   storagePath?: string;
   durationMs: number;
   type: VoiceMessageType;
+  moderationStatus?: import('@/types/voice-safety').ModerationStatus;
+  moderationCategory?: import('@/types/voice-safety').VoiceSafetyCategory | null;
+  moderationReason?: string | null;
+  moderatedAt?: string | null;
   wakeStyle?: import('@/types/community-voice').WakeStyle;
   transcript?: string;
   createdAt: string;

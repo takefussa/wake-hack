@@ -5,7 +5,7 @@ import type { MorningRequest, VoiceMessage, VoiceMessageRow } from '@/types';
 const voiceBucket = 'voice-messages';
 const signedUrlLifetimeSeconds = 15 * 60;
 const voiceColumns =
-  'id,sender_id,receiver_id,morning_request_id,storage_path,duration_ms,type,created_at' as const;
+  'id,sender_id,receiver_id,morning_request_id,storage_path,duration_ms,type,moderation_status,moderation_category,moderation_reason,moderated_at,created_at' as const;
 
 function mapReceivedVoice(row: VoiceMessageRow, signedUrl: string): VoiceMessage {
   if (row.type !== 'personal') {
@@ -21,6 +21,10 @@ function mapReceivedVoice(row: VoiceMessageRow, signedUrl: string): VoiceMessage
     storagePath: row.storage_path,
     durationMs: row.duration_ms,
     type: 'personal',
+    moderationStatus: row.moderation_status as VoiceMessage['moderationStatus'],
+    moderationCategory: row.moderation_category as VoiceMessage['moderationCategory'],
+    moderationReason: row.moderation_reason,
+    moderatedAt: row.moderated_at,
     createdAt: row.created_at,
   };
 }
@@ -39,6 +43,7 @@ export class SupabaseWakeVoiceRepository implements WakeVoiceRepository {
       .eq('receiver_id', receiverId)
       .eq('morning_request_id', request.id)
       .eq('type', 'personal')
+      .eq('moderation_status', 'approved')
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle();

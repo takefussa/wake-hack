@@ -171,7 +171,9 @@ export default function RecordVoiceScreen() {
         params: { requestId: request.id },
       });
     } catch {
-      setPageError('声を届けられませんでした。もう一度お試しください。');
+      setPageError(
+        'Voiceを送信できませんでした。相手が気持ちよく朝を迎えられる内容に変更して、もう一度お試しください。'
+      );
       isSendingRef.current = false;
       setIsSending(false);
     }
@@ -254,7 +256,7 @@ export default function RecordVoiceScreen() {
                           icon="paper-plane-outline"
                           label={
                             isSending
-                              ? '届けています…'
+                              ? 'Voiceを確認しています...'
                               : isTooShort
                                 ? '2秒以上録音してください'
                                 : 'この声を届ける'

@@ -30,6 +30,10 @@ export type VoiceMessageRow = {
   storage_path: string;
   duration_ms: number;
   type: string;
+  moderation_status: string;
+  moderation_category: string | null;
+  moderation_reason: string | null;
+  moderated_at: string | null;
   created_at: string;
 };
 
@@ -40,6 +44,9 @@ export type CommunityVoiceRow = {
   duration_ms: number;
   wake_style: string;
   moderation_status: string;
+  moderation_category: string | null;
+  moderation_reason: string | null;
+  moderated_at: string | null;
   play_count: number;
   thanks_count: number;
   created_at: string;
@@ -120,10 +127,18 @@ export type Database = {
           storage_path: string;
           duration_ms: number;
           type?: string;
+          moderation_status?: string;
+          moderation_category?: string | null;
+          moderation_reason?: string | null;
+          moderated_at?: string | null;
           created_at?: string;
         };
         Update: {
           storage_path?: string;
+          moderation_status?: string;
+          moderation_category?: string | null;
+          moderation_reason?: string | null;
+          moderated_at?: string | null;
         };
         Relationships: [];
       };
@@ -136,6 +151,9 @@ export type Database = {
           duration_ms: number;
           wake_style: string;
           moderation_status?: string;
+          moderation_category?: string | null;
+          moderation_reason?: string | null;
+          moderated_at?: string | null;
           play_count?: number;
           thanks_count?: number;
           created_at?: string;
@@ -145,6 +163,9 @@ export type Database = {
           duration_ms?: number;
           wake_style?: string;
           moderation_status?: string;
+          moderation_category?: string | null;
+          moderation_reason?: string | null;
+          moderated_at?: string | null;
           play_count?: number;
           thanks_count?: number;
         };
@@ -187,6 +208,9 @@ export type Database = {
           p_sender_morning_request_id: string;
           p_storage_path: string;
           p_duration_ms: number;
+          p_moderation_status?: string;
+          p_moderation_category?: string;
+          p_moderation_reason?: string | null;
         };
         Returns: VoiceMessageRow[];
       };
@@ -211,6 +235,15 @@ export type Database = {
           p_delivery_id: string;
         };
         Returns: undefined;
+      };
+      update_community_voice_moderation: {
+        Args: {
+          p_voice_id: string;
+          p_moderation_status: string;
+          p_moderation_category?: string | null;
+          p_moderation_reason?: string | null;
+        };
+        Returns: CommunityVoiceRow[];
       };
       thank_community_voice: {
         Args: {

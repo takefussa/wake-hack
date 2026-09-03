@@ -1,10 +1,10 @@
 import { avatarOptions } from '@/constants/options';
 import { isWakeStyle } from '@/constants/community-voice';
-import { checkCommunityVoiceSafety } from '@/features/community-voice/check-community-voice-safety';
 import { logDevelopmentError } from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { CommunityVoiceRepository } from '@/repositories/interfaces/community-voice-repository';
 import { authService } from '@/services/auth-service';
+import { voiceSafetyService } from '@/services/voice-safety-service';
 import type {
   AvatarId,
   CommunityVoice,
@@ -20,7 +20,7 @@ import { File } from 'expo-file-system';
 const communityVoiceBucket = 'community-voices';
 const signedUrlLifetimeSeconds = 15 * 60;
 const communityVoiceColumns =
-  'id,sender_id,audio_path,duration_ms,wake_style,moderation_status,play_count,thanks_count,created_at' as const;
+  'id,sender_id,audio_path,duration_ms,wake_style,moderation_status,moderation_category,moderation_reason,moderated_at,play_count,thanks_count,created_at' as const;
 
 function isAvatarId(value: string): value is AvatarId {
   return avatarOptions.some((option) => option.id === value);
@@ -44,6 +44,9 @@ function mapCommunityVoiceRow(row: CommunityVoiceRow, uri: string): CommunityVoi
       row.moderation_status === 'rejected'
         ? row.moderation_status
         : 'pending',
+    moderationCategory: row.moderation_category as CommunityVoice['moderationCategory'],
+    moderationReason: row.moderation_reason,
+    moderatedAt: row.moderated_at,
     playCount: row.play_count,
     thanksCount: row.thanks_count,
     createdAt: row.created_at,
@@ -92,7 +95,6 @@ export class SupabaseCommunityVoiceRepository
       throw new Error('The local recording file is empty');
     }
 
-    const moderationStatus = await checkCommunityVoiceSafety(input);
     const supabase = getSupabaseClient();
     const { error: uploadError } = await supabase.storage
       .from(communityVoiceBucket)
@@ -111,18 +113,53 @@ export class SupabaseCommunityVoiceRepository
           p_audio_path: audioPath,
           p_duration_ms: input.durationMs,
           p_wake_style: input.wakeStyle,
-          p_moderation_status: moderationStatus,
+          p_moderation_status: 'pending',
         })
         .single();
 
       if (error) throw error;
-      return mapCommunityVoiceRow(data, input.uri);
+
+      const checkResult = await voiceSafetyService.checkVoiceSafety({
+        bucket: communityVoiceBucket,
+        path: audioPath,
+        voiceKind: 'community',
+        durationMs: input.durationMs,
+        voiceId,
+      });
+
+      if (!checkResult.safe) {
+        const { error: rejectedCleanupError } = await supabase.storage
+          .from(communityVoiceBucket)
+          .remove([audioPath]);
+        if (rejectedCleanupError) {
+          logDevelopmentError('communityVoice.rejected.cleanup', rejectedCleanupError);
+        }
+        throw new Error('Community voice was rejected by safety check');
+      }
+
+      const { data: moderatedVoice, error: moderationError } = await supabase
+        .from('community_voices')
+        .select(communityVoiceColumns)
+        .eq('id', voiceId)
+        .eq('moderation_status', 'approved')
+        .single();
+
+      if (moderationError) throw moderationError;
+      return mapCommunityVoiceRow(moderatedVoice, input.uri);
     } catch (error) {
-      const { error: cleanupError } = await supabase.storage
-        .from(communityVoiceBucket)
-        .remove([audioPath]);
-      if (cleanupError) {
-        logDevelopmentError('communityVoice.upload.cleanup', cleanupError);
+      const { data: currentVoice } = await supabase
+        .from('community_voices')
+        .select('moderation_status')
+        .eq('id', voiceId)
+        .maybeSingle();
+
+      if (!currentVoice) {
+        const { error: cleanupError } = await supabase.storage
+          .from(communityVoiceBucket)
+          .remove([audioPath]);
+        if (cleanupError) {
+          logDevelopmentError('communityVoice.upload.cleanup', cleanupError);
+        }
       }
       throw error;
     }
@@ -213,15 +250,19 @@ export class SupabaseCommunityVoiceRepository
 
     if (error) throw error;
 
-    return Promise.all(
+    const voices = await Promise.all(
       data.map(async (row) => {
         const { data: signedUrl, error: signedUrlError } = await supabase.storage
           .from(communityVoiceBucket)
           .createSignedUrl(row.audio_path, signedUrlLifetimeSeconds);
 
-        if (signedUrlError) throw signedUrlError;
+        if (signedUrlError) {
+          logDevelopmentError('communityVoice.history.signedUrl', signedUrlError);
+          return null;
+        }
         return mapCommunityVoiceRow(row, signedUrl.signedUrl);
       })
     );
+    return voices.filter((voice): voice is CommunityVoice => voice !== null);
   }
 }
