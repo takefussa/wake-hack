@@ -1,4 +1,3 @@
-import * as Crypto from 'expo-crypto';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
@@ -7,14 +6,13 @@ import { logDevelopmentError } from '@/lib/development-logger';
 import { alarmService } from '@/services/alarm-service';
 import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
-import type { VoiceMessage, WakeSession } from '@/types';
 
 export function useAlarmStopFlow(enabled: boolean) {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore(
     (state) => state.currentMorningRequest
   );
-  const startWakeSession = useAppStore((state) => state.startWakeSession);
+  const completeWakeSession = useAppStore((state) => state.completeWakeSession);
   const isConsumingRef = useRef(false);
 
   useEffect(() => {
@@ -24,44 +22,24 @@ export function useAlarmStopFlow(enabled: boolean) {
       if (isConsumingRef.current) return;
       isConsumingRef.current = true;
       try {
-        const alarm = await alarmService.consumeStoppedAlarm();
+        const stopped = await alarmService.consumeStoppedAlarm();
         if (
-          !alarm ||
-          alarm.morningRequestId !== currentMorningRequest!.id ||
-          alarm.sound === 'default' ||
-          !alarm.voiceMessageId ||
-          !alarm.voiceSenderId
+          !stopped ||
+          stopped.morningRequestId !== currentMorningRequest!.id ||
+          stopped.sound === 'default'
         ) {
           return;
         }
 
-        const voice: VoiceMessage = {
-          id: alarm.voiceMessageId,
-          senderId: alarm.voiceSenderId,
-          receiverId: currentUser!.id,
-          morningRequestId: currentMorningRequest!.id,
-          uri: '',
-          durationMs: 1,
-          type: alarm.sound,
-          createdAt: new Date().toISOString(),
-        };
-        const session: WakeSession = {
-          id: Crypto.randomUUID(),
-          userId: currentUser!.id,
-          morningRequestId: currentMorningRequest!.id,
-          voiceMessageId: voice.id,
-          alarmAt: currentMorningRequest!.wakeAt,
-          scheduledFor: alarm.scheduledFor,
-          wokeAt: new Date().toISOString(),
-          missionCompleted: true,
-          isDemo: false,
-          status: 'completed',
-        };
-
-        if (startWakeSession(voice, session)) {
-          void wakeService.completeWakeSession(session);
-          router.replace('/wake/complete');
+        // The store already holds the real assignedWakeVoice/wakeSession set
+        // when the alarm was originally scheduled (Personal or Community,
+        // with a real playable uri). Reuse that instead of fabricating a
+        // placeholder VoiceMessage, so /wake/alarm can actually play it back.
+        const completed = completeWakeSession();
+        if (completed) {
+          void wakeService.completeWakeSession(completed);
         }
+        router.replace({ pathname: '/wake/alarm', params: { review: '1' } });
       } catch (error) {
         logDevelopmentError('alarmStopFlow.consume', error);
       } finally {
@@ -74,5 +52,5 @@ export function useAlarmStopFlow(enabled: boolean) {
       if (state === 'active') void consumeStop();
     });
     return () => subscription.remove();
-  }, [currentMorningRequest, currentUser, enabled, startWakeSession]);
+  }, [completeWakeSession, currentMorningRequest, currentUser, enabled]);
 }
