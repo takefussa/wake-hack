@@ -628,7 +628,12 @@ export default function ConnectionsScreen() {
 
                     <View style={styles.cassetteAttributeOverlay}>
                       <View pointerEvents="none" style={styles.cassetteAttributeTape} />
-                      <AppText numberOfLines={1} style={styles.cassetteAttributeValue}>
+                      <AppText
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.55}
+                        numberOfLines={1}
+                        style={styles.cassetteAttributeValue}
+                      >
                         {user.userType}
                       </AppText>
                     </View>
@@ -1040,12 +1045,14 @@ const styles = StyleSheet.create({
 
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 4,
   },
 
   cassetteName: {
+    maxWidth: '100%',
     fontFamily: fontFamilyName,
     color: '#2E2E2E',
-    fontSize: 22,
+    fontSize: 20,
   },
 
   // ラベル下部にある帯にちょうど収まる位置に属性を表示
@@ -1062,9 +1069,10 @@ const styles = StyleSheet.create({
   },
 
   cassetteAttributeValue: {
+    maxWidth: '100%',
     fontFamily: fontFamilyName,
     color: '#2E2E2E',
-    fontSize: 13,
+    fontSize: 12,
     textAlign: 'center',
   },
 
@@ -1196,7 +1204,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFDF8',
 
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderColor: paperColors.ink,
   },
 

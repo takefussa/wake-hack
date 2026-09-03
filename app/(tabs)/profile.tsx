@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   statLabel: { color: paperColors.ink, fontSize: 11, lineHeight: 16 },
   privacyWrap: { position: 'relative', transform: [{ rotate: '-0.4deg' }] },
   privacyTape: { position: 'absolute', zIndex: 1, top: -8, left: 24, width: 68, height: 18, backgroundColor: paperColors.tape, transform: [{ rotate: '-2deg' }] },
-  privacy: { padding: spacing.lg, borderWidth: 2, borderColor: paperColors.ink, borderStyle: 'dashed', borderRadius: 10, backgroundColor: paperColors.clockGray, flexDirection: 'row', alignItems: 'center', gap: spacing.md, ...shadows.paper },
+  privacy: { padding: spacing.lg, borderWidth: 2, borderColor: paperColors.ink, borderStyle: 'solid', borderRadius: 10, backgroundColor: paperColors.clockGray, flexDirection: 'row', alignItems: 'center', gap: spacing.md, ...shadows.paper },
   privacyIcon: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 21, backgroundColor: paperColors.olive },
   privacyCopy: { flex: 1 },
   privacyTitle: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 14, lineHeight: 20 },
