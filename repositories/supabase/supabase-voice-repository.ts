@@ -1,6 +1,6 @@
 import * as Crypto from 'expo-crypto';
-import { File } from 'expo-file-system';
 
+import { readLocalAudioData } from '@/features/voice/read-local-audio-data';
 import { logDevelopmentError } from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { VoiceRepository } from '@/repositories/interfaces/voice-repository';
@@ -68,22 +68,8 @@ export class SupabaseVoiceRepository
       `personal/${input.receiverId}/` +
       `${authenticatedUserId}/${voiceId}.m4a`;
 
-    const file = new File(input.uri);
-
-    if (!file.exists) {
-      throw new Error(
-        'The local recording file does not exist'
-      );
-    }
-
     const audioData =
-      await file.arrayBuffer();
-
-    if (audioData.byteLength === 0) {
-      throw new Error(
-        'The local recording file is empty'
-      );
-    }
+      await readLocalAudioData(input.uri);
 
     const supabase =
       getSupabaseClient();
@@ -93,7 +79,7 @@ export class SupabaseVoiceRepository
         .from(voiceBucket)
         .upload(storagePath, audioData, {
           cacheControl: '3600',
-          contentType: 'audio/mp4',
+          contentType: 'audio/m4a',
           upsert: false,
         });
 
