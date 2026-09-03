@@ -9,6 +9,7 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
+import { File } from 'expo-file-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
@@ -166,6 +167,10 @@ export function useVoiceRecorder() {
       const uri = recorder.uri ?? status.url;
       if (!uri) {
         throw new Error('Recording URI unavailable');
+      }
+      const recordingFile = new File(uri);
+      if (!recordingFile.exists || recordingFile.size <= 4_096) {
+        throw new Error('Recording file contains no audio data');
       }
 
       setRecording({

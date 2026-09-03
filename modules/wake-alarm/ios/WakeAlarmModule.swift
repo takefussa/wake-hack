@@ -434,6 +434,10 @@ public final class WakeAlarmModule: Module {
       guard (attributes[.size] as? NSNumber)?.intValue ?? 0 > 0 else {
         throw WakeAlarmFileError.audioConversionFailed
       }
+      let preparedAudio = try AVAudioFile(forReading: destinationURL)
+      guard preparedAudio.length > 0 else {
+        throw WakeAlarmFileError.audioConversionFailed
+      }
       return soundFileName
     } catch {
       try? FileManager.default.removeItem(at: destinationURL)
