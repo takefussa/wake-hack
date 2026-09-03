@@ -19,6 +19,7 @@
 15. SQL Editorで`migrations/014_community_voice_delivery.sql`を実行する（Community VoiceをSupabaseへ保存し、実機アラームで再生するため）
 16. 既に`community_voices`テーブルがある環境では、続けて`migrations/015_upgrade_existing_community_voices.sql`を実行する（既存列の移行に加え、Community Voice用StorageのRLSポリシーも追加します。今回の`new row violates row-level security policy`が出た環境では必ず実行してください）
 17. `migrations/016_allow_timeline_personal_voice.sql`を実行する（タイムラインから送るPersonal Voiceで、送信者側の朝リクエスト状態を不要にし、Community Voice選択済みの受信リクエストにも送信できるようにします）
+18. `migrations/017_remove_overloaded_personal_voice.sql`を実行する（`PGRST203`の原因となる9引数版`send_personal_voice`を削除します）
 
 実行後、次を確認します。
 
