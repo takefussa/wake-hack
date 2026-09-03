@@ -8,7 +8,6 @@ import {
   Animated,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Platform,
   Pressable,
   ScrollView,
   StyleProp,
@@ -21,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
 import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
-import { voiceStyleOptions } from '@/constants/options';
+import { wakeStyleOptions, type WakeStyleOption } from '@/constants/community-voice';
 import { fontFamilyName, paperColors, shadows } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { isSupabaseUuid } from '@/lib/identifiers';
@@ -60,18 +59,6 @@ const CASSETTE_IMAGE_BY_VOICE_STYLE: Record<VoiceStyle, number> = {
   面白く愉快に: require('../../assets/images/cassette-icon-yellow.png'),
 };
 const CASSETTE_MARGIN_BOTTOM = 1;
-// カセットが浮いて見えるよう、それぞれに薄い影をつける
-const cassetteShadow =
-  Platform.select({
-    web: { boxShadow: '0 4px 10px rgba(23, 32, 51, 0.22)' },
-    default: {
-      shadowColor: '#172033',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.22,
-      shadowRadius: 10,
-      elevation: 6,
-    },
-  }) ?? {};
 const PAGE_CONTENT_HORIZONTAL_PADDING = 24;
 // カセットだけページ余白より少しはみ出させて大きく見せるための量
 const CASSETTE_HORIZONTAL_BLEED = 12;
@@ -82,7 +69,7 @@ const CASSETTE_MIN_OPACITY = 0.4;
 const CASSETTE_SCALE_PLATEAU_RATIO = 0.3;
 const CASSETTE_OPACITY_PLATEAU_RATIO = 0.6;
 
-function VoiceOptionsPanel({ options }: { options: readonly string[] }) {
+function VoiceOptionsPanel({ options }: { options: readonly WakeStyleOption[] }) {
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -112,14 +99,24 @@ function VoiceOptionsPanel({ options }: { options: readonly string[] }) {
     >
       {options.map((option) => (
         <Pressable
-          key={option}
+          key={option.id}
           style={({ pressed }) => [
             styles.voiceOptionButton,
             pressed && styles.pressed,
           ]}
-          onPress={() => router.push({ pathname: '/community/record', params: { voiceStyle: option } })}
+          onPress={() =>
+            router.push({
+              pathname: '/community-voice/create',
+              params: { wakeStyle: option.id },
+            })
+          }
         >
-          <AppText style={styles.voiceOptionText}>{option}</AppText>
+          <View style={styles.voiceOptionCopy}>
+            <AppText style={styles.voiceOptionText}>{option.label}</AppText>
+            <AppText style={styles.voiceOptionDescription}>
+              {option.description}
+            </AppText>
+          </View>
 
           <Ionicons name="chevron-forward" size={18} color="#30463E" />
         </Pressable>
@@ -720,9 +717,23 @@ export default function ConnectionsScreen() {
               </Pressable>
 
               {showVoiceOptions ? (
-                <VoiceOptionsPanel options={voiceStyleOptions} />
+                <VoiceOptionsPanel options={wakeStyleOptions} />
               ) : null}
             </View>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/community-voice/history')}
+              style={({ pressed }) => [
+                styles.communityHistoryButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Ionicons name="stats-chart-outline" size={18} color={paperColors.ink} />
+              <AppText style={styles.communityHistoryText}>
+                投稿履歴と実績を見る
+              </AppText>
+            </Pressable>
 
             <View style={styles.communityHint}>
               <Ionicons
@@ -929,7 +940,6 @@ const styles = StyleSheet.create({
   cassetteTouchable: {
     marginBottom: CASSETTE_MARGIN_BOTTOM,
     marginHorizontal: -CASSETTE_HORIZONTAL_BLEED,
-    ...cassetteShadow,
   },
 
   thanksSection: {
@@ -1217,9 +1227,10 @@ const styles = StyleSheet.create({
   },
 
   voiceOptionButton: {
-    minHeight: 50,
+    minHeight: 62,
 
     paddingHorizontal: 16,
+    paddingVertical: 8,
 
     flexDirection: 'row',
     alignItems: 'center',
@@ -1235,5 +1246,37 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyName,
     color: '#30463E',
     fontSize: 14,
+  },
+
+  voiceOptionCopy: {
+    flex: 1,
+    gap: 2,
+  },
+
+  voiceOptionDescription: {
+    fontFamily: fontFamilyName,
+    color: '#6D736E',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+
+  communityHistoryButton: {
+    marginTop: 15,
+    marginHorizontal: 9,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1,
+    borderColor: paperColors.ink,
+  },
+
+  communityHistoryText: {
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 13,
   },
 });

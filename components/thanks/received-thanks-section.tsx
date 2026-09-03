@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 
 import { AppText } from '@/components/common/app-text';
 import { ThanksInboxRow } from '@/components/thanks/thanks-inbox-row';
@@ -49,7 +49,8 @@ export function ReceivedThanksSection({
   if (!isLoading && items.length === 0) return null;
   const shownItems = preview ? items.slice(0, 1) : items;
 
-  const openHistory = preview ? () => router.push('/thanks/history') : undefined;
+  const thanksHistoryHref = '/thanks/history' as Href;
+  const openHistory = preview ? () => router.push(thanksHistoryHref) : undefined;
 
   return (
     <View style={styles.section} testID="home-received-thanks">
