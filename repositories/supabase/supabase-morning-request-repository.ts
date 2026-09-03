@@ -15,7 +15,7 @@ import type {
 } from '@/types';
 
 const morningRequestColumns =
-  'id,user_id,wake_at,schedules,mood,preferred_voice_style,personal_eligible,voice_count,status,created_at,updated_at' as const;
+  'id,user_id,wake_at,schedules,mood,preferred_voice_style,voice_request_note,personal_eligible,voice_count,status,created_at,updated_at' as const;
 
 const requestStatuses: MorningRequestStatus[] = [
   'draft',
@@ -74,6 +74,7 @@ function mapMorningRequestRow(row: MorningRequestRow): MorningRequest {
     schedules,
     mood: row.mood,
     preferredVoiceStyle: row.preferred_voice_style,
+    voiceRequestNote: row.voice_request_note ?? undefined,
     personalEligible: row.personal_eligible,
     status: row.status,
     voiceCount: row.voice_count,
@@ -108,6 +109,7 @@ export class SupabaseMorningRequestRepository
         schedules: request.schedules,
         mood: request.mood,
         preferred_voice_style: request.preferredVoiceStyle,
+        voice_request_note: request.voiceRequestNote ?? null,
         personal_eligible: false,
         voice_count: 0,
         status: 'open',
@@ -134,6 +136,7 @@ export class SupabaseMorningRequestRepository
         schedules: input.schedules,
         mood: input.mood,
         preferred_voice_style: input.preferredVoiceStyle,
+        voice_request_note: input.voiceRequestNote ?? null,
         updated_at: now,
       })
       .eq('id', id)

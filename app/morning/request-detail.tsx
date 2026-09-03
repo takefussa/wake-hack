@@ -192,7 +192,14 @@ export default function RequestDetailScreen() {
             <View pointerEvents="none" style={[styles.blueTape, styles.detailsTape]} />
             <DetailRow label="明日の予定" value={request.schedules.join('・')} />
             <DetailRow label="今の気分" value={request.mood} />
-            <DetailRow label="希望する声" last value={request.preferredVoiceStyle} />
+            <DetailRow
+              label="希望する声"
+              last={!request.voiceRequestNote}
+              value={request.preferredVoiceStyle}
+            />
+            {request.voiceRequestNote ? (
+              <DetailRow label="一言" last value={request.voiceRequestNote} />
+            ) : null}
           </View>
 
           <AppButton

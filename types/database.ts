@@ -17,6 +17,7 @@ export type MorningRequestRow = {
   schedules: string[];
   mood: string;
   preferred_voice_style: string;
+  voice_request_note: string | null;
   personal_eligible: boolean;
   voice_count: number;
   status: string;
@@ -151,6 +152,7 @@ export type Database = {
           schedules: string[];
           mood: string;
           preferred_voice_style: string;
+          voice_request_note?: string | null;
           personal_eligible?: boolean;
           voice_count?: number;
           status?: string;
@@ -162,6 +164,7 @@ export type Database = {
           schedules?: string[];
           mood?: string;
           preferred_voice_style?: string;
+          voice_request_note?: string | null;
           personal_eligible?: boolean;
           voice_count?: number;
           status?: string;
@@ -328,9 +331,6 @@ export type Database = {
           p_sender_morning_request_id: string;
           p_storage_path: string;
           p_duration_ms: number;
-          p_moderation_status?: string;
-          p_moderation_category?: string;
-          p_moderation_reason?: string | null;
         };
         Returns: VoiceMessageRow[];
       };

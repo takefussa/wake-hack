@@ -25,6 +25,7 @@ export type MorningRequest = {
   schedules: ScheduleType[];
   mood: MoodType;
   preferredVoiceStyle: VoiceStyle;
+  voiceRequestNote?: string;
   personalEligible: boolean;
   status: MorningRequestStatus;
   voiceCount: number;
@@ -37,5 +38,5 @@ export type MorningRequestDraft = {
 
 export type CreateMorningRequestInput = Pick<
   MorningRequest,
-  'wakeAt' | 'schedules' | 'mood' | 'preferredVoiceStyle'
+  'wakeAt' | 'schedules' | 'mood' | 'preferredVoiceStyle' | 'voiceRequestNote'
 >;

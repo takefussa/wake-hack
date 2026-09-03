@@ -10,7 +10,7 @@ import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { LoadingState } from '@/components/common/loading-state';
 import { Screen } from '@/components/common/screen';
-import { colors, radii, spacing } from '@/constants/theme';
+import { paperColors, shadows, spacing } from '@/constants/theme';
 import { isSupabaseUuid } from '@/lib/identifiers';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
@@ -19,8 +19,13 @@ import { useAppStore } from '@/store/use-app-store';
 import type { UserProfile } from '@/types';
 
 export default function GiveCompleteScreen() {
-  const params = useLocalSearchParams<{ requestId?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    requestId?: string | string[];
+    preview?: string | string[];
+  }>();
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
+  const preview = Array.isArray(params.preview) ? params.preview[0] : params.preview;
+  const isPreview = preview === '1';
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
@@ -51,6 +56,7 @@ export default function GiveCompleteScreen() {
           setError('相手の情報を読み込めませんでした。');
           return;
         }
+        setError(null);
         setRecipient(nextRecipient);
       } catch {
         if (isMounted) {
@@ -100,7 +106,7 @@ export default function GiveCompleteScreen() {
   if (!currentMorningRequest) {
     return <Redirect href="/morning/setup" />;
   }
-  if (!requestId || !completedVoice) {
+  if (!requestId || (!completedVoice && !isPreview)) {
     return <Redirect href="/(tabs)/connections" />;
   }
 
@@ -116,7 +122,7 @@ export default function GiveCompleteScreen() {
 
       {isLoading ? <LoadingState label="声を届けています" /> : null}
 
-      {!isLoading && error ? (
+      {!isLoading && error && !recipient ? (
         <View style={styles.state}>
           <AppText variant="bodyMedium">{error}</AppText>
           <AppButton
@@ -132,8 +138,9 @@ export default function GiveCompleteScreen() {
       {!isLoading && recipient ? (
         <>
           <View style={styles.hero}>
+            <View pointerEvents="none" style={styles.heroTape} />
             <View style={styles.completeIcon}>
-              <Ionicons name="checkmark" color={colors.textInverse} size={30} />
+              <Ionicons name="checkmark" color={paperColors.ink} size={30} />
             </View>
             <Avatar
               avatarId={recipient.avatarId}
@@ -145,6 +152,7 @@ export default function GiveCompleteScreen() {
               <AppText variant="screenTitle" style={styles.centeredText}>
                 声を届けました
               </AppText>
+              <View pointerEvents="none" style={styles.titleUnderline} />
               <AppText variant="bodyMedium" style={styles.centeredText}>
                 {recipient.nickname}さんへ
               </AppText>
@@ -161,7 +169,7 @@ export default function GiveCompleteScreen() {
               testID="personal-voice-delivery-status"
             >
               <Ionicons
-                color={alarmReceivedAt ? colors.success : colors.textSecondary}
+                color={paperColors.ink}
                 name={alarmReceivedAt ? 'checkmark-circle' : 'time-outline'}
                 size={21}
               />
@@ -182,19 +190,24 @@ export default function GiveCompleteScreen() {
 
           <View style={styles.actions}>
             <AppButton
+              buttonColor={paperColors.salmon}
+              contentColor={paperColors.ink}
               icon="people-outline"
               label="もう1人応援する"
               onPress={() =>
                 navigateOnce(() => router.replace('/(tabs)/connections'))
               }
+              style={styles.primaryButton}
               testID="give-another"
             />
             <AppButton
+              buttonColor={paperColors.base}
+              contentColor={paperColors.ink}
               label="明日の準備へ戻る"
               onPress={() =>
                 navigateOnce(() => router.replace('/morning/summary'))
               }
-              variant="secondary"
+              style={styles.secondaryButton}
             />
           </View>
         </>
@@ -210,23 +223,49 @@ const styles = StyleSheet.create({
     gap: spacing.xxxl,
   },
   hero: {
+    position: 'relative',
     flex: 1,
     minHeight: 420,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xl,
+    padding: spacing.xl,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.base,
+    ...shadows.paper,
+  },
+  heroTape: {
+    position: 'absolute',
+    zIndex: 2,
+    top: -11,
+    left: '39%',
+    width: 82,
+    height: 22,
+    backgroundColor: paperColors.tape,
+    transform: [{ rotate: '1deg' }],
   },
   completeIcon: {
     width: 56,
     height: 56,
-    borderRadius: radii.avatar,
-    backgroundColor: colors.success,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 28,
+    backgroundColor: paperColors.olive,
     alignItems: 'center',
     justifyContent: 'center',
   },
   copy: {
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  titleUnderline: {
+    width: 190,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: paperColors.ruleBlue,
+    transform: [{ rotate: '-1deg' }],
   },
   deliveryStatus: {
     width: '100%',
@@ -235,12 +274,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 10,
+    backgroundColor: paperColors.noteBlue,
   },
   deliveryStatusReceived: {
-    borderColor: colors.success,
+    backgroundColor: paperColors.olive,
   },
   deliveryCopy: {
     flex: 1,
@@ -252,11 +293,26 @@ const styles = StyleSheet.create({
   actions: {
     gap: spacing.sm,
   },
+  primaryButton: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    ...shadows.paper,
+  },
+  secondaryButton: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+  },
   state: {
     flex: 1,
     minHeight: 360,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.lg,
+    padding: spacing.xl,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 16,
+    backgroundColor: paperColors.base,
+    ...shadows.paper,
   },
 });

@@ -1,7 +1,7 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppButton } from '@/components/common/app-button';
@@ -136,6 +136,17 @@ export default function RecordVoiceScreen() {
     goBackOrReplace('/(tabs)/connections');
   }
 
+  async function handleSkip() {
+    if (isLeavingRef.current || isSendingRef.current || !requestId) return;
+
+    isLeavingRef.current = true;
+    await recorder.leaveRecording();
+    router.replace({
+      pathname: '/morning/give-complete',
+      params: { requestId, preview: '1' },
+    });
+  }
+
   async function handleSend() {
     if (recorder.recording && isTooShort) {
       setPageError('声は2秒以上必要です。もう一度、少し長めに録音してください。');
@@ -195,6 +206,19 @@ export default function RecordVoiceScreen() {
               label="この人の明日の朝へ戻る"
               onPress={() => void handleBack()}
             />
+            <Pressable
+              accessibilityLabel="声の送信をスキップして次へ"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => void handleSkip()}
+              style={({ pressed }) => [
+                styles.skipButton,
+                pressed && styles.skipButtonPressed,
+              ]}
+            >
+              <AppText style={styles.skipText}>スキップ</AppText>
+              <View pointerEvents="none" style={styles.skipUnderline} />
+            </Pressable>
           </View>
 
           <View style={styles.heading}>
@@ -338,7 +362,31 @@ const styles = StyleSheet.create({
   navigation: {
     minHeight: 44,
     marginLeft: -spacing.md,
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  skipButton: {
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  skipButtonPressed: {
+    opacity: 0.6,
+  },
+  skipText: {
+    color: paperColors.ink,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  skipUnderline: {
+    width: 54,
+    height: 3,
+    marginTop: 1,
+    borderRadius: 2,
+    backgroundColor: paperColors.ruleBlue,
+    transform: [{ rotate: '-2deg' }],
   },
   heading: {
     alignItems: 'center',
