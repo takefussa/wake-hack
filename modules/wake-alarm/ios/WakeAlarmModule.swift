@@ -363,7 +363,12 @@ public final class WakeAlarmModule: Module {
     let shouldDeleteSource: Bool
     let sourceURL: URL
 
-    if let remoteURL = URL(string: trimmed), remoteURL.scheme?.lowercased() == "https" {
+    // Supabase production URLs are HTTPS. Allow HTTP as well for local/dev
+    // Supabase and Metro-hosted assets; ATS still applies to network requests,
+    // while file/content URLs continue through the local-file branch below.
+    if let remoteURL = URL(string: trimmed),
+       let scheme = remoteURL.scheme?.lowercased(),
+       scheme == "https" || scheme == "http" {
       let temporaryURL: URL
       let response: URLResponse
       do {

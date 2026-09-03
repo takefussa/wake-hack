@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { Asset } from 'expo-asset';
+import { File } from 'expo-file-system';
 
 import { logDevelopmentError } from '@/lib/development-logger';
 import { isSupabaseUuid } from '@/lib/identifiers';
@@ -52,6 +53,16 @@ export type WakeExperience =
 type StartWakeExperienceOptions = {
   isDemo?: boolean;
 };
+
+function isUsableLocalVoiceUri(uri: string | undefined): boolean {
+  if (!uri) return false;
+  if (/^(https?|blob):/.test(uri)) return true;
+  try {
+    return new File(uri).exists;
+  } catch {
+    return false;
+  }
+}
 
 export class WakeService {
   constructor(
@@ -246,7 +257,7 @@ export class WakeService {
     const unsyncedLocal = matching.find(
       (voice) => !voice.storagePath && voice.voiceStyle === request.preferredVoiceStyle
     ) ?? matching.find((voice) => !voice.storagePath);
-    if (unsyncedLocal?.uri) {
+    if (unsyncedLocal?.uri && isUsableLocalVoiceUri(unsyncedLocal.uri)) {
       return {
         status: 'ready',
         voice: { ...unsyncedLocal, receiverId, morningRequestId: request.id },
@@ -268,7 +279,7 @@ export class WakeService {
     }
 
     const selected = matching.find((voice) => voice.voiceStyle === request.preferredVoiceStyle) ?? matching[0];
-    if (selected?.uri) {
+    if (selected?.uri && isUsableLocalVoiceUri(selected.uri)) {
       return { status: 'ready', voice: { ...selected, receiverId, morningRequestId: request.id } };
     }
     const asset = Asset.fromModule(
