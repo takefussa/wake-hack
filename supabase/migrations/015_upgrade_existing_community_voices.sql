@@ -79,6 +79,56 @@ set allowed_mime_types = array[
 ]
 where id = 'voice-messages';
 
+-- The pre-merge Supabase-social implementation stores Community Voice in its
+-- own bucket. Keep that bucket available as well; the app intentionally uses
+-- this contract first when the RPC from migration 006 exists.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'community-voices',
+  'community-voices',
+  false,
+  2097152,
+  array['audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/x-wav', 'audio/webm']
+)
+on conflict (id) do update
+set public = false,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Legacy community voice upload" on storage.objects;
+create policy "Legacy community voice upload"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'community-voices'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
+
+drop policy if exists "Legacy community voice read" on storage.objects;
+create policy "Legacy community voice read"
+on storage.objects
+for select
+to authenticated
+using (
+  bucket_id = 'community-voices'
+  and (
+    (storage.foldername(name))[1] = (select auth.uid())::text
+    or (select auth.uid()) is not null
+  )
+);
+
+drop policy if exists "Legacy community voice delete" on storage.objects;
+create policy "Legacy community voice delete"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'community-voices'
+  and owner_id = (select auth.uid())::text
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
+
 drop policy if exists "Authenticated users can upload community voice audio" on storage.objects;
 create policy "Authenticated users can upload community voice audio"
 on storage.objects
