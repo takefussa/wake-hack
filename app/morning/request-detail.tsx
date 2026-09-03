@@ -41,7 +41,6 @@ export default function RequestDetailScreen() {
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
-  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
   const selectGiveRequest = useAppStore((state) => state.selectGiveRequest);
   const [request, setRequest] = useState<MorningRequest | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -88,8 +87,6 @@ export default function RequestDetailScreen() {
     };
   }, [requestId]);
 
-  const hasAlreadyGiven = user !== null && currentGiveReceiverIds.includes(user.id);
-
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
   }
@@ -98,7 +95,7 @@ export default function RequestDetailScreen() {
   }
 
   function handleStartRecording() {
-    if (!request || hasAlreadyGiven) return;
+    if (!request) return;
     runOnce(() => {
       selectGiveRequest(request.id);
       router.push({
@@ -179,9 +176,8 @@ export default function RequestDetailScreen() {
           </View>
 
           <AppButton
-            disabled={hasAlreadyGiven}
-            icon={hasAlreadyGiven ? 'checkmark' : 'mic-outline'}
-            label={hasAlreadyGiven ? 'この人には届けました' : 'この人に声を届ける'}
+            icon="mic-outline"
+            label="この人に声を届ける"
             onPress={handleStartRecording}
             testID="request-detail-give"
           />

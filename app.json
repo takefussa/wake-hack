@@ -4,22 +4,25 @@
     "slug": "wake-hack",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-okita.png",
     "scheme": "wakehack",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ryosei.wakehack",
+      "infoPlist": {
+        "NSAlarmKitUsageDescription": "設定した時刻に、届いた声で朝を始めるためにアラームを使用します。"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#1E2A4A",
+        "foregroundImage": "./assets/images/icon-okita.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.ryosei.wakehack"
     },
     "web": {
       "output": "static",
@@ -33,10 +36,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#172033",
-          "dark": {
-            "backgroundColor": "#172033"
-          }
+          "backgroundColor": "#172033"
         }
       ],
       [
@@ -51,7 +51,9 @@
           "photosPermission": "プロフィール画像を選ぶため、写真へのアクセスを許可してください。",
           "cameraPermission": false
         }
-      ]
+      ],
+      "expo-asset",
+      "./plugins/withAndroidOverridePathCheck.js"
     ],
     "experiments": {
       "typedRoutes": true,

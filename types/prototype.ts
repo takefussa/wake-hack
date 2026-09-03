@@ -12,6 +12,7 @@ export type PrototypePersistedState = {
   selectedGiveRequestId: string | null;
   currentGiveReceiverIds: string[];
   givenVoiceMessages: VoiceMessage[];
+  communityVoiceMessages: VoiceMessage[];
   assignedWakeVoice: VoiceMessage | null;
   wakeSession: WakeSession | null;
   thanksMessages: ThanksMessage[];

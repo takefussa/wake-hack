@@ -14,4 +14,12 @@ export class MockVoiceRepository implements VoiceRepository {
       createdAt: new Date().toISOString(),
     };
   }
+
+  async getAlarmReceivedAt(): Promise<string | null> {
+    return null;
+  }
+
+  async acknowledgeAlarmReceived(): Promise<string> {
+    return new Date().toISOString();
+  }
 }

@@ -13,27 +13,43 @@ export class VoiceService {
   ) {}
 
   async createPersonalVoice(input: CreatePersonalVoiceInput): Promise<VoiceMessage> {
-    if (!input.uri.trim()) {
-      throw new Error('Recording URI is required');
-    }
-    if (
-      input.durationMs < prototypeConfig.recordingMinMs ||
-      input.durationMs > prototypeConfig.recordingMaxMs
-    ) {
-      throw new Error('Recording duration is outside the allowed range');
-    }
-
     try {
+      if (!input.uri.trim()) {
+        throw new Error('Recording URI is required');
+      }
+      if (
+        input.durationMs < prototypeConfig.recordingMinMs ||
+        input.durationMs > prototypeConfig.recordingMaxMs
+      ) {
+        throw new Error(
+          `Recording duration is outside the allowed range: ${input.durationMs}ms`
+        );
+      }
+
       const isMockRequest = await morningRequestService.isMockRequest(
         input.morningRequestId
       );
-      return isMockRequest
+      return await (isMockRequest
         ? this.mockRepository.createPersonal(input)
-        : this.repository.createPersonal(input);
+        : this.repository.createPersonal(input));
     } catch (error) {
       logDevelopmentError('voice.createPersonal', error);
       throw error;
     }
+  }
+
+  async getAlarmReceivedAt(voiceMessageId: string): Promise<string | null> {
+    return this.repository.getAlarmReceivedAt(voiceMessageId);
+  }
+
+  async acknowledgeAlarmReceived(
+    voiceMessageId: string,
+    morningRequestId: string
+  ): Promise<string> {
+    return this.repository.acknowledgeAlarmReceived(
+      voiceMessageId,
+      morningRequestId
+    );
   }
 }
 

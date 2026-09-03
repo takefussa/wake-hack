@@ -9,11 +9,11 @@ import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { ChoiceChip } from '@/components/common/choice-chip';
-import { ScreenHeader } from '@/components/common/screen-header';
+import { IconButton } from '@/components/common/icon-button';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { prototypeConfig } from '@/constants/config';
 import { thanksReactionOptions } from '@/constants/options';
-import { legacyColors as colors, fonts, radii, spacing } from '@/constants/theme';
+import { colors, fonts, paperColors, radii, shadows, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
@@ -89,7 +89,13 @@ export default function ThanksSendScreen() {
   }
 
   async function handleSend() {
-    if (!currentUser || !assignedWakeVoice || !reaction || isSendingRef.current) return;
+    if (
+      !currentUser ||
+      !assignedWakeVoice ||
+      !reaction ||
+      isSendingRef.current ||
+      !text.trim()
+    ) return;
 
     isSendingRef.current = true;
     setIsSending(true);
@@ -123,17 +129,36 @@ export default function ThanksSendScreen() {
   return (
     <MorningScreen contentStyle={styles.content} testID="thanks-send-screen">
       <StatusBar style="dark" />
-      <ScreenHeader
-        description={
+
+      <View style={styles.navigation}>
+        <IconButton
+          icon="chevron-back"
+          label="完了画面に戻る"
+          onPress={() => goBackOrReplace('/wake/complete')}
+        />
+      </View>
+
+      <View style={styles.heading}>
+        <AppText
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          numberOfLines={1}
+          style={styles.title}
+        >
+          ありがとうを届ける
+        </AppText>
+        <View pointerEvents="none" style={styles.titleUnderline} />
+        <AppText style={styles.description}>
+          {
           isPersonal
             ? `${sender?.nickname ?? '声をくれた人'}さんへ、起きられたことを短く返します。`
             : '今朝の声を届けてくれたみんなへ、起きられたことを返します。'
-        }
-        onBack={() => goBackOrReplace('/wake/complete')}
-        title="ありがとうを届ける"
-      />
+          }
+        </AppText>
+      </View>
 
       <View style={styles.recipient}>
+        <View pointerEvents="none" style={styles.greenTape} />
         {isPersonal ? (
           <Avatar
             avatarId={sender?.avatarId ?? 'sky'}
@@ -165,6 +190,7 @@ export default function ThanksSendScreen() {
               label={option}
               onPress={() => setReaction(option)}
               selected={reaction === option}
+              selectedStyle="warm"
             />
           ))}
         </View>
@@ -172,12 +198,7 @@ export default function ThanksSendScreen() {
 
       <View style={styles.section}>
         <View style={styles.labelRow}>
-          <View style={styles.optionalLabel}>
-            <AppText variant="sectionTitle">メッセージ</AppText>
-            <AppText variant="caption" tone="muted">
-              任意
-            </AppText>
-          </View>
+          <AppText variant="sectionTitle">メッセージ</AppText>
           <AppText variant="caption" tone="muted">
             {text.length}/{prototypeConfig.thanksTextMaxLength}
           </AppText>
@@ -202,35 +223,77 @@ export default function ThanksSendScreen() {
         </AppText>
       ) : null}
 
-      <AppButton
-        legacy
-        disabled={!reaction || isSending}
-        icon="heart-outline"
-        label={isSending ? '届けています…' : 'ありがとうを届ける'}
-        onPress={() => void handleSend()}
-        testID="send-thanks"
-      />
+      <View style={styles.footer}>
+        <AppButton
+          buttonColor={paperColors.orange}
+          contentColor={paperColors.ink}
+          disabled={!reaction || isSending || !text.trim()}
+          icon="heart-outline"
+          label={isSending ? '届けています…' : 'ありがとうを届ける'}
+          onPress={() => void handleSend()}
+          style={styles.primaryAction}
+          testID="send-thanks"
+          variant="warm"
+        />
+      </View>
     </MorningScreen>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    gap: spacing.xxl,
+    justifyContent: 'space-between',
+    gap: spacing.xl,
+  },
+  navigation: {
+    minHeight: 44,
+    marginLeft: -spacing.md,
+    alignItems: 'flex-start',
+  },
+  heading: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    gap: spacing.md,
+  },
+  title: {
+    width: '100%',
+    fontFamily: fonts?.handwritten,
+    fontSize: 36,
+    lineHeight: 44,
+    textAlign: 'center',
+  },
+  titleUnderline: {
+    width: 210,
+    height: 8,
+    marginTop: -spacing.md,
+    borderRadius: 4,
+    backgroundColor: paperColors.orange,
+    opacity: 0.72,
+    transform: [{ rotate: '-1deg' }],
+  },
+  description: {
+    fontSize: 17,
+    lineHeight: 26,
+    textAlign: 'center',
   },
   recipient: {
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
+    position: 'relative',
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.cardGray,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    ...shadows.paper,
   },
   communityAvatar: {
     width: 56,
     height: 56,
     borderRadius: radii.avatar,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
     backgroundColor: colors.indigoSoft,
     alignItems: 'center',
     justifyContent: 'center',
@@ -240,7 +303,13 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   section: {
-    gap: spacing.lg,
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.base,
+    gap: spacing.md,
+    ...shadows.paper,
   },
   reactions: {
     flexDirection: 'row',
@@ -253,16 +322,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  optionalLabel: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.sm,
-  },
   input: {
-    minHeight: 112,
+    minHeight: 128,
     borderRadius: radii.input,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
@@ -274,5 +338,28 @@ const styles = StyleSheet.create({
   },
   error: {
     color: colors.danger,
+  },
+  greenTape: {
+    position: 'absolute',
+    top: -13,
+    left: '34%',
+    right: '34%',
+    zIndex: 2,
+    height: 24,
+    backgroundColor: colors.success,
+    opacity: 0.82,
+    transform: [{ rotate: '1deg' }],
+  },
+  footer: {
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.base,
+    ...shadows.paper,
+  },
+  primaryAction: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
   },
 });

@@ -42,4 +42,10 @@ app-example
 /ios
 /android
 
+# Local Expo module build output
+/modules/**/build/
+
 .env
+
+# Supabase CLI local cache
+supabase/.temp/

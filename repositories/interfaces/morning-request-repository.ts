@@ -11,5 +11,6 @@ export interface MorningRequestRepository {
   incrementVoiceCount(id: string): Promise<MorningRequest | null>;
   markPersonalEligible(id: string): Promise<MorningRequest | null>;
   markCommunityReady(id: string): Promise<MorningRequest | null>;
+  markCompleted(id: string): Promise<MorningRequest | null>;
   reset(): Promise<void>;
 }

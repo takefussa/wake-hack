@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 
+import { getNextWakeDate } from '@/features/morning/get-next-wake-date';
 import { isSupabaseUuid } from '@/lib/identifiers';
 import { logDevelopmentError } from '@/lib/development-logger';
 import { MockMorningRequestRepository } from '@/repositories/mock/mock-morning-request-repository';
@@ -27,6 +28,7 @@ export class MorningRequestService {
         id: Crypto.randomUUID(),
         userId,
         ...input,
+        scheduledFor: getNextWakeDate(input.wakeAt).toISOString(),
         personalEligible: false,
         status: 'open',
         voiceCount: 0,
@@ -46,6 +48,7 @@ export class MorningRequestService {
       return {
         ...request,
         ...input,
+        scheduledFor: getNextWakeDate(input.wakeAt).toISOString(),
         schedules: [...input.schedules],
       };
     }
@@ -67,23 +70,16 @@ export class MorningRequestService {
     userId: string,
     currentRequestId?: string
   ): Promise<MorningRequest[]> {
-    let remoteRequests: MorningRequest[] = [];
-    if (!currentRequestId || isSupabaseUuid(currentRequestId)) {
-      try {
-        remoteRequests = await this.repository.getAvailableRequests(userId);
-      } catch (error) {
-        logDevelopmentError('morningRequest.getAvailable.remote', error);
-      }
+    if (currentRequestId && !isSupabaseUuid(currentRequestId)) {
+      return this.mockRepository.getAvailableRequests(userId);
     }
 
-    const mockRequests = await this.mockRepository.getAvailableRequests(userId);
-    const seenUsers = new Set<string>();
-
-    return [...remoteRequests, ...mockRequests].filter((request) => {
-      if (seenUsers.has(request.userId)) return false;
-      seenUsers.add(request.userId);
-      return true;
-    });
+    try {
+      return await this.repository.getAvailableRequests(userId);
+    } catch (error) {
+      logDevelopmentError('morningRequest.getAvailable.remote', error);
+      throw error;
+    }
   }
 
   async getRequest(id: string): Promise<MorningRequest | null> {
@@ -161,6 +157,19 @@ export class MorningRequestService {
       if (!request) throw new Error('Current morning request not found');
     } catch (error) {
       logDevelopmentError('morningRequest.markCommunityReady', error);
+      throw error;
+    }
+  }
+
+  async markCompleted(id: string): Promise<void> {
+    const repository = isSupabaseUuid(id)
+      ? this.repository
+      : this.mockRepository;
+    try {
+      const request = await repository.markCompleted(id);
+      if (!request) throw new Error('Current morning request not found');
+    } catch (error) {
+      logDevelopmentError('morningRequest.markCompleted', error);
       throw error;
     }
   }

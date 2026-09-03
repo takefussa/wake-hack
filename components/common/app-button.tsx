@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
-import type { ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
@@ -24,6 +24,8 @@ type AppButtonProps = {
   testID?: string;
   buttonColor?: ViewStyle['backgroundColor'];
   legacy?: boolean;
+  style?: StyleProp<ViewStyle>;
+  contentColor?: string;
 };
 
 function getTextTone(variant: ButtonVariant): 'light' | 'lightMuted' | 'dark' | 'accent' {
@@ -43,18 +45,21 @@ export function AppButton({
   testID,
   buttonColor,
   legacy = false,
+  style,
+  contentColor,
 }: AppButtonProps) {
   const textTone = !legacy && variant === 'primary' ? 'dark' : getTextTone(variant);
   const iconColor =
-    legacy && textTone === 'accent'
+    contentColor ??
+    (legacy && textTone === 'accent'
       ? '#4D628B'
       : textTone === 'light'
-      ? colors.textInverse
-      : textTone === 'lightMuted'
-        ? colors.textInverseSecondary
-        : textTone === 'accent'
-          ? colors.indigo
-          : colors.text;
+        ? colors.textInverse
+        : textTone === 'lightMuted'
+          ? colors.textInverseSecondary
+          : textTone === 'accent'
+            ? colors.indigo
+            : colors.text);
 
   return (
     <Pressable
@@ -75,6 +80,7 @@ export function AppButton({
         legacy && variant === 'primary' && styles.legacyPrimary,
         legacy && variant === 'secondary' && styles.legacySecondary,
         legacy && variant === 'warm' && styles.legacyWarm,
+        style,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
         buttonColor ? { backgroundColor: buttonColor } : null,
@@ -84,7 +90,11 @@ export function AppButton({
           adjustsFontSizeToFit
           minimumFontScale={0.85}
           numberOfLines={1}
-          style={[styles.label, legacy && textTone === 'accent' && styles.legacyAccentLabel]}
+          style={[
+            styles.label,
+            legacy && textTone === 'accent' && styles.legacyAccentLabel,
+            contentColor ? { color: contentColor } : null,
+          ]}
           tone={textTone}
           variant="bodyMedium">
           {label}

@@ -17,9 +17,14 @@ import type {
 
 const voiceBucket = 'voice-messages';
 
-function mapVoiceRow(row: VoiceMessageRow, uri: string): VoiceMessage {
+function mapVoiceRow(
+  row: VoiceMessageRow,
+  uri: string
+): VoiceMessage {
   if (row.type !== 'personal') {
-    throw new Error(`Unsupported remote voice type: ${row.type}`);
+    throw new Error(
+      `Unsupported remote voice type: ${row.type}`
+    );
   }
 
   return {
@@ -36,38 +41,65 @@ function mapVoiceRow(row: VoiceMessageRow, uri: string): VoiceMessage {
     moderationReason: row.moderation_reason,
     moderatedAt: row.moderated_at,
     createdAt: row.created_at,
+    alarmReceivedAt: row.alarm_received_at ?? undefined,
   };
 }
 
-export class SupabaseVoiceRepository implements VoiceRepository {
-  async createPersonal(input: CreatePersonalVoiceInput): Promise<VoiceMessage> {
-    const authenticatedUserId = authService.getAuthenticatedUserId();
-    if (input.senderId !== authenticatedUserId) {
-      throw new Error('Voice sender does not match the authenticated user');
+export class SupabaseVoiceRepository
+  implements VoiceRepository
+{
+  async createPersonal(
+    input: CreatePersonalVoiceInput
+  ): Promise<VoiceMessage> {
+    const authenticatedUserId =
+      authService.getAuthenticatedUserId();
+
+    if (
+      input.senderId !== authenticatedUserId
+    ) {
+      throw new Error(
+        'Voice sender does not match the authenticated user'
+      );
     }
 
     const voiceId = Crypto.randomUUID();
-    const storagePath = `personal/${input.receiverId}/${authenticatedUserId}/${voiceId}.m4a`;
+
+    const storagePath =
+      `personal/${input.receiverId}/` +
+      `${authenticatedUserId}/${voiceId}.m4a`;
+
     const file = new File(input.uri);
+
     if (!file.exists) {
-      throw new Error('The local recording file does not exist');
+      throw new Error(
+        'The local recording file does not exist'
+      );
     }
 
-    const audioData = await file.arrayBuffer();
+    const audioData =
+      await file.arrayBuffer();
+
     if (audioData.byteLength === 0) {
-      throw new Error('The local recording file is empty');
+      throw new Error(
+        'The local recording file is empty'
+      );
     }
 
-    const supabase = getSupabaseClient();
-    const { error: uploadError } = await supabase.storage
-      .from(voiceBucket)
-      .upload(storagePath, audioData, {
-        cacheControl: '3600',
-        contentType: 'audio/mp4',
-        upsert: false,
-      });
+    const supabase =
+      getSupabaseClient();
 
-    if (uploadError) throw uploadError;
+    const { error: uploadError } =
+      await supabase.storage
+        .from(voiceBucket)
+        .upload(storagePath, audioData, {
+          cacheControl: '3600',
+          contentType: 'audio/mp4',
+          upsert: false,
+        });
+
+    if (uploadError) {
+      throw uploadError;
+    }
 
     try {
       const checkResult = await voiceSafetyService.assertVoiceIsSafe({
@@ -91,19 +123,55 @@ export class SupabaseVoiceRepository implements VoiceRepository {
         })
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
       return mapVoiceRow(data, input.uri);
     } catch (error) {
-      const { error: cleanupError } = await supabase.storage
-        .from(voiceBucket)
-        .remove([storagePath]);
+      const { error: cleanupError } =
+        await supabase.storage
+          .from(voiceBucket)
+          .remove([storagePath]);
+
       if (cleanupError) {
-        logDevelopmentError('voice.upload.cleanup', cleanupError);
+        logDevelopmentError(
+          'voice.upload.cleanup',
+          cleanupError
+        );
       }
       if (error instanceof VoiceSafetyRejectedError) {
         throw error;
       }
       throw error;
     }
+  }
+
+  async getAlarmReceivedAt(voiceMessageId: string): Promise<string | null> {
+    const { data, error } = await getSupabaseClient()
+      .from('voice_messages')
+      .select('alarm_received_at')
+      .eq('id', voiceMessageId)
+      .eq('type', 'personal')
+      .maybeSingle();
+
+    if (error) throw error;
+    return data?.alarm_received_at ?? null;
+  }
+
+  async acknowledgeAlarmReceived(
+    voiceMessageId: string,
+    morningRequestId: string
+  ): Promise<string> {
+    const { data, error } = await getSupabaseClient().rpc(
+      'acknowledge_personal_voice_alarm',
+      {
+        p_voice_id: voiceMessageId,
+        p_morning_request_id: morningRequestId,
+      }
+    );
+
+    if (error) throw error;
+    return data;
   }
 }

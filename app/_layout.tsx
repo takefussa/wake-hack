@@ -10,7 +10,10 @@ import 'react-native-reanimated';
 import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
 import { LoadingScreen } from '@/components/common/loading-screen';
 import { colors, fontFamilyName, paperColors } from '@/constants/theme';
+import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
+import { useAlarmStopFlow } from '@/hooks/use-alarm-stop-flow';
 import { useAuthBootstrap } from '@/hooks/use-auth-bootstrap';
+import { WakeAlarm } from '@/modules/wake-alarm';
 import { useAppStore } from '@/store/use-app-store';
 
 void SplashScreen.preventAutoHideAsync();
@@ -33,15 +36,26 @@ export default function RootLayout() {
     [fontFamilyName]: require('../assets/fonts/851tegaki_zatsu_normal_0883.ttf'),
   });
   const isHydrated = useAppStore((state) => state.isHydrated);
+  const currentMorningRequest = useAppStore(
+    (state) => state.currentMorningRequest
+  );
   const { failure, retry, status: authStatus } = useAuthBootstrap();
   const isFontReady = fontsLoaded || fontError !== null;
   const isReady = isHydrated && authStatus === 'ready';
+  useAlarmStopFlow(isReady);
+  useAlarmSchedule(isReady ? currentMorningRequest : null);
 
   useEffect(() => {
     if (isFontReady) {
       void SplashScreen.hideAsync();
     }
   }, [isFontReady]);
+
+  useEffect(() => {
+    if (isReady) {
+      void WakeAlarm.requestNotificationPermission();
+    }
+  }, [isReady]);
 
   if (!isFontReady) {
     return null;

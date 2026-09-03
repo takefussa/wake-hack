@@ -4,12 +4,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { resolveVoiceSource } from '@/features/voice/resolve-voice-source';
 import type { VoiceMessage } from '@/types';
 
-export function useVoicePlayer(voice: VoiceMessage, autoPlay = false) {
+type VoicePlayerOptions = {
+  downloadFirst?: boolean;
+};
+
+export function useVoicePlayer(
+  voice: VoiceMessage,
+  autoPlay = false,
+  options: VoicePlayerOptions = {}
+) {
   const source = useMemo(
     () => resolveVoiceSource(voice),
     [voice.id, voice.type, voice.uri]
   );
-  const player = useAudioPlayer(source, { updateInterval: 100 });
+  const player = useAudioPlayer(source, {
+    updateInterval: 100,
+    downloadFirst: options.downloadFirst ?? false,
+  });
   const status = useAudioPlayerStatus(player);
   const [error, setError] = useState<string | null>(null);
   const autoPlayAttempted = useRef(false);
@@ -72,7 +83,10 @@ export function useVoicePlayer(voice: VoiceMessage, autoPlay = false) {
 
   return {
     isPlaying: status.playing,
-    isReady: status.isLoaded && player.isLoaded,
+    // `player.isLoaded` is the native source of truth. On iOS the status
+    // event can lag behind it, which previously left playable received voices
+    // permanently shown as "preparing".
+    isReady: player.isLoaded,
     progress: Math.min(1, status.currentTime / Math.max(durationSeconds, 0.1)),
     currentTimeSeconds: status.currentTime,
     durationSeconds,

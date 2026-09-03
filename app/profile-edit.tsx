@@ -23,6 +23,7 @@ export default function ProfileEditScreen() {
   const [profileImageUri, setProfileImageUri] = useState<string | undefined>(
     currentUser?.profileImageUri
   );
+  const [removeProfileImage, setRemoveProfileImage] = useState(false);
   const [nickname, setNickname] = useState(currentUser?.nickname ?? '');
   const [bio, setBio] = useState(currentUser?.bio ?? '');
   const [userType, setUserType] = useState<UserType | null>(currentUser?.userType ?? null);
@@ -46,6 +47,7 @@ export default function ProfileEditScreen() {
     const input: UpdateProfileInput = {
       avatarId,
       profileImageUri,
+      removeProfileImage,
       nickname,
       bio,
       userType,
