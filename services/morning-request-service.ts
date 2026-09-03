@@ -109,6 +109,7 @@ export class MorningRequestService {
       schedules: request.schedules,
       mood: request.mood,
       preferredVoiceStyle: request.preferredVoiceStyle,
+      voiceRequestNote: request.voiceRequestNote,
     })
       .then(async (createdRequest) => {
         if (!request.personalEligible) return createdRequest;
