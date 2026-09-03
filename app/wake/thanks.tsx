@@ -9,9 +9,9 @@ import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { IconButton } from '@/components/common/icon-button';
-import { MorningScreen } from '@/components/wake/morning-screen';
 import { BoomboxRecorder } from '@/components/voice/boombox-recorder';
 import { MicrophonePermissionGate } from '@/components/voice/microphone-permission-gate';
+import { MorningScreen } from '@/components/wake/morning-screen';
 import { prototypeConfig } from '@/constants/config';
 import { thanksReactionOptions } from '@/constants/options';
 import { colors, fonts, paperColors, radii, shadows, spacing } from '@/constants/theme';
@@ -97,7 +97,7 @@ export default function ThanksSendScreen() {
         message.sourceVoiceMessageId === assignedWakeVoice.id
     );
 
-  if (hasSentThanks) {
+  if (hasSentThanks && !isSendingRef.current) {
     return <Redirect href={isPersonal ? '/friend/request' : '/(tabs)/connections'} />;
   }
 
@@ -172,7 +172,7 @@ export default function ThanksSendScreen() {
         () => undefined
       );
       await recorder.leaveRecording();
-      router.replace(isPersonal && addToOkimate ? '/friend/request' : '/(tabs)');
+      router.replace(isPersonal ? '/friend/request' : '/(tabs)');
     } catch {
       setError('ありがとうを届けられませんでした。もう一度お試しください。');
       isSendingRef.current = false;
