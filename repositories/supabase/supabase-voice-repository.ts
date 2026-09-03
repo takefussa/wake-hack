@@ -5,6 +5,10 @@ import { logDevelopmentError } from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { VoiceRepository } from '@/repositories/interfaces/voice-repository';
 import { authService } from '@/services/auth-service';
+import {
+  voiceSafetyService,
+  VoiceSafetyRejectedError,
+} from '@/services/voice-safety-service';
 import type {
   CreatePersonalVoiceInput,
   VoiceMessage,
@@ -32,6 +36,10 @@ function mapVoiceRow(
     storagePath: row.storage_path,
     durationMs: row.duration_ms,
     type: 'personal',
+    moderationStatus: row.moderation_status as VoiceMessage['moderationStatus'],
+    moderationCategory: row.moderation_category as VoiceMessage['moderationCategory'],
+    moderationReason: row.moderation_reason,
+    moderatedAt: row.moderated_at,
     createdAt: row.created_at,
     alarmReceivedAt: row.alarm_received_at ?? undefined,
   };
@@ -94,22 +102,26 @@ export class SupabaseVoiceRepository
     }
 
     try {
-      const { data, error } =
-        await supabase
-          .rpc('send_personal_voice', {
-            p_voice_id: voiceId,
-            p_receiver_id:
-              input.receiverId,
-            p_morning_request_id:
-              input.morningRequestId,
-            p_sender_morning_request_id:
-              input.senderMorningRequestId,
-            p_storage_path:
-              storagePath,
-            p_duration_ms:
-              input.durationMs,
-          })
-          .single();
+      const checkResult = await voiceSafetyService.assertVoiceIsSafe({
+        bucket: voiceBucket,
+        path: storagePath,
+        voiceKind: 'personal',
+        durationMs: input.durationMs,
+      });
+
+      const { data, error } = await supabase
+        .rpc('send_personal_voice', {
+          p_voice_id: voiceId,
+          p_receiver_id: input.receiverId,
+          p_morning_request_id: input.morningRequestId,
+          p_sender_morning_request_id: input.senderMorningRequestId,
+          p_storage_path: storagePath,
+          p_duration_ms: input.durationMs,
+          p_moderation_status: 'approved',
+          p_moderation_category: checkResult.category,
+          p_moderation_reason: checkResult.reason,
+        })
+        .single();
 
       if (error) {
         throw error;
@@ -128,7 +140,9 @@ export class SupabaseVoiceRepository
           cleanupError
         );
       }
-
+      if (error instanceof VoiceSafetyRejectedError) {
+        throw error;
+      }
       throw error;
     }
   }

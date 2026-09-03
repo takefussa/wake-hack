@@ -15,6 +15,7 @@ import { prototypeConfig } from '@/constants/config';
 import { colors, fonts, paperColors, shadows, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { formatRecordingDuration } from '@/features/voice/format-duration';
+import { logDevelopmentError } from '@/lib/development-logger';
 import { giveService } from '@/services/give-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
@@ -140,13 +141,11 @@ export default function RecordVoiceScreen() {
       return;
     }
 
-    if (
-      !request ||
-      !recipient ||
-      !recorder.recording ||
-      isSendingRef.current ||
-      hasAlreadyGiven
-    ) {
+    if (isSendingRef.current || hasAlreadyGiven) {
+      return;
+    }
+    if (!request || !recipient || !recorder.recording) {
+      setPageError('相手の情報を確認できませんでした。画面を開き直してお試しください。');
       return;
     }
 
@@ -170,8 +169,11 @@ export default function RecordVoiceScreen() {
         pathname: '/morning/give-complete',
         params: { requestId: request.id },
       });
-    } catch {
-      setPageError('声を届けられませんでした。もう一度お試しください。');
+    } catch (error) {
+      logDevelopmentError('morningRecord.send', error);
+      setPageError(
+        'Voiceを送信できませんでした。相手が気持ちよく朝を迎えられる内容に変更して、もう一度お試しください。'
+      );
       isSendingRef.current = false;
       setIsSending(false);
     }
@@ -268,7 +270,7 @@ export default function RecordVoiceScreen() {
                           icon="paper-plane-outline"
                           label={
                             isSending
-                              ? '届けています…'
+                              ? 'Voiceを確認しています...'
                               : isTooShort
                                 ? '2秒以上録音してください'
                                 : 'この声を届ける'

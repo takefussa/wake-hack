@@ -1,6 +1,6 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -18,6 +18,7 @@ import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { alarmService } from '@/services/alarm-service';
+import { communityVoiceService } from '@/services/community-voice-service';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function WakeAlarmScreen() {
@@ -35,6 +36,11 @@ export default function WakeAlarmScreen() {
   const handlePlayerReady = useCallback((stopPlayback: () => void) => {
     stopPlaybackRef.current = stopPlayback;
   }, []);
+
+  useEffect(() => {
+    if (assignedWakeVoice?.type !== 'community') return;
+    void communityVoiceService.markPlayed(assignedWakeVoice);
+  }, [assignedWakeVoice]);
 
   if (!currentUser || !currentMorningRequest || !assignedWakeVoice || !wakeSession) {
     return <Redirect href="/morning/ready" />;

@@ -10,7 +10,7 @@ export function useVoiceSender(voice: VoiceMessage | null): UserProfile | null {
     let isMounted = true;
 
     async function loadSender() {
-      if (!voice || voice.type !== 'personal') {
+      if (!voice || (voice.type !== 'personal' && voice.type !== 'community') || voice.senderId === 'community') {
         setSender(null);
         return;
       }
