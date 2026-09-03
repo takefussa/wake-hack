@@ -258,6 +258,14 @@ export default function MorningSummaryScreen() {
                 : 'Wake Voiceを再確認'}
             </AppText>
           </Pressable>
+        ) : alarmSchedule.personalVoiceSyncStatus === 'waiting' ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={alarmSchedule.retry}
+            style={styles.alarmAction}
+          >
+            <AppText style={styles.alarmActionText}>Wake Voiceを再確認</AppText>
+          </Pressable>
         ) : null}
 
         {alarmSchedule.preparedPersonalVoice ? (

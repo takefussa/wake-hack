@@ -75,16 +75,27 @@ export function useVoiceRecorder() {
   useEffect(() => {
     if (!recording?.uri) return;
 
+    // `pause()` can throw when the player has not loaded a source yet. Keep
+    // each operation independent so that failure never prevents `replace()`
+    // from loading the newly-recorded take for preview.
     try {
-      // Pause unconditionally rather than trusting `player.playing`: that flag comes from
-      // a polled status hook and can lag the native player by up to its update interval,
-      // so a still-playing previous take could otherwise keep running into the new source
-      // and make `replace` appear to auto-resume playback.
-      player.pause();
-      player.replace({ uri: recording.uri });
       player.pause();
     } catch {
+      // There may be no previous source to pause.
+    }
+
+    try {
+      player.replace({ uri: recording.uri });
+    } catch {
       setError('録音した声の再生を準備できませんでした。');
+      return;
+    }
+
+    try {
+      player.pause();
+    } catch {
+      // Replacing the source is enough to make the preview available; a
+      // native player may reject this second pause while it is loading.
     }
   }, [player, recording?.uri]);
 

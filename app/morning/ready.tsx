@@ -246,6 +246,13 @@ export default function TomorrowReadyScreen() {
               onPress={alarmSchedule.retry}
               variant="textOnDark"
             />
+          ) : alarmSchedule.personalVoiceSyncStatus === 'waiting' ? (
+            <AppButton
+              icon="refresh-outline"
+              label="Wake Voiceを再確認"
+              onPress={alarmSchedule.retry}
+              variant="textOnDark"
+            />
           ) : null}
           {wakeError ? (
             <AppText variant="caption" style={styles.error}>
