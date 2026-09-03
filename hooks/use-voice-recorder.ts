@@ -1,6 +1,5 @@
 import {
   getRecordingPermissionsAsync,
-  IOSOutputFormat,
   RecordingPresets,
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
@@ -17,16 +16,9 @@ import { prototypeConfig } from '@/constants/config';
 
 const recordingOptions = {
   ...RecordingPresets.HIGH_QUALITY,
-  // Keep the proven AAC/M4A recorder format. AlarmKit converts this file to a
-  // Linear PCM WAV after download. Direct LINEARPCM recording on iOS 26 can
-  // produce a header-only WAV (zero audio frames), which results in a silent
-  // human-voice alarm even though recording appears to succeed.
-  numberOfChannels: 1,
-  ios: {
-    ...RecordingPresets.HIGH_QUALITY.ios,
-    extension: '.m4a',
-    outputFormat: IOSOutputFormat.MPEG4AAC,
-  },
+  // Keep the exact preset used by the previously working recorder. Expo
+  // chooses the platform-safe AAC/M4A container for iOS; AlarmKit converts it
+  // to PCM only after the voice reaches the receiver's device.
   isMeteringEnabled: true,
 };
 
