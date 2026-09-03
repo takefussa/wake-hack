@@ -5,7 +5,6 @@ import { AppState } from 'react-native';
 
 import { logDevelopmentError } from '@/lib/development-logger';
 import { alarmService } from '@/services/alarm-service';
-import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
 import type { VoiceMessage, WakeSession } from '@/types';
 
@@ -52,15 +51,16 @@ export function useAlarmStopFlow(enabled: boolean) {
           voiceMessageId: voice.id,
           alarmAt: currentMorningRequest!.wakeAt,
           scheduledFor: alarm.scheduledFor,
-          wokeAt: new Date().toISOString(),
-          missionCompleted: true,
+          missionCompleted: false,
           isDemo: false,
-          status: 'completed',
+          status: 'ringing',
         };
 
         if (startWakeSession(voice, session)) {
-          void wakeService.completeWakeSession(session);
-          router.replace('/wake/complete');
+          // AlarmKit's stop action only dismisses the alarm. Keep the new UI
+          // Wake Mission in the foreground so the user must complete the
+          // wake proof before reaching the thank-you flow.
+          router.replace('/wake/mission');
         }
       } catch (error) {
         logDevelopmentError('alarmStopFlow.consume', error);

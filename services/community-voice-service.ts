@@ -104,7 +104,12 @@ export class CommunityVoiceService {
         }
       } catch (error) {
         await supabase.storage.from(legacyVoiceBucket).remove([legacyPath]);
-        throw error;
+        // A database created from the newer migrations may not expose the
+        // legacy RPC. In that case continue with the modern table contract
+        // below; only surface real upload/RPC failures to the caller.
+        if (!isMissingFunctionError(error as { code?: string; message?: string } | null)) {
+          throw error;
+        }
       }
     }
 
