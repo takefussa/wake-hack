@@ -31,6 +31,10 @@ function isMissingColumnError(error: { code?: string; message?: string } | null)
   );
 }
 
+function isMissingFunctionError(error: { code?: string; message?: string } | null): boolean {
+  return error?.code === '42883' || error?.code === 'PGRST202' || error?.message?.includes('function') === true;
+}
+
 function toLegacyWakeStyle(style: VoiceStyle): 'gentle' | 'cheerful' | 'strict' | 'funny' {
   switch (style) {
     case '明るく元気に':
@@ -95,7 +99,7 @@ export class CommunityVoiceService {
         }
         await supabase.storage.from(legacyVoiceBucket).remove([legacyPath]);
         // If the old RPC is absent, continue with the modern table contract.
-        if (error && !isMissingColumnError(error) && error.code !== '42883') {
+        if (error && !isMissingFunctionError(error)) {
           throw error;
         }
       } catch (error) {
