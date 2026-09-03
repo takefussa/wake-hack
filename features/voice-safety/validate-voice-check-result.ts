@@ -30,10 +30,11 @@ export function validateVoiceCheckResult(value: unknown): VoiceCheckResult {
     typeof candidate.reason === 'string' && candidate.reason.trim()
       ? candidate.reason.trim().slice(0, 240)
       : 'No reason was returned';
+  const isSafe = candidate.safe === true;
 
   return {
-    safe: candidate.safe && category === 'safe',
-    category: candidate.safe ? 'safe' : category,
+    safe: isSafe,
+    category: isSafe ? 'safe' : category,
     reason,
   };
 }

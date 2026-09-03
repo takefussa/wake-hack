@@ -258,27 +258,6 @@ async function checkWithGemini({
             mime_type: mimeType,
           },
         ],
-        response_format: {
-          type: 'object',
-          properties: {
-            safe: { type: 'boolean' },
-            category: {
-              type: 'string',
-              enum: [
-                'safe',
-                'insult',
-                'hate',
-                'sexual',
-                'threat',
-                'harassment',
-                'irrelevant',
-                'other',
-              ],
-            },
-            reason: { type: 'string' },
-          },
-          required: ['safe', 'category', 'reason'],
-        },
       }),
     }
   );
@@ -425,7 +404,7 @@ function validateResult(value: unknown): VoiceCheckResult {
   const category = allowedCategories.has(candidate.category ?? '')
     ? (candidate.category as VoiceSafetyCategory)
     : 'other';
-  const safe = candidate.safe === true && category === 'safe';
+  const safe = candidate.safe === true;
   const reason =
     typeof candidate.reason === 'string' && candidate.reason.trim()
       ? candidate.reason.trim().slice(0, 240)
