@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -13,7 +14,6 @@ import {
   StyleProp,
   StyleSheet,
   TextStyle,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -162,7 +162,22 @@ export default function ConnectionsScreen() {
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const replaceMorningRequest = useAppStore((state) => state.replaceMorningRequest);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
-  const { width, height } = useWindowDimensions();
+  // On web, the whole app renders inside a phone-width frame (see
+  // WebAppFrame) that's narrower than the actual browser window, so
+  // useWindowDimensions() would return the raw window size and blow up
+  // every width-dependent layout below (cassette cards, page paging). The
+  // horizontal scroll area's own onLayout gives the size it's actually
+  // rendered at, which respects that frame.
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const { width, height } = viewportSize;
+  const handleViewportLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width: layoutWidth, height: layoutHeight } = event.nativeEvent.layout;
+    setViewportSize((current) =>
+      current.width === layoutWidth && current.height === layoutHeight
+        ? current
+        : { width: layoutWidth, height: layoutHeight }
+    );
+  }, []);
 
   const horizontalRef = useRef<ScrollView>(null);
   const personalScrollViewRef = useRef<ScrollView>(null);
@@ -483,6 +498,7 @@ export default function ConnectionsScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        onLayout={handleViewportLayout}
         onMomentumScrollEnd={handleSwipeEnd}
         keyboardShouldPersistTaps="handled"
       >
