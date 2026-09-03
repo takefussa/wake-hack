@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 
 import { logDevelopmentError } from '@/lib/development-logger';
 import { alarmService, type ActiveAlarm } from '@/services/alarm-service';
@@ -144,7 +143,7 @@ export class PersonalAlarmVoiceService {
     voiceMessageId?: string,
     communityVoices: VoiceMessage[] = []
   ): Promise<PersonalAlarmVoiceSyncResult> {
-    if (Platform.OS !== 'ios' || !alarmService.isNativeAlarmAvailable()) {
+    if (!alarmService.isNativeAlarmAvailable()) {
       return { status: 'unavailable' };
     }
     if (request.userId !== receiverId) return { status: 'failed' };

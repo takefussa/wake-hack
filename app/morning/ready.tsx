@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useRef, useState } from 'react';
-import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, Platform, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
@@ -252,6 +252,42 @@ export default function TomorrowReadyScreen() {
               variant="text"
             />
           ) : null}
+          {Platform.OS === 'android' &&
+          alarmSchedule.state.status === 'scheduled' &&
+          !alarmSchedule.hasNotificationPermission ? (
+            <>
+              <View style={styles.batteryNotice} testID="ready-notification-permission-notice">
+                <Ionicons color={colors.textInverseSecondary} name="notifications-off-outline" size={16} />
+                <AppText variant="caption" tone="lightMuted" style={styles.alarmStatusCopy}>
+                  アプリの通知を許可してください。許可がないとアラームを止められません
+                </AppText>
+              </View>
+              <AppButton
+                icon="settings-outline"
+                label="通知を許可する"
+                onPress={() => void alarmSchedule.openNotificationSettings()}
+                variant="text"
+              />
+            </>
+          ) : null}
+          {Platform.OS === 'android' &&
+          alarmSchedule.state.status === 'scheduled' &&
+          !alarmSchedule.isBatteryOptimizationExcluded ? (
+            <>
+              <View style={styles.batteryNotice} testID="ready-battery-optimization-notice">
+                <Ionicons color={colors.textInverseSecondary} name="battery-half-outline" size={16} />
+                <AppText variant="caption" tone="lightMuted" style={styles.alarmStatusCopy}>
+                  端末の電池最適化が有効です。機種によってはアラームが鳴らないことがあります
+                </AppText>
+              </View>
+              <AppButton
+                icon="settings-outline"
+                label="電池最適化の対象から外す"
+                onPress={() => void alarmSchedule.openBatteryOptimizationSettings()}
+                variant="text"
+              />
+            </>
+          ) : null}
           {wakeError ? (
             <AppText variant="caption" style={styles.error}>
               {wakeError}
@@ -423,6 +459,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     ...shadows.paper,
+  },
+  batteryNotice: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: 1,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    backgroundColor: colors.navyRaised,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   alarmStatusCopy: {
     flexShrink: 1,

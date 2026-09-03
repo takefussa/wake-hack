@@ -269,7 +269,7 @@ export class AlarmService {
     senderId: string;
     sound: 'personal' | 'community';
   }): Promise<ActiveAlarm | null> {
-    if (Platform.OS !== 'ios' || !this.isNativeAlarmAvailable()) {
+    if (!this.isNativeAlarmAvailable()) {
       throw new Error('Native AlarmKit is unavailable');
     }
 
