@@ -98,7 +98,6 @@ export default function RecordVoiceScreen() {
   }
 
   const currentUserId = currentUser.id;
-  const currentMorningRequestId = currentMorningRequest.id;
   // Supabase requests are authoritative on the server. The old local-only
   // receiver list can survive a request edit and incorrectly block a new
   // recording for the same person. Keep the guard only for mock requests.
@@ -163,11 +162,23 @@ export default function RecordVoiceScreen() {
     setPageError(null);
 
     try {
+      // A sender can still have a legacy local morning request after the
+      // Supabase-social merge. The RPC requires a UUID for the sender request;
+      // migrate it before uploading so the voice is not rejected with a
+      // generic "声を届けられませんでした" message.
+      const senderRequestSource = currentMorningRequest;
+      if (!senderRequestSource) return;
+      const senderRequest = await morningRequestService.ensureRemoteRequest(
+        senderRequestSource
+      );
+      if (senderRequest.id !== senderRequestSource.id) {
+        useAppStore.getState().replaceMorningRequest(senderRequest);
+      }
       const voiceMessage = await giveService.sendPersonalVoice({
         senderId: currentUserId,
         receiverId: recipient.id,
         morningRequestId: request.id,
-        senderMorningRequestId: currentMorningRequestId,
+        senderMorningRequestId: senderRequest.id,
         uri: recorder.recording.uri,
         durationMs: recorder.recording.durationMs,
       });
