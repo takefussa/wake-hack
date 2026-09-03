@@ -1,5 +1,6 @@
 import { mapVoiceStyleToWakeStyle } from '@/constants/community-voice';
 import { prototypeConfig } from '@/constants/config';
+import { isDemoMode } from '@/features/demo/demo-mode';
 import { logDevelopmentError } from '@/lib/development-logger';
 import type { CommunityVoiceRepository } from '@/repositories/interfaces/community-voice-repository';
 import {
@@ -145,6 +146,6 @@ function isUuid(value: string): boolean {
 }
 
 export const communityVoiceService = new CommunityVoiceService(
-  new SupabaseCommunityVoiceRepository(),
+  isDemoMode ? mockCommunityVoiceRepository : new SupabaseCommunityVoiceRepository(),
   mockCommunityVoiceRepository
 );
