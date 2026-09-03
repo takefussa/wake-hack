@@ -121,6 +121,19 @@ export class CommunityVoiceService {
       return this.fallbackRepository.listMine(userId);
     }
   }
+
+  async deleteMine(voiceId: string, userId: string): Promise<void> {
+    try {
+      if (!isUuid(voiceId)) {
+        await this.fallbackRepository.deleteMine(voiceId, userId);
+        return;
+      }
+      await this.repository.deleteMine(voiceId, userId);
+    } catch (error) {
+      logDevelopmentError('communityVoice.deleteMine', error);
+      throw error;
+    }
+  }
 }
 
 const mockCommunityVoiceRepository = new MockCommunityVoiceRepository();

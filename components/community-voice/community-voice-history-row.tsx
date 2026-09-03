@@ -10,6 +10,8 @@ import type { CommunityVoice, VoiceMessage } from '@/types';
 
 type CommunityVoiceHistoryRowProps = {
   voice: CommunityVoice;
+  isDeleting?: boolean;
+  onDelete?: (voice: CommunityVoice) => void;
 };
 
 function formatDate(createdAt: string): string {
@@ -31,7 +33,11 @@ function toVoiceMessage(voice: CommunityVoice): VoiceMessage {
   };
 }
 
-export function CommunityVoiceHistoryRow({ voice }: CommunityVoiceHistoryRowProps) {
+export function CommunityVoiceHistoryRow({
+  voice,
+  isDeleting = false,
+  onDelete,
+}: CommunityVoiceHistoryRowProps) {
   const player = useVoicePlayer(toVoiceMessage(voice));
   const wakeStyle = getWakeStyleOption(voice.wakeStyle);
 
@@ -84,6 +90,29 @@ export function CommunityVoiceHistoryRow({ voice }: CommunityVoiceHistoryRowProp
           Thanks {voice.thanksCount}
         </AppText>
       </View>
+
+      {onDelete ? (
+        <Pressable
+          accessibilityRole="button"
+          disabled={isDeleting}
+          onPress={() => onDelete(voice)}
+          style={({ pressed }) => [
+            styles.deleteButton,
+            isDeleting && styles.disabled,
+            pressed && !isDeleting && styles.pressed,
+          ]}>
+          {isDeleting ? (
+            <ActivityIndicator color={colors.danger} size="small" />
+          ) : (
+            <>
+              <Ionicons color={colors.danger} name="trash-outline" size={16} />
+              <AppText variant="caption" style={styles.deleteText}>
+                削除
+              </AppText>
+            </>
+          )}
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -136,6 +165,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: spacing.md,
+  },
+  deleteButton: {
+    minHeight: 40,
+    borderRadius: radii.badge,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  deleteText: {
+    color: colors.danger,
   },
   disabled: {
     opacity: 0.48,
