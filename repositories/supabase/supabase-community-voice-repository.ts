@@ -18,7 +18,7 @@ import type {
   WakeStyle,
 } from '@/types';
 import * as Crypto from 'expo-crypto';
-import { File } from 'expo-file-system';
+import { readLocalAudioData } from '@/features/voice/read-local-audio-data';
 
 const communityVoiceBucket = 'community-voices';
 const signedUrlLifetimeSeconds = 15 * 60;
@@ -88,22 +88,14 @@ export class SupabaseCommunityVoiceRepository
 
     const voiceId = Crypto.randomUUID();
     const audioPath = `${authenticatedUserId}/${voiceId}.m4a`;
-    const file = new File(input.uri);
-    if (!file.exists) {
-      throw new Error('The local recording file does not exist');
-    }
-
-    const audioData = await file.arrayBuffer();
-    if (audioData.byteLength === 0) {
-      throw new Error('The local recording file is empty');
-    }
+    const audioData = await readLocalAudioData(input.uri);
 
     const supabase = getSupabaseClient();
     const { error: uploadError } = await supabase.storage
       .from(communityVoiceBucket)
       .upload(audioPath, audioData, {
         cacheControl: '3600',
-        contentType: 'audio/mp4',
+        contentType: 'audio/m4a',
         upsert: false,
       });
 
