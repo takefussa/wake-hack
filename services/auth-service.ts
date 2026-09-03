@@ -1,12 +1,18 @@
-import type { User } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
 import type {
   AppStateStatus,
   NativeEventSubscription,
 } from 'react-native';
 import { AppState, Platform } from 'react-native';
 
+import { isDemoMode } from '@/features/demo/demo-mode';
 import { logDevelopmentError } from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
+
+export type AuthenticatedUser = { id: string };
+
+const demoUserStorageKey = '@wake-hack/demo-user-id';
 
 function isNetworkError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
@@ -18,13 +24,16 @@ function isNetworkError(error: unknown): boolean {
 }
 
 export class AuthService {
-  private initializationPromise: Promise<User> | null = null;
+  private initializationPromise: Promise<AuthenticatedUser> | null = null;
   private authenticatedUserId: string | null = null;
   private appStateSubscription: NativeEventSubscription | null = null;
 
-  initializeAnonymousSession(): Promise<User> {
+  initializeSession(): Promise<AuthenticatedUser> {
     if (!this.initializationPromise) {
-      this.initializationPromise = this.resolveAnonymousSession().catch((error) => {
+      const session = isDemoMode
+        ? this.resolveDemoSession()
+        : this.resolveAnonymousSession();
+      this.initializationPromise = session.catch((error) => {
         this.initializationPromise = null;
         this.authenticatedUserId = null;
         logDevelopmentError('auth.initialize', error);
@@ -73,7 +82,22 @@ export class AuthService {
     };
   }
 
-  private async resolveAnonymousSession(): Promise<User> {
+  private async resolveDemoSession(): Promise<AuthenticatedUser> {
+    const storedUserId = await AsyncStorage.getItem(demoUserStorageKey);
+    if (storedUserId) {
+      this.authenticatedUserId = storedUserId;
+      return { id: storedUserId };
+    }
+
+    // Deliberately not a UUID: every service routes non-UUID ids to its local
+    // mock repository, which is what keeps the demo off Supabase entirely.
+    const demoUserId = `demo-user-${Crypto.randomUUID()}`;
+    await AsyncStorage.setItem(demoUserStorageKey, demoUserId);
+    this.authenticatedUserId = demoUserId;
+    return { id: demoUserId };
+  }
+
+  private async resolveAnonymousSession(): Promise<AuthenticatedUser> {
     const supabase = getSupabaseClient();
     const { data: sessionData, error: sessionError } =
       await supabase.auth.getSession();

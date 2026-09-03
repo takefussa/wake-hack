@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
@@ -88,7 +89,7 @@ export default function RequestDetailScreen() {
   }, [requestId]);
 
   if (!currentUser) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href={onboardingRoute} />;
   }
   if (!currentMorningRequest) {
     return <Redirect href="/morning/setup" />;

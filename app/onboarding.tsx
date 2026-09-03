@@ -20,7 +20,7 @@ export default function OnboardingScreen() {
   function handleNext() {
     runOnce(() => {
       if (isLastPage) {
-        router.push('/onboarding/profile');
+        router.push('/onboarding-profile');
         return;
       }
 

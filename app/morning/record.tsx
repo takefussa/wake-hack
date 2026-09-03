@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { LoadingState } from '@/components/common/loading-state';
@@ -90,7 +91,7 @@ export default function RecordVoiceScreen() {
   }, [requestId]);
 
   if (!currentUser) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href={onboardingRoute} />;
   }
 
   if (!currentMorningRequest) {

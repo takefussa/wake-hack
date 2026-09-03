@@ -44,6 +44,7 @@ app-example
 
 # Local Expo module build output
 /modules/**/build/
+/modules/**/.gradle/
 
 .env
 

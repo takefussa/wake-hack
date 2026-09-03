@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 
+import { isDemoMode } from '@/features/demo/demo-mode';
 import { getNextWakeDate } from '@/features/morning/get-next-wake-date';
 import { isSupabaseUuid } from '@/lib/identifiers';
 import { logDevelopmentError } from '@/lib/development-logger';
@@ -23,9 +24,11 @@ export class MorningRequestService {
     userId: string,
     input: CreateMorningRequestInput
   ): Promise<MorningRequest> {
+    const repository = isDemoMode ? this.mockRepository : this.repository;
     try {
-      return await this.repository.create({
-        id: Crypto.randomUUID(),
+      return await repository.create({
+        // A non-UUID id keeps every downstream service on its mock repository.
+        id: isDemoMode ? `request-demo-${Crypto.randomUUID()}` : Crypto.randomUUID(),
         userId,
         ...input,
         scheduledFor: getNextWakeDate(input.wakeAt).toISOString(),
@@ -70,7 +73,7 @@ export class MorningRequestService {
     userId: string,
     currentRequestId?: string
   ): Promise<MorningRequest[]> {
-    if (currentRequestId && !isSupabaseUuid(currentRequestId)) {
+    if (isDemoMode || (currentRequestId && !isSupabaseUuid(currentRequestId))) {
       return this.mockRepository.getAvailableRequests(userId);
     }
 
@@ -85,6 +88,7 @@ export class MorningRequestService {
   async getRequest(id: string): Promise<MorningRequest | null> {
     const mockRequest = await this.mockRepository.getById(id);
     if (mockRequest) return mockRequest;
+    if (isDemoMode) return null;
 
     try {
       return await this.repository.getById(id);
@@ -99,7 +103,7 @@ export class MorningRequestService {
   }
 
   async ensureRemoteRequest(request: MorningRequest): Promise<MorningRequest> {
-    if (isSupabaseUuid(request.id)) return request;
+    if (isDemoMode || isSupabaseUuid(request.id)) return request;
 
     const existingMigration = this.legacyMigrationPromises.get(request.id);
     if (existingMigration) return existingMigration;
@@ -177,6 +181,8 @@ export class MorningRequestService {
   async resetPrototypeData(): Promise<void> {
     this.legacyMigrationPromises.clear();
     await this.mockRepository.reset();
+    if (isDemoMode) return;
+
     try {
       await this.repository.reset();
     } catch (error) {

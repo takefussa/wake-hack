@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppText } from '@/components/common/app-text';
 import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { voiceStyleOptions } from '@/constants/options';
@@ -325,7 +326,7 @@ export default function ConnectionsScreen() {
   }, [loadDeliveryStatuses]);
 
   if (!currentUser) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href={onboardingRoute} />;
   }
 
   function moveTo(nextMode: TimelineMode) {

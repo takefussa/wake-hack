@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppButton } from "@/components/common/app-button";
 import { AppText } from "@/components/common/app-text";
 import { Screen } from "@/components/common/screen";
@@ -32,7 +33,7 @@ export default function GiveChoiceScreen() {
   const runOnce = useTapLock();
 
   if (!currentUser) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href={onboardingRoute} />;
   }
 
   if (!currentMorningRequest) {

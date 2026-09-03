@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 
 import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
 import { LoadingScreen } from '@/components/common/loading-screen';
+import { WebAppFrame } from '@/components/common/web-app-frame';
 import { colors, fontFamilyName, paperColors } from '@/constants/theme';
 import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useAlarmStopFlow } from '@/hooks/use-alarm-stop-flow';
@@ -62,32 +63,34 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      {isReady ? (
-        <ThemeProvider value={navigationTheme}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: 'fade',
-              contentStyle: { backgroundColor: colors.background },
-            }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="onboarding/index" />
-            <Stack.Screen name="onboarding/profile" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="profile-edit" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="user/[id]" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="morning" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="wake" options={{ animation: 'fade' }} />
-            <Stack.Screen name="friend" options={{ animation: 'slide_from_right' }} />
-          </Stack>
-          <StatusBar backgroundColor={paperColors.statusGray} style="dark" />
-        </ThemeProvider>
-      ) : authStatus === 'error' ? (
-        <AuthErrorScreen failure={failure} onRetry={retry} />
-      ) : (
-        <LoadingScreen />
-      )}
-    </SafeAreaProvider>
+    <WebAppFrame>
+      <SafeAreaProvider>
+        {isReady ? (
+          <ThemeProvider value={navigationTheme}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'fade',
+                contentStyle: { backgroundColor: colors.background },
+              }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="onboarding" />
+              <Stack.Screen name="onboarding-profile" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="profile-edit" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="user/[id]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="morning" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="wake" options={{ animation: 'fade' }} />
+              <Stack.Screen name="friend" options={{ animation: 'slide_from_right' }} />
+            </Stack>
+            <StatusBar backgroundColor={paperColors.statusGray} style="dark" />
+          </ThemeProvider>
+        ) : authStatus === 'error' ? (
+          <AuthErrorScreen failure={failure} onRetry={retry} />
+        ) : (
+          <LoadingScreen />
+        )}
+      </SafeAreaProvider>
+    </WebAppFrame>
   );
 }

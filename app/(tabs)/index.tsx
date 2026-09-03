@@ -5,12 +5,14 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { Waveform } from '@/components/common/waveform';
 import { ReceivedThanksSection } from '@/components/thanks/received-thanks-section';
 import { fonts, paperColors, shadows, spacing } from '@/constants/theme';
+import { isDemoMode } from '@/features/demo/demo-mode';
 import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
@@ -342,7 +344,7 @@ export default function HomeScreen() {
     alarmSchedule.state.status === 'scheduled' &&
     alarmSchedule.state.alarm.sound !== 'default';
 
-  if (!currentUser) return <Redirect href="/onboarding" />;
+  if (!currentUser) return <Redirect href={onboardingRoute} />;
 
   function handleMorningAction() {
     runOnce(() =>
@@ -368,7 +370,9 @@ export default function HomeScreen() {
         <View style={styles.expoGoNotice} testID="alarm-unavailable-notice">
           <Ionicons color="#8A674E" name="information-circle-outline" size={19} />
           <AppText style={styles.expoGoNoticeText}>
-            Expo Goでは実際のアラームだけ利用できません。朝リクエストやWake Voiceの送受信は使えます。
+            {isDemoMode
+              ? 'Web版では実際のアラームは鳴りません。朝リクエストやWake Voiceの送受信はお試しいただけます。'
+              : 'Expo Goでは実際のアラームだけ利用できません。朝リクエストやWake Voiceの送受信は使えます。'}
           </AppText>
         </View>
       ) : null}

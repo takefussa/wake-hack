@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppText } from '@/components/common/app-text';
 import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
@@ -38,7 +39,7 @@ export default function ProfileEditScreen() {
   }, [avatarId, nickname, tags, userType]);
 
   if (!currentUser) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href={onboardingRoute} />;
   }
 
   async function handleSubmit() {

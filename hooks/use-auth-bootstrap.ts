@@ -122,7 +122,7 @@ export function useAuthBootstrap() {
           authService.startSessionAutoRefresh();
 
         const user =
-          await authService.initializeAnonymousSession();
+          await authService.initializeSession();
 
         let profile: UserProfile | null;
 

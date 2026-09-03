@@ -5,6 +5,7 @@ import { Redirect, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
@@ -152,7 +153,7 @@ export default function FriendsScreen() {
   }
 
   if (!currentUser) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href={onboardingRoute} />;
   }
 
   return (

@@ -8,6 +8,7 @@ import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { fonts, paperColors, shadows, spacing } from '@/constants/theme';
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { alarmService } from '@/services/alarm-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
@@ -22,7 +23,7 @@ export default function ProfileScreen() {
   const [isResetting, setIsResetting] = useState(false);
   const isResettingRef = useRef(false);
 
-  if (!currentUser) return <Redirect href="/onboarding" />;
+  if (!currentUser) return <Redirect href={onboardingRoute} />;
 
   const matchedFriendCount = friendships.filter(
     (friendship) => friendship.status === 'matched'
@@ -44,7 +45,7 @@ export default function ProfileScreen() {
       await profileService.deleteCurrentProfile();
       await morningRequestService.resetPrototypeData();
       await resetPrototype();
-      router.replace('/onboarding');
+      router.replace(onboardingRoute);
     } catch {
       isResettingRef.current = false;
       setIsResetting(false);

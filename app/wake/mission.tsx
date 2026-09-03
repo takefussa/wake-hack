@@ -24,6 +24,7 @@ import {
   shadows,
   spacing,
 } from '@/constants/theme';
+import { isDemoMode } from '@/features/demo/demo-mode';
 import {
   resolveWakeProofMission,
   wakeProofMissions,
@@ -56,18 +57,27 @@ export default function WakeMissionScreen() {
   const [status, setStatus] = useState<MissionStatus>('active');
   const [missionOffset, setMissionOffset] = useState(0);
 
+  // A desktop browser has no accelerometer, so the shake mission would be a
+  // dead end for a judge opening the web demo.
+  const availableMissions = useMemo(
+    () =>
+      isDemoMode
+        ? wakeProofMissions.filter((candidate) => candidate.type !== 'shake')
+        : wakeProofMissions,
+    []
+  );
   const defaultMission = useMemo(
-    () => resolveWakeProofMission(wakeSession?.id ?? 'wake-session'),
-    [wakeSession?.id]
+    () => resolveWakeProofMission(wakeSession?.id ?? 'wake-session', availableMissions),
+    [availableMissions, wakeSession?.id]
   );
   const mission = useMemo(() => {
-    const defaultIndex = wakeProofMissions.findIndex(
+    const defaultIndex = availableMissions.findIndex(
       (candidate) => candidate.type === defaultMission.type
     );
-    return wakeProofMissions[
-      (Math.max(defaultIndex, 0) + missionOffset) % wakeProofMissions.length
+    return availableMissions[
+      (Math.max(defaultIndex, 0) + missionOffset) % availableMissions.length
     ];
-  }, [defaultMission.type, missionOffset]);
+  }, [availableMissions, defaultMission.type, missionOffset]);
 
   const hasValidMissionContext = Boolean(
     currentUser &&

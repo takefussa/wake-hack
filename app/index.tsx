@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 
 import { LoadingScreen } from '@/components/common/loading-screen';
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function EntryScreen() {
@@ -11,5 +12,5 @@ export default function EntryScreen() {
     return <LoadingScreen />;
   }
 
-  return <Redirect href={currentUser ? '/(tabs)' : '/onboarding'} />;
+  return <Redirect href={currentUser ? '/(tabs)' : onboardingRoute} />;
 }

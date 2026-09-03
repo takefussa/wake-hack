@@ -1,5 +1,6 @@
 import type { AudioSource } from 'expo-audio';
 
+import { demoRecordingUri } from '@/features/demo/demo-recording';
 import type { VoiceMessage } from '@/types';
 
 const onboardingHumanVoice = require('../../assets/audio/onboarding-takuma.wav') as number;
@@ -16,6 +17,9 @@ export function resolveVoiceSource(voice: VoiceMessage): AudioSource {
   }
   if (voice.id.startsWith('personal-voice-takuma')) {
     return personalWakeVoice;
+  }
+  if (voice.uri === demoRecordingUri) {
+    return onboardingHumanVoice;
   }
   if (isPlayableUri(voice.uri)) {
     return { uri: voice.uri };

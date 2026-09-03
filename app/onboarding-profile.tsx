@@ -11,6 +11,7 @@ import { ProfileFields } from '@/components/profile/profile-fields';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { demoProfileDefaults } from '@/data/demo-scenario';
 import { goBackOrReplace } from '@/features/navigation/go-back';
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { isProfileInputValid } from '@/features/profile/profile-form';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -71,7 +72,7 @@ export default function ProfileSetupScreen() {
       return;
     }
 
-    goBackOrReplace('/onboarding');
+    goBackOrReplace(onboardingRoute);
   }
 
   function handleNext() {

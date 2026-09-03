@@ -1,18 +1,21 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { paperColors, shadows } from '@/constants/theme';
 import { demoWakeSenderId } from '@/data/demo-scenario';
+import { isDemoMode } from '@/features/demo/demo-mode';
 import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
+import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
 import type { VoiceMessage } from '@/types';
 
@@ -42,6 +45,7 @@ export default function MorningSummaryScreen() {
     (state) => state.currentMorningRequest
   );
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
+  const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const startWakeSession = useAppStore((state) => state.startWakeSession);
   const cancelWakeSession = useAppStore((state) => state.cancelWakeSession);
   const completeWakeSession = useAppStore((state) => state.completeWakeSession);
@@ -55,9 +59,12 @@ export default function MorningSummaryScreen() {
     alarmSchedule.state.alarm.sound === 'personal';
   const [skipTarget, setSkipTarget] = useState<'personal' | 'community' | null>(null);
   const [skipError, setSkipError] = useState<string | null>(null);
+  const [isStartingDemoWake, setIsStartingDemoWake] = useState(false);
+  const [demoWakeError, setDemoWakeError] = useState<string | null>(null);
+  const isStartingDemoWakeRef = useRef(false);
 
   if (!currentUser) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href={onboardingRoute} />;
   }
 
   if (!currentMorningRequest) {
@@ -106,6 +113,41 @@ export default function MorningSummaryScreen() {
       return;
     }
     router.replace('/wake/complete');
+  }
+
+  // The real device flow only reaches /morning/ready once a wake voice is
+  // already assigned (by a native alarm firing or a peer's Give), which a
+  // solo web judge can never trigger on their own. This mirrors the same
+  // assignment ready.tsx's "朝を体験する" performs -- Personal when the
+  // request is eligible, Community otherwise -- just reachable a step
+  // earlier so the demo never dead-ends waiting for a second real user.
+  async function handleStartDemoWake() {
+    if (isStartingDemoWakeRef.current || !currentMorningRequest || !currentUser) return;
+
+    isStartingDemoWakeRef.current = true;
+    setIsStartingDemoWake(true);
+    setDemoWakeError(null);
+    try {
+      const experience = await wakeService.startWakeExperience(
+        currentMorningRequest,
+        currentUser.id,
+        givenVoiceMessages,
+        { isDemo: true }
+      );
+      const didStart = startWakeSession(experience.voice, experience.session);
+      if (!didStart) {
+        throw new Error('Wake session could not start');
+      }
+      router.push(
+        experience.session.status === 'completed'
+          ? '/wake/complete'
+          : '/wake/alarm'
+      );
+    } catch {
+      setDemoWakeError('朝の声を準備できませんでした。もう一度お試しください。');
+      isStartingDemoWakeRef.current = false;
+      setIsStartingDemoWake(false);
+    }
   }
 
   return (
@@ -217,7 +259,9 @@ export default function MorningSummaryScreen() {
                   : alarmSchedule.state.status === 'expired'
                       ? '設定時刻を過ぎています'
                       : alarmSchedule.state.status === 'unavailable'
-                        ? '実際のアラームはこの環境では利用できません'
+                        ? isDemoMode
+                          ? 'Web版では実際のアラームは鳴りません'
+                          : '実際のアラームはこの環境では利用できません'
                         : 'アラームを設定できませんでした'}
             </AppText>
             <AppText style={styles.alarmNoteText}>
@@ -245,7 +289,9 @@ export default function MorningSummaryScreen() {
                   : alarmSchedule.state.status === 'expired'
                     ? '時刻を編集して、未来の時刻を選んでください。'
                     : alarmSchedule.state.status === 'unavailable'
-                      ? 'Expo GoではAlarmKitだけを無効にしています。朝リクエストやWake Voiceの送受信は利用できます。'
+                      ? isDemoMode
+                        ? '「朝を体験する」から声の再生をお試しください。'
+                        : 'Expo GoではAlarmKitだけを無効にしています。朝リクエストやWake Voiceの送受信は利用できます。'
                       : '再設定を試すか、端末の設定を確認してください。'}
             </AppText>
           </View>
@@ -349,6 +395,35 @@ export default function MorningSummaryScreen() {
           </AppText>
           <Ionicons color="#30463E" name="arrow-forward" size={22} />
         </Pressable>
+
+        {isDemoMode && !assignedWakeVoice ? (
+          <View style={styles.demoWakeSection}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isStartingDemoWake}
+              onPress={() => void handleStartDemoWake()}
+              style={({ pressed }) => [
+                styles.demoWakeButton,
+                isStartingDemoWake && styles.submitDisabled,
+                pressed && styles.linkPressed,
+              ]}
+              testID="morning-summary-demo-wake"
+            >
+              <Ionicons color="#30463E" name="play-circle-outline" size={18} />
+              <AppText style={styles.demoWakeButtonText}>
+                {isStartingDemoWake ? '朝を準備しています…' : '朝を体験する（デモ）'}
+              </AppText>
+            </Pressable>
+            <AppText style={styles.demoWakeHint}>
+              {currentMorningRequest.personalEligible
+                ? '声を届けたので、あなたにも人の声が届きます。'
+                : '相手を選ばなくても、みんなの声で朝を体験できます。'}
+            </AppText>
+            {demoWakeError ? (
+              <AppText style={styles.devSkipError}>{demoWakeError}</AppText>
+            ) : null}
+          </View>
+        ) : null}
 
         <View style={styles.devSkipSection}>
           <AppText style={styles.devSkipSectionLabel}>
@@ -711,5 +786,34 @@ const styles = StyleSheet.create({
   nextButtonText: {
     color: '#30463E',
     fontSize: 19,
+  },
+  demoWakeSection: {
+    marginTop: 14,
+    alignItems: 'center',
+    gap: 6,
+  },
+  demoWakeButton: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: paperColors.ink,
+    borderRadius: 8,
+    backgroundColor: paperColors.noteBlue,
+  },
+  demoWakeButtonText: {
+    color: '#30463E',
+    fontSize: 14,
+  },
+  demoWakeHint: {
+    color: '#657169',
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  submitDisabled: {
+    opacity: 0.55,
   },
 });

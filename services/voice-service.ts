@@ -1,4 +1,5 @@
 import { prototypeConfig } from '@/constants/config';
+import { isDemoMode } from '@/features/demo/demo-mode';
 import { logDevelopmentError } from '@/lib/development-logger';
 import type { VoiceRepository } from '@/repositories/interfaces/voice-repository';
 import { MockVoiceRepository } from '@/repositories/mock/mock-voice-repository';
@@ -53,7 +54,9 @@ export class VoiceService {
   }
 }
 
+const mockVoiceRepository = new MockVoiceRepository();
+
 export const voiceService = new VoiceService(
-  new SupabaseVoiceRepository(),
-  new MockVoiceRepository()
+  isDemoMode ? mockVoiceRepository : new SupabaseVoiceRepository(),
+  mockVoiceRepository
 );

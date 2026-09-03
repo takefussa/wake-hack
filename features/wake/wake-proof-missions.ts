@@ -24,12 +24,15 @@ export const wakeProofMissions: WakeProofMission[] = [
   },
 ];
 
-export function resolveWakeProofMission(sessionId: string): WakeProofMission {
+export function resolveWakeProofMission(
+  sessionId: string,
+  candidates: WakeProofMission[] = wakeProofMissions
+): WakeProofMission {
   const seed = Array.from(sessionId).reduce(
     (total, character) => total + character.charCodeAt(0),
     0
   );
-  return wakeProofMissions[seed % wakeProofMissions.length];
+  return candidates[seed % candidates.length];
 }
 
 export const wakeProofPhrase = 'ASA-42';

@@ -16,6 +16,7 @@ import {
   shadows,
   spacing,
 } from '@/constants/theme';
+import { isDemoMode } from '@/features/demo/demo-mode';
 import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { wakeService } from '@/services/wake-service';
@@ -228,7 +229,9 @@ export default function TomorrowReadyScreen() {
                     : alarmSchedule.state.status === 'expired'
                       ? '設定時刻を過ぎています'
                       : alarmSchedule.state.status === 'unavailable'
-                        ? 'Expo Goでは実際のアラームは利用できません。Wake Voiceの送受信は利用できます'
+                        ? isDemoMode
+                          ? 'Web版では実際のアラームは鳴りません。「朝を体験する」から声の再生をお試しください'
+                          : 'Expo Goでは実際のアラームは利用できません。Wake Voiceの送受信は利用できます'
                         : 'アラームを設定できませんでした'}
             </AppText>
           </View>

@@ -4,6 +4,7 @@ import { File, Paths } from 'expo-file-system';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Screen } from '@/components/common/screen';
@@ -36,7 +37,7 @@ export default function CommunityRecordScreen() {
     }
   }, [recorder.isRecording, recorder.durationMs, recorder.recording]);
 
-  if (!currentUser) return <Redirect href="/onboarding" />;
+  if (!currentUser) return <Redirect href={onboardingRoute} />;
   const user = currentUser;
 
   const isTooShort =

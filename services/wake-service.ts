@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { Asset } from 'expo-asset';
 
+import { isDemoMode } from '@/features/demo/demo-mode';
 import { logDevelopmentError } from '@/lib/development-logger';
 import { isSupabaseUuid } from '@/lib/identifiers';
 import type { WakeAssignmentRepository } from '@/repositories/interfaces/wake-assignment-repository';
@@ -389,9 +390,11 @@ const mockWakeVoiceRepository =
 
 export const wakeService =
   new WakeService(
-    new SupabaseWakeVoiceRepository(
-      mockWakeVoiceRepository
-    ),
+    isDemoMode
+      ? mockWakeVoiceRepository
+      : new SupabaseWakeVoiceRepository(
+          mockWakeVoiceRepository
+        ),
     mockWakeVoiceRepository,
     new SupabaseWakeAssignmentRepository(),
     new SupabaseWakeSessionRepository()

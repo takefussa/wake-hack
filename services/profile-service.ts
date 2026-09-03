@@ -1,6 +1,8 @@
+import { DemoProfileRepository } from '@/repositories/demo/demo-profile-repository';
 import { MockProfileRepository } from '@/repositories/mock/mock-profile-repository';
 import type { ProfileRepository } from '@/repositories/interfaces/profile-repository';
 import { SupabaseProfileRepository } from '@/repositories/supabase/supabase-profile-repository';
+import { isDemoMode } from '@/features/demo/demo-mode';
 import { logDevelopmentError } from '@/lib/development-logger';
 import { authService } from '@/services/auth-service';
 import type { CreateProfileInput, UpdateProfileInput, UserProfile } from '@/types';
@@ -91,6 +93,6 @@ export class ProfileService {
 }
 
 export const profileService = new ProfileService(
-  new SupabaseProfileRepository(),
+  isDemoMode ? new DemoProfileRepository() : new SupabaseProfileRepository(),
   new MockProfileRepository()
 );

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { LoadingState } from '@/components/common/loading-state';
@@ -58,7 +59,7 @@ export default function UserProfileScreen() {
     };
   }, [currentUser, profileId]);
 
-  if (!currentUser) return <Redirect href="/onboarding" />;
+  if (!currentUser) return <Redirect href={onboardingRoute} />;
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea} testID="user-profile-screen">
