@@ -1,4 +1,4 @@
-import { logDevelopmentError } from '@/lib/development-logger';
+import { logDevelopmentWarning } from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { MorningRequest, UserProfile } from '@/types';
 
@@ -46,7 +46,11 @@ class VoiceExampleService {
 
       return lines;
     } catch (error) {
-      logDevelopmentError('voiceExample.generate', error);
+      // This is an optional, best-effort prompt -- the record screen already
+      // hides the card and continues the give flow on failure, so this isn't
+      // treated as an app error (which would pop RN's intrusive full-screen
+      // LogBox in dev builds).
+      logDevelopmentWarning('voiceExample.generate', error);
       throw new Error('Voice example could not be generated');
     }
   }
