@@ -14,6 +14,7 @@ import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useAlarmStopFlow } from '@/hooks/use-alarm-stop-flow';
 import { useAuthBootstrap } from '@/hooks/use-auth-bootstrap';
 import { WakeAlarm } from '@/modules/wake-alarm';
+import { ensureBackgroundVoiceSyncRegistered } from '@/services/background-voice-sync-task';
 import { useAppStore } from '@/store/use-app-store';
 
 void SplashScreen.preventAutoHideAsync();
@@ -54,6 +55,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (isReady) {
       void WakeAlarm.requestNotificationPermission();
+      void ensureBackgroundVoiceSyncRegistered();
     }
   }, [isReady]);
 
