@@ -328,9 +328,6 @@ export type Database = {
           p_sender_morning_request_id: string;
           p_storage_path: string;
           p_duration_ms: number;
-          p_moderation_status?: string;
-          p_moderation_category?: string;
-          p_moderation_reason?: string | null;
         };
         Returns: VoiceMessageRow[];
       };
