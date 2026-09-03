@@ -1,5 +1,6 @@
 import {
   getRecordingPermissionsAsync,
+  IOSOutputFormat,
   RecordingPresets,
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
@@ -15,6 +16,18 @@ import { prototypeConfig } from '@/constants/config';
 
 const recordingOptions = {
   ...RecordingPresets.HIGH_QUALITY,
+  // Record an AlarmKit-compatible PCM WAV on iOS. Expo's AAC recorder omits a
+  // channel layout on these devices, which makes AVFoundation reject the file
+  // when preparing a custom alarm sound.
+  numberOfChannels: 1,
+  ios: {
+    ...RecordingPresets.HIGH_QUALITY.ios,
+    extension: '.wav',
+    outputFormat: IOSOutputFormat.LINEARPCM,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
   isMeteringEnabled: true,
 };
 

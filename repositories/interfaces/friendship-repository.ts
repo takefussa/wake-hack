@@ -1,6 +1,7 @@
-import type { CreateFriendshipInput, Friendship } from '@/types';
+import type { Friendship, RequestFriendshipInput } from '@/types';
 
 export interface FriendshipRepository {
-  createPending(input: CreateFriendshipInput): Promise<Friendship>;
-  match(friendship: Friendship): Promise<Friendship>;
+  request(input: RequestFriendshipInput): Promise<Friendship>;
+  respond(friendshipId: string): Promise<Friendship>;
+  getForUser(userId: string): Promise<Friendship[]>;
 }

@@ -6,7 +6,7 @@ export type WakeProofMission = {
   description: string;
 };
 
-const missions: WakeProofMission[] = [
+export const wakeProofMissions: WakeProofMission[] = [
   {
     type: 'phrase',
     title: '合言葉を入力',
@@ -29,7 +29,7 @@ export function resolveWakeProofMission(sessionId: string): WakeProofMission {
     (total, character) => total + character.charCodeAt(0),
     0
   );
-  return missions[seed % missions.length];
+  return wakeProofMissions[seed % wakeProofMissions.length];
 }
 
 export const wakeProofPhrase = 'ASA-42';

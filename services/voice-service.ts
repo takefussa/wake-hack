@@ -35,6 +35,20 @@ export class VoiceService {
       throw error;
     }
   }
+
+  async getAlarmReceivedAt(voiceMessageId: string): Promise<string | null> {
+    return this.repository.getAlarmReceivedAt(voiceMessageId);
+  }
+
+  async acknowledgeAlarmReceived(
+    voiceMessageId: string,
+    morningRequestId: string
+  ): Promise<string> {
+    return this.repository.acknowledgeAlarmReceived(
+      voiceMessageId,
+      morningRequestId
+    );
+  }
 }
 
 export const voiceService = new VoiceService(

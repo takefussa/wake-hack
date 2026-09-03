@@ -13,6 +13,7 @@ import type {
   ThanksMessage,
   UserProfile,
   VoiceMessage,
+  WakeSession,
 } from '@/types';
 
 type AppStore = PrototypePersistedState & {
@@ -28,10 +29,11 @@ type AppStore = PrototypePersistedState & {
   replaceMorningRequest: (request: MorningRequest) => void;
   selectGiveRequest: (requestId: string) => void;
   completeGive: (voiceMessage: VoiceMessage) => boolean;
+  addCommunityVoice: (voiceMessage: VoiceMessage) => void;
   chooseCommunityWake: () => void;
-  startWakeSession: (voiceMessage: VoiceMessage) => boolean;
-  cancelWakeSession: () => void;
-  completeWakeSession: () => void;
+  startWakeSession: (voiceMessage: VoiceMessage, session?: WakeSession) => boolean;
+  cancelWakeSession: () => WakeSession | null;
+  completeWakeSession: () => WakeSession | null;
   addThanks: (message: ThanksMessage) => void;
   addThanksMessages: (messages: ThanksMessage[]) => void;
   upsertFriendship: (friendship: Friendship) => void;
@@ -58,6 +60,7 @@ const initialPersistedState: PrototypePersistedState = {
   selectedGiveRequestId: null,
   currentGiveReceiverIds: [],
   givenVoiceMessages: [],
+  communityVoiceMessages: [],
   assignedWakeVoice: null,
   wakeSession: null,
   thanksMessages: [],
@@ -78,14 +81,16 @@ export const useAppStore = create<AppStore>()(
           }
 
           const hasSameIdentity = state.currentUser?.id === profile.id;
-          // Phase 1のDB列にない写真URIと一言コメントは、同じ端末のStoreから補完する。
-          const restoredProfile: UserProfile = hasSameIdentity
-            ? {
-                ...profile,
-                profileImageUri: state.currentUser?.profileImageUri,
-                bio: state.currentUser?.bio,
-              }
-            : profile;
+          const restoredProfile: UserProfile =
+            hasSameIdentity &&
+            profile.profileImagePath &&
+            profile.profileImagePath === state.currentUser?.profileImagePath &&
+            !profile.profileImageUri
+              ? {
+                  ...profile,
+                  profileImageUri: state.currentUser.profileImageUri,
+                }
+              : profile;
 
           if (!hasSameIdentity) {
             return {
@@ -144,15 +149,14 @@ export const useAppStore = create<AppStore>()(
         }),
       selectGiveRequest: (requestId) => set({ selectedGiveRequestId: requestId }),
       completeGive: (voiceMessage) => {
-        const { currentGiveReceiverIds, currentMorningRequest, currentUser } = get();
+        const { currentMorningRequest, currentUser } = get();
         if (
           !currentMorningRequest ||
           !currentUser ||
           voiceMessage.type !== 'personal' ||
           voiceMessage.senderId !== currentUser.id ||
           !voiceMessage.receiverId ||
-          !voiceMessage.morningRequestId ||
-          currentGiveReceiverIds.includes(voiceMessage.receiverId)
+          !voiceMessage.morningRequestId
         ) {
           return false;
         }
@@ -171,20 +175,32 @@ export const useAppStore = create<AppStore>()(
             new Set([...state.currentGiveReceiverIds, receiverId])
           ),
           givenVoiceMessages: [...state.givenVoiceMessages, voiceMessage],
-          assignedWakeVoice: bindWakeVoice(
-            mockPersonalWakeVoice,
-            eligibleRequest.id,
-            currentUser.id
-          ),
+          // Keep the wake assignment unset until the receiver actually has a
+          // valid wake voice ready. This prevents the app from showing a
+          // wake-provider before the voice is genuinely assigned.
+          assignedWakeVoice: state.assignedWakeVoice,
         }));
         return true;
       },
+      addCommunityVoice: (voiceMessage) =>
+        set((state) => ({
+          communityVoiceMessages: [voiceMessage, ...state.communityVoiceMessages],
+        })),
       chooseCommunityWake: () => {
-        const { currentMorningRequest, currentUser } = get();
+        const { currentMorningRequest, currentUser, communityVoiceMessages } = get();
         if (!currentMorningRequest || !currentUser) return;
         if (currentMorningRequest.personalEligible) return;
 
-        const communityVoice = mockCommunityVoices[0];
+        const localCommunityVoices = communityVoiceMessages
+          .filter((voice) => voice.type === 'community')
+          .sort(
+            (left, right) =>
+              new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+          );
+        const communityVoice =
+          localCommunityVoices.find(
+            (voice) => voice.voiceStyle === currentMorningRequest.preferredVoiceStyle
+          ) ?? localCommunityVoices[0] ?? mockCommunityVoices[0];
 
         set({
           currentMorningRequest: {
@@ -200,7 +216,7 @@ export const useAppStore = create<AppStore>()(
           ),
         });
       },
-      startWakeSession: (voiceMessage) => {
+      startWakeSession: (voiceMessage, preparedSession) => {
         const { currentMorningRequest, currentUser } = get();
         if (
           !currentMorningRequest ||
@@ -212,41 +228,64 @@ export const useAppStore = create<AppStore>()(
           return false;
         }
 
+        const session: WakeSession = preparedSession ?? {
+          id: `wake-session-${Date.now()}`,
+          userId: currentUser.id,
+          morningRequestId: currentMorningRequest.id,
+          voiceMessageId: voiceMessage.id,
+          alarmAt: currentMorningRequest.wakeAt,
+          scheduledFor: currentMorningRequest.scheduledFor,
+          missionCompleted: false,
+          isDemo: true,
+          status: 'ringing',
+        };
+        if (
+          session.userId !== currentUser.id ||
+          session.morningRequestId !== currentMorningRequest.id ||
+          session.voiceMessageId !== voiceMessage.id
+        ) {
+          return false;
+        }
+
         set({
           assignedWakeVoice: voiceMessage,
-          wakeSession: {
-            id: `wake-session-${Date.now()}`,
-            userId: currentUser.id,
-            morningRequestId: currentMorningRequest.id,
-            voiceMessageId: voiceMessage.id,
-            alarmAt: currentMorningRequest.wakeAt,
-            status: 'ringing',
-          },
+          wakeSession: session,
+          currentMorningRequest:
+            session.status === 'completed'
+              ? { ...currentMorningRequest, status: 'completed' }
+              : currentMorningRequest,
         });
         return true;
       },
       cancelWakeSession: () => {
         const wakeSession = get().wakeSession;
-        if (!wakeSession || wakeSession.status === 'completed') return;
+        if (!wakeSession || wakeSession.status === 'completed') return null;
 
         set({
           wakeSession: null,
         });
+        return wakeSession;
       },
       completeWakeSession: () => {
         const { currentMorningRequest, wakeSession } = get();
-        if (!wakeSession || wakeSession.status !== 'ringing') return;
+        if (!wakeSession || wakeSession.status !== 'ringing') return null;
+
+        const completedSession: WakeSession = {
+          ...wakeSession,
+          status: 'completed',
+          wokeAt: wakeSession.isDemo
+            ? createDemoWokeAt(wakeSession.alarmAt)
+            : new Date().toISOString(),
+          missionCompleted: true,
+        };
 
         set({
-          wakeSession: {
-            ...wakeSession,
-            status: 'completed',
-            wokeAt: createDemoWokeAt(wakeSession.alarmAt),
-          },
+          wakeSession: completedSession,
           currentMorningRequest: currentMorningRequest
             ? { ...currentMorningRequest, status: 'completed' }
             : null,
         });
+        return completedSession;
       },
       addThanks: (message) =>
         set((state) => ({ thanksMessages: [message, ...state.thanksMessages] })),
@@ -254,6 +293,7 @@ export const useAppStore = create<AppStore>()(
         set((state) => {
           const existingIds = new Set(state.thanksMessages.map((message) => message.id));
           const uniqueMessages = messages.filter((message) => !existingIds.has(message.id));
+          if (uniqueMessages.length === 0) return state;
           return { thanksMessages: [...uniqueMessages, ...state.thanksMessages] };
         }),
       upsertFriendship: (friendship) =>
@@ -288,6 +328,18 @@ export const useAppStore = create<AppStore>()(
                   morningCount: Math.max(existing.morningCount, friendship.morningCount),
                   createdAt: existing.createdAt,
                 };
+          if (
+            existing.id === nextFriendship.id &&
+            existing.userAId === nextFriendship.userAId &&
+            existing.userBId === nextFriendship.userBId &&
+            existing.userARequested === nextFriendship.userARequested &&
+            existing.userBRequested === nextFriendship.userBRequested &&
+            existing.status === nextFriendship.status &&
+            existing.morningCount === nextFriendship.morningCount &&
+            existing.createdAt === nextFriendship.createdAt
+          ) {
+            return state;
+          }
           const friendships = [...state.friendships];
           friendships[existingIndex] = nextFriendship;
           return { friendships };
@@ -315,6 +367,7 @@ export const useAppStore = create<AppStore>()(
         selectedGiveRequestId: state.selectedGiveRequestId,
         currentGiveReceiverIds: state.currentGiveReceiverIds,
         givenVoiceMessages: state.givenVoiceMessages,
+        communityVoiceMessages: state.communityVoiceMessages,
         assignedWakeVoice: state.assignedWakeVoice,
         wakeSession: state.wakeSession,
         thanksMessages: state.thanksMessages,

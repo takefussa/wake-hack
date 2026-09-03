@@ -17,11 +17,11 @@ export function resolveVoiceSource(voice: VoiceMessage): AudioSource {
   if (voice.id.startsWith('personal-voice-takuma')) {
     return personalWakeVoice;
   }
-  if (voice.type === 'community') {
-    return communityWakeVoice;
-  }
   if (isPlayableUri(voice.uri)) {
     return { uri: voice.uri };
+  }
+  if (voice.type === 'community') {
+    return communityWakeVoice;
   }
   return null;
 }

@@ -1,4 +1,5 @@
 import { moodOptions, scheduleOptions, voiceStyleOptions } from '@/constants/options';
+import { getNextWakeDate } from '@/features/morning/get-next-wake-date';
 import { logDevelopmentError } from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { MorningRequestRepository } from '@/repositories/interfaces/morning-request-repository';
@@ -43,11 +44,7 @@ function isRequestStatus(value: string): value is MorningRequestStatus {
 }
 
 function toNextMorningIso(wakeAt: string): string {
-  const [hours, minutes] = wakeAt.split(':').map(Number);
-  const nextMorning = new Date();
-  nextMorning.setDate(nextMorning.getDate() + 1);
-  nextMorning.setHours(hours, minutes, 0, 0);
-  return nextMorning.toISOString();
+  return getNextWakeDate(wakeAt).toISOString();
 }
 
 function toWakeTime(timestamp: string): string {
@@ -73,6 +70,7 @@ function mapMorningRequestRow(row: MorningRequestRow): MorningRequest {
     id: row.id,
     userId: row.user_id,
     wakeAt: toWakeTime(row.wake_at),
+    scheduledFor: row.wake_at,
     schedules,
     mood: row.mood,
     preferredVoiceStyle: row.preferred_voice_style,
@@ -153,6 +151,7 @@ export class SupabaseMorningRequestRepository
       .from('morning_requests')
       .select(morningRequestColumns)
       .eq('status', 'open')
+      .eq('voice_count', 0)
       .neq('user_id', userId)
       .order('voice_count', { ascending: true })
       .order('created_at', { ascending: false })
@@ -197,6 +196,13 @@ export class SupabaseMorningRequestRepository
     );
   }
 
+  async markCompleted(id: string): Promise<MorningRequest | null> {
+    return this.updateOwnRequest(id, {
+      status: 'completed',
+      updated_at: new Date().toISOString(),
+    });
+  }
+
   async reset(): Promise<void> {
     const userId = authService.getAuthenticatedUserId();
     const { error } = await getSupabaseClient()
@@ -210,7 +216,7 @@ export class SupabaseMorningRequestRepository
   private async updateOwnRequest(
     id: string,
     values: {
-      personal_eligible: boolean;
+      personal_eligible?: boolean;
       status?: MorningRequestStatus;
       updated_at: string;
     },

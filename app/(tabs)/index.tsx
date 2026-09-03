@@ -6,10 +6,14 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
+import { Avatar } from '@/components/common/avatar';
 import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { Waveform } from '@/components/common/waveform';
+import { ReceivedThanksSection } from '@/components/thanks/received-thanks-section';
 import { fonts, paperColors, shadows, spacing } from '@/constants/theme';
+import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
+import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -41,7 +45,7 @@ function MemoNote({ name }: { name: string }) {
 
 type BoomboxCardProps = {
   request: MorningRequest | null;
-  wakeVoice: VoiceMessage | null;
+  isVoiceReady: boolean;
   onPress: () => void;
 };
 
@@ -72,9 +76,9 @@ function getWakeDayDisplay(request: MorningRequest | null, now: Date) {
   };
 }
 
-function BoomboxCard({ request, wakeVoice, onPress }: BoomboxCardProps) {
+function BoomboxCard({ request, isVoiceReady, onPress }: BoomboxCardProps) {
   const [now, setNow] = useState(() => new Date());
-  const isReady = wakeVoice !== null;
+  const isReady = isVoiceReady;
   const { dateLabel, relativeDayLabel } = getWakeDayDisplay(request, now);
   const buttonLabel = request ? '朝を確認する' : '設定する';
 
@@ -290,13 +294,53 @@ function TomorrowWakeCard({
   );
 }
 
+function CassetteTimeline() {
+  const steps = [
+    { icon: 'moon-outline' as const, label: '夜', copy: '気持ちを預ける' },
+    { icon: 'mic-outline' as const, label: '声', copy: '誰かの声が届く' },
+    { icon: 'sunny-outline' as const, label: '朝', copy: '声と一緒に起きる' },
+  ];
+  return (
+    <View style={styles.timeline}>
+      <View style={styles.timelineTitleRow}>
+        <View style={styles.titleRule} />
+        <AppText style={styles.timelineTitle}>HOW IT WORKS</AppText>
+        <View style={styles.titleRule} />
+      </View>
+      <View style={styles.timelineTrack} />
+      <View style={styles.timelineSteps}>
+        {steps.map((step, index) => (
+          <View key={step.label} style={styles.timelineStep}>
+            <View style={styles.cassetteReel}>
+              <View style={styles.reelCenter}>
+                <Ionicons color={paperColors.ink} name={step.icon} size={18} />
+              </View>
+            </View>
+            <AppText style={styles.stepNumber}>0{index + 1} / {step.label}</AppText>
+            <AppText style={styles.stepCopy}>{step.copy}</AppText>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
+  const thanksMessages = useAppStore((state) => state.thanksMessages);
+  const addThanksMessages = useAppStore((state) => state.addThanksMessages);
   const runOnce = useTapLock();
+  const alarmSchedule = useAlarmSchedule(currentMorningRequest);
+  const preparedVoiceSender = useVoiceSender(
+    alarmSchedule.preparedPersonalVoice
+  );
+  const isAlarmVoiceReady =
+    alarmSchedule.state.status === 'scheduled' &&
+    alarmSchedule.state.alarm.sound !== 'default';
 
   if (!currentUser) return <Redirect href="/onboarding" />;
 
@@ -311,13 +355,71 @@ export default function HomeScreen() {
   return (
     <NotebookBackground>
       <MemoNote name={currentUser.nickname} />
-      <BoomboxCard request={currentMorningRequest} wakeVoice={assignedWakeVoice} onPress={handleMorningAction} />
+      <BoomboxCard
+        request={currentMorningRequest}
+        isVoiceReady={
+          isAlarmVoiceReady ||
+          alarmSchedule.preparedPersonalVoice !== null ||
+          assignedWakeVoice !== null
+        }
+        onPress={handleMorningAction}
+      />
+      {currentMorningRequest && alarmSchedule.state.status === 'unavailable' ? (
+        <View style={styles.expoGoNotice} testID="alarm-unavailable-notice">
+          <Ionicons color="#8A674E" name="information-circle-outline" size={19} />
+          <AppText style={styles.expoGoNoticeText}>
+            Expo Goでは実際のアラームだけ利用できません。朝リクエストやWake Voiceの送受信は使えます。
+          </AppText>
+        </View>
+      ) : null}
+      {alarmSchedule.preparedPersonalVoice ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={handleMorningAction}
+          style={({ pressed }) => [
+            styles.receivedVoiceCard,
+            pressed && styles.receivedVoiceCardPressed,
+          ]}
+          testID="home-prepared-personal-voice"
+        >
+          {preparedVoiceSender ? (
+            <Avatar
+              avatarId={preparedVoiceSender.avatarId}
+              imageUri={preparedVoiceSender.profileImageUri}
+              name={preparedVoiceSender.nickname}
+              size={48}
+            />
+          ) : (
+            <View style={styles.receivedVoicePlaceholder}>
+              <Ionicons color="#66835F" name="person" size={22} />
+            </View>
+          )}
+          <View style={styles.receivedVoiceCopy}>
+            <AppText style={styles.receivedVoiceTitle}>
+              {preparedVoiceSender
+                ? `${preparedVoiceSender.nickname}さんから明日のWake Voiceが届いています`
+                : '明日のWake Voiceが届いています'}
+            </AppText>
+            <AppText style={styles.receivedVoiceDescription}>
+              起床時まで内容は再生できません
+            </AppText>
+          </View>
+          <Ionicons color="#66835F" name="lock-closed" size={18} />
+        </Pressable>
+      ) : null}
       <TomorrowWakeCard
         currentUserId={currentUser.id}
         receiverIds={currentGiveReceiverIds}
         givenVoices={givenVoiceMessages}
         onPressTimeline={() => runOnce(() => router.push('/(tabs)/connections'))}
       />
+      <ReceivedThanksSection
+        givenVoices={givenVoiceMessages}
+        localMessages={thanksMessages}
+        onMessagesLoaded={addThanksMessages}
+        userId={currentUser.id}
+      />
+      <CassetteTimeline />
     </NotebookBackground>
   );
 }
@@ -354,6 +456,14 @@ const styles = StyleSheet.create({
   actionButtonPressed: { backgroundColor: paperColors.statusGray, transform: [{ translateY: 1 }] },
   playButton: { width: 31, height: 31, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   actionLabel: { flex: 1, color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 20, lineHeight: 26 },
+  expoGoNotice: { minHeight: 58, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 10, backgroundColor: paperColors.noteBlue },
+  expoGoNoticeText: { flex: 1, color: paperColors.ink, fontSize: 11, lineHeight: 17 },
+  receivedVoiceCard: { minHeight: 78, paddingHorizontal: spacing.md, paddingVertical: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 12, backgroundColor: paperColors.olive, ...shadows.paper },
+  receivedVoiceCardPressed: { opacity: 0.72 },
+  receivedVoicePlaceholder: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: paperColors.base },
+  receivedVoiceCopy: { flex: 1 },
+  receivedVoiceTitle: { color: paperColors.ink, fontSize: 13, lineHeight: 19 },
+  receivedVoiceDescription: { marginTop: 2, color: paperColors.ink, fontSize: 10, lineHeight: 15 },
   wakePlanWrap: { position: 'relative', marginTop: spacing.xs, borderRadius: 3, backgroundColor: paperColors.base, ...shadows.paper },
   wakePlanTape: { position: 'absolute', zIndex: 1, top: -9, right: 28, width: 82, height: 20, backgroundColor: paperColors.tape, transform: [{ rotate: '1.5deg' }] },
   wakePlanCard: { overflow: 'hidden', borderWidth: 2, borderColor: paperColors.ink, borderRadius: 2, backgroundColor: paperColors.base },
@@ -362,6 +472,17 @@ const styles = StyleSheet.create({
   wakePlanTitle: { marginTop: 2, color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 26, lineHeight: 33 },
   wakePlanCount: { minWidth: 48, height: 28, paddingHorizontal: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 14, backgroundColor: paperColors.noteBlue },
   wakePlanCountText: { color: paperColors.ink, fontSize: 11, lineHeight: 15 },
+  timeline: { position: 'relative', paddingTop: spacing.sm },
+  timelineTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xl },
+  titleRule: { flex: 1, height: 1, backgroundColor: paperColors.ruleBlue },
+  timelineTitle: { color: paperColors.ink, fontSize: 10, lineHeight: 14, letterSpacing: 1.8 },
+  timelineTrack: { position: 'absolute', top: 69, left: '16%', right: '16%', height: 2, backgroundColor: paperColors.statusGray },
+  timelineSteps: { flexDirection: 'row', justifyContent: 'space-between' },
+  timelineStep: { width: '31%', alignItems: 'center' },
+  cassetteReel: { width: 54, height: 54, padding: 6, borderWidth: 2, borderColor: paperColors.ink, borderRadius: 27, backgroundColor: paperColors.olive },
+  reelCenter: { flex: 1, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 20, backgroundColor: paperColors.base, alignItems: 'center', justifyContent: 'center' },
+  stepNumber: { color: paperColors.ink, fontSize: 9, lineHeight: 13, letterSpacing: 1, marginTop: spacing.sm },
+  stepCopy: { color: paperColors.ink, fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 2 },
   recipientList: { paddingHorizontal: spacing.lg },
   recipientRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   recipientRowBorder: { borderTopWidth: 1, borderTopColor: paperColors.ink, borderStyle: 'dashed' },
