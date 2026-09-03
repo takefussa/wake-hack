@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -162,21 +161,34 @@ export default function ConnectionsScreen() {
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const replaceMorningRequest = useAppStore((state) => state.replaceMorningRequest);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
-  // On web, the whole app renders inside a phone-width frame (see
-  // WebAppFrame) that's narrower than the actual browser window, so
-  // useWindowDimensions() would return the raw window size and blow up
-  // every width-dependent layout below (cassette cards, page paging). The
-  // horizontal scroll area's own onLayout gives the size it's actually
-  // rendered at, which respects that frame.
+  // On web, the whole app renders inside a phone-width/height frame (see
+  // WebAppFrame) that's smaller than the actual browser window -- and, when
+  // the window is taller than the frame's max height, the frame is also
+  // letterboxed (centered with empty space above and below it). So both
+  // useWindowDimensions() (raw window size) and a plain onLayout height
+  // (no window-relative position) are wrong for the width- and
+  // vertical-centering math below. The screen's own measureInWindow gives
+  // its true size and top offset in the same window-relative coordinate
+  // space that measureInWindow() on the scroll view (below) reports.
+  const screenRef = useRef<View>(null);
+  const [screenTop, setScreenTop] = useState(0);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const { width, height } = viewportSize;
-  const handleViewportLayout = useCallback((event: LayoutChangeEvent) => {
-    const { width: layoutWidth, height: layoutHeight } = event.nativeEvent.layout;
-    setViewportSize((current) =>
-      current.width === layoutWidth && current.height === layoutHeight
-        ? current
-        : { width: layoutWidth, height: layoutHeight }
-    );
+  const handleScreenLayout = useCallback(() => {
+    (
+      screenRef.current as unknown as {
+        measureInWindow: (
+          callback: (x: number, y: number, w: number, h: number) => void
+        ) => void;
+      } | null
+    )?.measureInWindow((_x, y, layoutWidth, layoutHeight) => {
+      setScreenTop(y);
+      setViewportSize((current) =>
+        current.width === layoutWidth && current.height === layoutHeight
+          ? current
+          : { width: layoutWidth, height: layoutHeight }
+      );
+    });
   }, []);
 
   const horizontalRef = useRef<ScrollView>(null);
@@ -194,7 +206,7 @@ export default function ConnectionsScreen() {
 
   // ヘッダー・タブの下からタブバーの上までの表示領域ではなく、
   // スマホの画面(ディスプレイ)全体の中央をズームの焦点にする
-  const screenCenterInViewport = height / 2 - personalViewportTop;
+  const screenCenterInViewport = screenTop + height / 2 - personalViewportTop;
 
   // 一番上のカセットが上端に引っかかって中央(最大ズーム)まで来られない問題を防ぐため、
   // 1枚目が初期表示のまま画面中央に来るよう上部余白を確保する
@@ -388,7 +400,7 @@ export default function ConnectionsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView onLayout={handleScreenLayout} ref={screenRef} style={styles.safeArea}>
       <StatusBar style="dark" />
 
       <NotebookWallpaper />
@@ -498,7 +510,6 @@ export default function ConnectionsScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onLayout={handleViewportLayout}
         onMomentumScrollEnd={handleSwipeEnd}
         keyboardShouldPersistTaps="handled"
       >
