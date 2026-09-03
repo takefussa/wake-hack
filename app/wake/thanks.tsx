@@ -3,18 +3,22 @@ import * as Haptics from 'expo-haptics';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { IconButton } from '@/components/common/icon-button';
+import { BoomboxRecorder } from '@/components/voice/boombox-recorder';
+import { MicrophonePermissionGate } from '@/components/voice/microphone-permission-gate';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { prototypeConfig } from '@/constants/config';
 import { thanksReactionOptions } from '@/constants/options';
 import { colors, fonts, paperColors, radii, shadows, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
+import { formatRecordingDuration } from '@/features/voice/format-duration';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
+import { useVoiceRecorder } from '@/hooks/use-voice-recorder';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { communityVoiceService } from '@/services/community-voice-service';
 import { thanksService } from '@/services/thanks-service';
@@ -28,12 +32,22 @@ export default function ThanksSendScreen() {
   const thanksMessages = useAppStore((state) => state.thanksMessages);
   const addThanksMessages = useAppStore((state) => state.addThanksMessages);
   const sender = useVoiceSender(assignedWakeVoice);
-  const [text, setText] = useState('');
+  const recorder = useVoiceRecorder();
   const [addToOkimate, setAddToOkimate] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remoteHasSentThanks, setRemoteHasSentThanks] = useState(false);
+  const [displayDurationMs, setDisplayDurationMs] = useState(0);
   const isSendingRef = useRef(false);
+  const isLeavingRef = useRef(false);
+
+  useEffect(() => {
+    if (recorder.isRecording) {
+      setDisplayDurationMs(recorder.durationMs);
+    } else if (!recorder.recording) {
+      setDisplayDurationMs(0);
+    }
+  }, [recorder.isRecording, recorder.durationMs, recorder.recording]);
 
   useEffect(() => {
     let isMounted = true;
@@ -83,16 +97,56 @@ export default function ThanksSendScreen() {
         message.sourceVoiceMessageId === assignedWakeVoice.id
     );
 
-  if (hasSentThanks) {
+  if (hasSentThanks && !isSendingRef.current) {
     return <Redirect href={isPersonal ? '/friend/request' : '/(tabs)/connections'} />;
   }
 
+  const isTooShort =
+    recorder.recording !== null &&
+    recorder.recording.durationMs < prototypeConfig.recordingMinMs;
+
+  const stateLabel = recorder.isRecording
+    ? '録音しています'
+    : recorder.recording
+      ? !recorder.isPlaybackReady
+        ? '再生を準備しています'
+        : recorder.isPlaying
+          ? '再生しています'
+          : '録音できました'
+      : null;
+
+  function handleRetakeFromBoombox() {
+    recorder.resetRecording();
+    void recorder.startRecording();
+  }
+
+  async function handleOpenSettings() {
+    setError(null);
+    try {
+      await Linking.openSettings();
+    } catch {
+      setError('設定を開けませんでした。端末の設定からマイクを許可してください。');
+    }
+  }
+
+  async function handleBack() {
+    if (isLeavingRef.current || isSendingRef.current) return;
+    isLeavingRef.current = true;
+    await recorder.leaveRecording();
+    goBackOrReplace('/wake/complete');
+  }
+
   async function handleSend() {
+    if (isTooShort) {
+      setError('声は2秒以上必要です。もう一度、少し長めに録音してください。');
+      return;
+    }
+
     if (
       !currentUser ||
       !assignedWakeVoice ||
       isSendingRef.current ||
-      !text.trim()
+      !recorder.recording
     ) return;
 
     isSendingRef.current = true;
@@ -110,13 +164,15 @@ export default function ThanksSendScreen() {
         receiverId: isPersonal ? assignedWakeVoice.senderId : 'community',
         sourceVoiceMessageId: assignedWakeVoice.id,
         reaction: thanksReactionOptions[0],
-        text,
+        voiceUri: recorder.recording.uri,
+        voiceDurationMs: recorder.recording.durationMs,
       });
       addThanksMessages(messages);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
         () => undefined
       );
-      router.replace(isPersonal && addToOkimate ? '/friend/request' : '/(tabs)');
+      await recorder.leaveRecording();
+      router.replace(isPersonal ? '/friend/request' : '/(tabs)');
     } catch {
       setError('ありがとうを届けられませんでした。もう一度お試しください。');
       isSendingRef.current = false;
@@ -132,7 +188,7 @@ export default function ThanksSendScreen() {
         <IconButton
           icon="chevron-back"
           label="完了画面に戻る"
-          onPress={() => goBackOrReplace('/wake/complete')}
+          onPress={() => void handleBack()}
         />
         <Pressable
           accessibilityRole="button"
@@ -204,27 +260,75 @@ export default function ThanksSendScreen() {
         ) : null}
       </View>
 
-      <View style={styles.section}>
-        <View style={styles.labelRow}>
-          <AppText variant="sectionTitle">一言メッセージ</AppText>
-          <AppText variant="caption" tone="muted">
-            {text.length}/{prototypeConfig.thanksTextMaxLength}
-          </AppText>
-        </View>
-        <TextInput
-          accessibilityLabel="ありがとうのメッセージ"
-          maxLength={prototypeConfig.thanksTextMaxLength}
-          onChangeText={setText}
-          placeholder="声のおかげで、落ち着いて起きられました。"
-          placeholderTextColor={colors.textTertiary}
-          selectionColor={colors.indigo}
-          style={styles.input}
-          textAlignVertical="top"
-          value={text}
+      {recorder.permissionState !== 'granted' ? (
+        <MicrophonePermissionGate
+          canAskPermissionAgain={recorder.canAskPermissionAgain}
+          error={recorder.error}
+          isRequestingPermission={recorder.isRequestingPermission}
+          onOpenSettings={() => void handleOpenSettings()}
+          onRequestPermission={() => void recorder.requestPermission()}
+          permissionState={recorder.permissionState}
         />
-      </View>
+      ) : (
+        <>
+          <View style={styles.statusCard}>
+            <View pointerEvents="none" style={styles.orangeTape} />
+            <AppText variant="caption" tone="muted">
+              お礼の声
+            </AppText>
+            <AppText variant="displayNumber" style={styles.time}>
+              {formatRecordingDuration(displayDurationMs)}
+            </AppText>
+            <AppText variant="caption" tone="muted">
+              2秒〜10秒
+            </AppText>
+            <AppText
+              variant="secondary"
+              tone="soft"
+              style={[styles.stateLabel, !stateLabel && styles.hiddenLabel]}
+            >
+              {stateLabel ?? ' '}
+            </AppText>
+          </View>
 
-      {isPersonal ? (
+          <View style={styles.actionArea}>
+            {recorder.recording ? (
+              <View style={styles.sendSection}>
+                <AppText
+                  variant="caption"
+                  tone="muted"
+                  style={[styles.sendNote, !isTooShort && styles.hiddenLabel]}
+                >
+                  2秒以上録音すると送信できます
+                </AppText>
+                <AppButton
+                  buttonColor={paperColors.orange}
+                  contentColor={paperColors.ink}
+                  disabled={isSending || isTooShort}
+                  icon="heart-outline"
+                  label={
+                    isSending
+                      ? '届けています…'
+                      : isTooShort
+                        ? '2秒以上録音してください'
+                        : 'ありがとうを届ける'
+                  }
+                  onPress={() => void handleSend()}
+                  style={styles.primaryAction}
+                  testID="send-thanks"
+                  variant="warm"
+                />
+              </View>
+            ) : (
+              <AppText variant="secondary" tone="soft" style={styles.actionDescription}>
+                長く考えなくて大丈夫です。短い声でお礼を伝えましょう。
+              </AppText>
+            )}
+          </View>
+        </>
+      )}
+
+      {isPersonal && recorder.permissionState === 'granted' ? (
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: addToOkimate }}
@@ -257,25 +361,33 @@ export default function ThanksSendScreen() {
         </AppText>
       ) : null}
 
-      <View style={styles.footer}>
-        <AppButton
-          buttonColor={paperColors.orange}
-          contentColor={paperColors.ink}
-          disabled={isSending || !text.trim()}
-          icon="heart-outline"
-          label={isSending ? '届けています…' : 'ありがとうを届ける'}
-          onPress={() => void handleSend()}
-          style={styles.primaryAction}
-          testID="send-thanks"
-          variant="warm"
-        />
-        <AppButton
-          contentColor={colors.success}
-          label="ホームへ戻る"
-          onPress={() => router.replace('/(tabs)')}
-          variant="text"
-        />
-      </View>
+      {recorder.permissionState === 'granted' ? (
+        <View style={styles.dock}>
+          <BoomboxRecorder
+            disabled={recorder.isBusy}
+            durationMs={displayDurationMs}
+            hasRecording={recorder.recording !== null}
+            isPlaying={recorder.isPlaying}
+            playbackProgress={recorder.playbackProgress}
+            isRecording={recorder.isRecording}
+            onRetake={handleRetakeFromBoombox}
+            onStart={() => void recorder.startRecording()}
+            onStop={() => void recorder.stopRecording()}
+            onTogglePlayback={() => void recorder.togglePlayback()}
+          />
+        </View>
+      ) : null}
+
+      {recorder.permissionState === 'granted' ? (
+        <View style={styles.footer}>
+          <AppButton
+            contentColor={colors.success}
+            label="ホームへ戻る"
+            onPress={() => router.replace('/(tabs)')}
+            variant="text"
+          />
+        </View>
+      ) : null}
     </MorningScreen>
   );
 }
@@ -388,37 +500,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
   },
-  section: {
+  statusCard: {
+    position: 'relative',
     padding: spacing.lg,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    backgroundColor: paperColors.cardGray,
+    alignItems: 'center',
+    gap: spacing.xs,
+    ...shadows.paper,
+  },
+  orangeTape: {
+    position: 'absolute',
+    top: -12,
+    left: '36%',
+    right: '36%',
+    zIndex: 2,
+    height: 23,
+    backgroundColor: paperColors.orange,
+    opacity: 0.82,
+    transform: [{ rotate: '1deg' }],
+  },
+  time: {
+    marginTop: spacing.xs,
+  },
+  stateLabel: {
+    marginTop: spacing.sm,
+  },
+  hiddenLabel: {
+    opacity: 0,
+  },
+  actionArea: {
+    minHeight: 84,
+    padding: spacing.md,
     borderWidth: 2,
     borderColor: paperColors.ink,
     borderRadius: 18,
     backgroundColor: paperColors.base,
-    gap: spacing.md,
+    justifyContent: 'flex-start',
     ...shadows.paper,
   },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: spacing.md,
+  actionDescription: {
+    textAlign: 'center',
   },
-  input: {
-    minHeight: 56,
-    borderRadius: radii.input,
+  sendSection: {
+    gap: spacing.sm,
+  },
+  primaryAction: {
     borderWidth: 2,
     borderColor: paperColors.ink,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    color: colors.text,
-    fontFamily: fonts?.sans,
-    fontSize: 16,
-    lineHeight: 24,
-    letterSpacing: 0,
+  },
+  sendNote: {
+    textAlign: 'center',
   },
   error: {
     color: colors.danger,
+    textAlign: 'center',
   },
   okimateChoice: {
     minHeight: 78,
@@ -464,6 +602,11 @@ const styles = StyleSheet.create({
     opacity: 0.82,
     transform: [{ rotate: '1deg' }],
   },
+  dock: {
+    marginTop: -spacing.lg,
+    marginHorizontal: -spacing.xl,
+    paddingBottom: spacing.sm,
+  },
   footer: {
     padding: spacing.lg,
     borderWidth: 2,
@@ -471,9 +614,5 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: paperColors.base,
     ...shadows.paper,
-  },
-  primaryAction: {
-    borderWidth: 2,
-    borderColor: paperColors.ink,
   },
 });
