@@ -7,10 +7,10 @@ import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
+import { IconButton } from '@/components/common/icon-button';
 import { LoadingState } from '@/components/common/loading-state';
-import { Screen } from '@/components/common/screen';
-import { ScreenHeader } from '@/components/common/screen-header';
-import { colors, fonts, radii, spacing } from '@/constants/theme';
+import { MorningScreen } from '@/components/wake/morning-screen';
+import { fonts, paperColors, shadows, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { morningRequestService } from '@/services/morning-request-service';
@@ -107,12 +107,28 @@ export default function RequestDetailScreen() {
   }
 
   return (
-    <Screen contentStyle={styles.content} testID="request-detail-screen">
+    <MorningScreen contentStyle={styles.content} testID="request-detail-screen">
       <StatusBar style="dark" />
-      <ScreenHeader
-        onBack={() => goBackOrReplace('/(tabs)/connections')}
-        title="この人の明日の朝へ"
-      />
+
+      <View style={styles.navigation}>
+        <IconButton
+          icon="chevron-back"
+          label="タイムラインに戻る"
+          onPress={() => goBackOrReplace('/(tabs)/connections')}
+        />
+      </View>
+
+      <View style={styles.heading}>
+        <AppText
+          adjustsFontSizeToFit
+          minimumFontScale={0.78}
+          numberOfLines={1}
+          style={styles.title}
+        >
+          この人の明日の朝へ
+        </AppText>
+        <View pointerEvents="none" style={styles.titleUnderline} />
+      </View>
 
       {isLoading ? <LoadingState label="朝の様子を読み込んでいます" /> : null}
 
@@ -130,6 +146,7 @@ export default function RequestDetailScreen() {
       {!isLoading && request && user ? (
         <>
           <View style={styles.person}>
+            <View pointerEvents="none" style={styles.blueTape} />
             <Pressable
               accessibilityLabel={`${user.nickname}さんのプロフィールを見る`}
               accessibilityRole="button"
@@ -159,43 +176,80 @@ export default function RequestDetailScreen() {
           </View>
 
           <View style={styles.morningCard}>
-            <AppText variant="caption" tone="lightMuted">
+            <View pointerEvents="none" style={[styles.blueTape, styles.morningTape]} />
+            <AppText variant="caption" style={styles.morningLabel}>
               明日の起床時刻
             </AppText>
-            <AppText variant="time" tone="light" style={styles.time}>
+            <AppText variant="time" style={styles.time}>
               {request.wakeAt}
             </AppText>
-            <AppText variant="secondary" tone="lightMuted">
+            <AppText variant="secondary" tone="soft" style={styles.centeredText}>
               この時間に、あなたの声が届きます。
             </AppText>
           </View>
 
           <View style={styles.details}>
+            <View pointerEvents="none" style={[styles.blueTape, styles.detailsTape]} />
             <DetailRow label="明日の予定" value={request.schedules.join('・')} />
             <DetailRow label="今の気分" value={request.mood} />
             <DetailRow label="希望する声" last value={request.preferredVoiceStyle} />
           </View>
 
           <AppButton
+            buttonColor={paperColors.salmon}
+            contentColor={paperColors.ink}
             icon="mic-outline"
             label="この人に声を届ける"
             onPress={handleStartRecording}
+            style={styles.primaryAction}
             testID="request-detail-give"
           />
         </>
       ) : null}
-    </Screen>
+    </MorningScreen>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    gap: spacing.xxl,
+    gap: spacing.xl,
+  },
+  navigation: {
+    minHeight: 44,
+    marginLeft: -spacing.md,
+    alignItems: 'flex-start',
+  },
+  heading: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  title: {
+    width: '100%',
+    fontFamily: fonts?.handwritten,
+    fontSize: 34,
+    lineHeight: 43,
+    textAlign: 'center',
+  },
+  titleUnderline: {
+    width: 230,
+    height: 7,
+    marginTop: spacing.xs,
+    borderRadius: 4,
+    backgroundColor: paperColors.ruleBlue,
+    opacity: 0.8,
+    transform: [{ rotate: '-1deg' }],
   },
   person: {
+    position: 'relative',
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.base,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
+    ...shadows.paper,
   },
   personCopy: {
     flex: 1,
@@ -206,17 +260,38 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.96 }],
   },
   morningCard: {
+    position: 'relative',
     padding: spacing.xl,
-    borderRadius: radii.card,
-    backgroundColor: colors.navy,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.cardGray,
+    alignItems: 'center',
     gap: spacing.sm,
+    ...shadows.paper,
+  },
+  morningLabel: {
+    color: paperColors.ink,
+    fontSize: 15,
+    lineHeight: 21,
   },
   time: {
     fontFamily: fonts?.rounded,
+    color: paperColors.ink,
+    fontSize: 60,
+    lineHeight: 68,
+  },
+  centeredText: {
+    textAlign: 'center',
   },
   details: {
-    borderTopWidth: 1,
-    borderTopColor: colors.separator,
+    position: 'relative',
+    paddingHorizontal: spacing.lg,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.base,
+    ...shadows.paper,
   },
   detailRow: {
     minHeight: 68,
@@ -226,15 +301,42 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   detailRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.separator,
+    borderBottomWidth: 1.5,
+    borderBottomColor: paperColors.ink,
   },
   detailLabel: {
     width: 84,
+    color: paperColors.ink,
+    fontSize: 15,
+    lineHeight: 21,
   },
   detailValue: {
     flex: 1,
+    color: paperColors.ink,
+    fontSize: 19,
+    lineHeight: 25,
     textAlign: 'right',
+  },
+  blueTape: {
+    position: 'absolute',
+    top: -12,
+    left: '36%',
+    right: '36%',
+    zIndex: 2,
+    height: 23,
+    backgroundColor: paperColors.tape,
+    transform: [{ rotate: '-1deg' }],
+  },
+  morningTape: {
+    transform: [{ rotate: '1deg' }],
+  },
+  detailsTape: {
+    transform: [{ rotate: '-0.5deg' }],
+  },
+  primaryAction: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    ...shadows.paper,
   },
   state: {
     flex: 1,

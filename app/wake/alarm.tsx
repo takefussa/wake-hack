@@ -1,11 +1,10 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
-import { IconButton } from '@/components/common/icon-button';
 import { MorningScreen } from '@/components/wake/morning-screen';
 import { WakeVoicePlayer } from '@/components/wake/wake-voice-player';
 import {
@@ -19,7 +18,7 @@ import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { alarmService } from '@/services/alarm-service';
-import { wakeService } from '@/services/wake-service';
+import { communityVoiceService } from '@/services/community-voice-service';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function WakeAlarmScreen() {
@@ -30,7 +29,6 @@ export default function WakeAlarmScreen() {
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const wakeSession = useAppStore((state) => state.wakeSession);
-  const cancelWakeSession = useAppStore((state) => state.cancelWakeSession);
   const sender = useVoiceSender(assignedWakeVoice);
   const runOnce = useTapLock();
   const stopPlaybackRef = useRef<() => void>(() => undefined);
@@ -38,6 +36,11 @@ export default function WakeAlarmScreen() {
   const handlePlayerReady = useCallback((stopPlayback: () => void) => {
     stopPlaybackRef.current = stopPlayback;
   }, []);
+
+  useEffect(() => {
+    if (assignedWakeVoice?.type !== 'community') return;
+    void communityVoiceService.markPlayed(assignedWakeVoice);
+  }, [assignedWakeVoice]);
 
   if (!currentUser || !currentMorningRequest || !assignedWakeVoice || !wakeSession) {
     return <Redirect href="/morning/ready" />;
@@ -71,32 +74,9 @@ export default function WakeAlarmScreen() {
     });
   }
 
-  function handleBack() {
-    runOnce(() => {
-      stopPlaybackRef.current();
-      if (isReview) {
-        router.replace('/wake/complete');
-        return;
-      }
-      const canceledSession = cancelWakeSession();
-      if (canceledSession) {
-        void wakeService.cancelWakeSession(canceledSession);
-      }
-      router.replace('/morning/ready');
-    });
-  }
-
   return (
     <MorningScreen contentStyle={styles.content} testID="wake-alarm-screen">
       <StatusBar style="dark" />
-
-      <View style={styles.navigation}>
-        <IconButton
-          icon="chevron-back"
-          label="朝の準備に戻る"
-          onPress={handleBack}
-        />
-      </View>
 
       <View style={styles.greeting}>
         <AppText
@@ -157,11 +137,6 @@ const styles = StyleSheet.create({
     minHeight: '100%',
     justifyContent: 'space-between',
     gap: spacing.xl,
-  },
-  navigation: {
-    minHeight: 44,
-    marginLeft: -spacing.md,
-    alignItems: 'flex-start',
   },
   greeting: {
     alignItems: 'center',

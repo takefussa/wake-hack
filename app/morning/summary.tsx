@@ -5,19 +5,17 @@ import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { paperColors, shadows } from '@/constants/theme';
-import { demoWakeSenderId } from '@/data/demo-scenario';
 import { isDemoMode } from '@/features/demo/demo-mode';
+import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
-import type { VoiceMessage } from '@/types';
 
 type SummaryRowProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -46,9 +44,10 @@ export default function MorningSummaryScreen() {
   );
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
+  const currentGiveReceiverIds = useAppStore(
+    (state) => state.currentGiveReceiverIds
+  );
   const startWakeSession = useAppStore((state) => state.startWakeSession);
-  const cancelWakeSession = useAppStore((state) => state.cancelWakeSession);
-  const completeWakeSession = useAppStore((state) => state.completeWakeSession);
   const runOnce = useTapLock();
   const alarmSchedule = useAlarmSchedule(currentMorningRequest);
   const preparedVoiceSender = useVoiceSender(
@@ -57,8 +56,7 @@ export default function MorningSummaryScreen() {
   const hasPersonalAlarm =
     alarmSchedule.state.status === 'scheduled' &&
     alarmSchedule.state.alarm.sound === 'personal';
-  const [skipTarget, setSkipTarget] = useState<'personal' | 'community' | null>(null);
-  const [skipError, setSkipError] = useState<string | null>(null);
+  const hasRecordedVoice = currentGiveReceiverIds.length > 0;
   const [isStartingDemoWake, setIsStartingDemoWake] = useState(false);
   const [demoWakeError, setDemoWakeError] = useState<string | null>(null);
   const isStartingDemoWakeRef = useRef(false);
@@ -69,50 +67,6 @@ export default function MorningSummaryScreen() {
 
   if (!currentMorningRequest) {
     return <Redirect href="/morning/setup" />;
-  }
-
-  function handleSkipToWake(type: 'personal' | 'community') {
-    if (skipTarget) return;
-    setSkipTarget(type);
-    setSkipError(null);
-
-    const mockVoice: VoiceMessage = {
-      id: `dev-skip-${type}-${Date.now()}`,
-      senderId: type === 'personal' ? demoWakeSenderId : 'community',
-      receiverId: currentUser!.id,
-      morningRequestId: currentMorningRequest!.id,
-      uri: 'dev-skip-no-audio',
-      durationMs: 4_000,
-      type,
-      createdAt: new Date().toISOString(),
-    };
-
-    const didStart = startWakeSession(mockVoice);
-    if (!didStart) {
-      setSkipError('[開発用] 朝へのスキップに失敗しました(セッション開始エラー)。');
-      setSkipTarget(null);
-      return;
-    }
-
-    if (type === 'personal') {
-      const cancelledSession = cancelWakeSession();
-      if (!cancelledSession) {
-        setSkipError('[開発用] パーソナルボイスを準備できませんでした。');
-        setSkipTarget(null);
-        return;
-      }
-
-      router.replace('/morning/ready');
-      return;
-    }
-
-    const completedSession = completeWakeSession();
-    if (!completedSession) {
-      setSkipError('[開発用] 朝へのスキップに失敗しました(セッション完了エラー)。');
-      setSkipTarget(null);
-      return;
-    }
-    router.replace('/wake/complete');
   }
 
   // The real device flow only reaches /morning/ready once a wake voice is
@@ -379,9 +333,7 @@ export default function MorningSummaryScreen() {
           accessibilityRole="button"
           onPress={() =>
             runOnce(() =>
-              router.replace(
-                assignedWakeVoice ? '/morning/ready' : '/(tabs)/connections'
-              )
+              router.replace(hasRecordedVoice ? '/(tabs)' : '/(tabs)/connections')
             )
           }
           style={({ pressed }) => [
@@ -391,9 +343,13 @@ export default function MorningSummaryScreen() {
           testID="morning-summary-next"
         >
           <AppText style={styles.nextButtonText}>
-            {assignedWakeVoice ? '朝の準備を見る' : 'タイムラインへ'}
+            {hasRecordedVoice ? 'ホームへ' : 'タイムラインへ'}
           </AppText>
-          <Ionicons color="#30463E" name="arrow-forward" size={22} />
+          <Ionicons
+            color="#30463E"
+            name={hasRecordedVoice ? 'home-outline' : 'arrow-forward'}
+            size={22}
+          />
         </Pressable>
 
         {isDemoMode && !assignedWakeVoice ? (
@@ -420,47 +376,10 @@ export default function MorningSummaryScreen() {
                 : '相手を選ばなくても、みんなの声で朝を体験できます。'}
             </AppText>
             {demoWakeError ? (
-              <AppText style={styles.devSkipError}>{demoWakeError}</AppText>
+              <AppText style={styles.demoWakeError}>{demoWakeError}</AppText>
             ) : null}
           </View>
         ) : null}
-
-        <View style={styles.devSkipSection}>
-          <AppText style={styles.devSkipSectionLabel}>
-            [開発用] 声を伴わずに朝の画面へ進む
-          </AppText>
-          <View style={styles.devSkipRow}>
-            <Pressable
-              accessibilityRole="button"
-              disabled={skipTarget !== null}
-              onPress={() => runOnce(() => handleSkipToWake('personal'))}
-              style={({ pressed }) => [
-                styles.devSkipButton,
-                pressed && styles.linkPressed,
-              ]}
-              testID="morning-summary-dev-skip-personal"
-            >
-              <Ionicons color="#8A674E" name="person-outline" size={15} />
-              <AppText style={styles.devSkipButtonText}>Personal Voiceへ</AppText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              disabled={skipTarget !== null}
-              onPress={() => runOnce(() => handleSkipToWake('community'))}
-              style={({ pressed }) => [
-                styles.devSkipButton,
-                pressed && styles.linkPressed,
-              ]}
-              testID="morning-summary-dev-skip-community"
-            >
-              <Ionicons color="#8A674E" name="people-outline" size={15} />
-              <AppText style={styles.devSkipButtonText}>Community Voiceへ</AppText>
-            </Pressable>
-          </View>
-          {skipError ? (
-            <AppText style={styles.devSkipError}>{skipError}</AppText>
-          ) : null}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -526,45 +445,6 @@ const styles = StyleSheet.create({
   },
   linkPressed: {
     opacity: 0.58,
-  },
-  devSkipSection: {
-    marginTop: 28,
-    alignItems: 'center',
-    gap: 8,
-  },
-  devSkipSectionLabel: {
-    color: '#8A674E',
-    fontSize: 11,
-  },
-  devSkipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  devSkipButton: {
-    minHeight: 36,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#C8A97A',
-    borderRadius: 6,
-    backgroundColor: '#FFF6E7',
-  },
-  devSkipButtonText: {
-    color: '#8A674E',
-    fontSize: 12,
-  },
-  devSkipError: {
-    marginTop: 2,
-    color: '#A5574C',
-    fontSize: 11,
-    lineHeight: 16,
-    textAlign: 'center',
   },
   headingTape: {
     alignSelf: 'flex-start',
@@ -811,6 +691,13 @@ const styles = StyleSheet.create({
   demoWakeHint: {
     color: '#657169',
     fontSize: 11,
+    textAlign: 'center',
+  },
+  demoWakeError: {
+    marginTop: 2,
+    color: '#A5574C',
+    fontSize: 11,
+    lineHeight: 16,
     textAlign: 'center',
   },
   submitDisabled: {

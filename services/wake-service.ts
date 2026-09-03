@@ -11,6 +11,7 @@ import { MockWakeVoiceRepository } from '@/repositories/mock/mock-wake-voice-rep
 import { SupabaseWakeAssignmentRepository } from '@/repositories/supabase/supabase-wake-assignment-repository';
 import { SupabaseWakeSessionRepository } from '@/repositories/supabase/supabase-wake-session-repository';
 import { SupabaseWakeVoiceRepository } from '@/repositories/supabase/supabase-wake-voice-repository';
+import { communityVoiceService } from '@/services/community-voice-service';
 import type {
   MorningRequest,
   VoiceMessage,
@@ -181,12 +182,10 @@ export class WakeService {
       }
     }
 
-    const communityVoice =
-      await this.repository.findCommunityForRequest(
-        request,
-        receiverId
-      );
-
+    const communityVoice = await communityVoiceService.getCommunityWakeVoice(
+      request,
+      receiverId
+    );
     return {
       voice: communityVoice,
       mode: request.personalEligible
