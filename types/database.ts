@@ -17,6 +17,7 @@ export type MorningRequestRow = {
   schedules: string[];
   mood: string;
   preferred_voice_style: string;
+  voice_request_note: string | null;
   personal_eligible: boolean;
   voice_count: number;
   status: string;
@@ -151,6 +152,7 @@ export type Database = {
           schedules: string[];
           mood: string;
           preferred_voice_style: string;
+          voice_request_note?: string | null;
           personal_eligible?: boolean;
           voice_count?: number;
           status?: string;
@@ -162,6 +164,7 @@ export type Database = {
           schedules?: string[];
           mood?: string;
           preferred_voice_style?: string;
+          voice_request_note?: string | null;
           personal_eligible?: boolean;
           voice_count?: number;
           status?: string;

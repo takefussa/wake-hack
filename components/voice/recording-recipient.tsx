@@ -37,6 +37,12 @@ export function RecordingRecipient({ request, user }: RecordingRecipientProps) {
             希望する声：{request.preferredVoiceStyle}
           </AppText>
         </View>
+        {request.voiceRequestNote ? (
+          <View style={styles.requestNote}>
+            <Ionicons name="chatbubble-ellipses-outline" color={paperColors.ink} size={16} />
+            <AppText style={styles.requestNoteText}>{request.voiceRequestNote}</AppText>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -80,5 +86,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+  },
+  requestNote: {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    borderLeftWidth: 3,
+    borderLeftColor: paperColors.orange,
+    backgroundColor: paperColors.paleYellow,
+  },
+  requestNoteText: {
+    flex: 1,
+    color: paperColors.ink,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

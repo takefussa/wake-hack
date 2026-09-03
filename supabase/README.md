@@ -15,6 +15,7 @@
 11. SQL Editorで`migrations/010_custom_morning_schedules.sql`を実行する
 12. SQL Editorで`migrations/011_wake_assignments_and_sessions.sql`を実行する
 13. SQL Editorで`migrations/012_alarm_voice_delivery.sql`を実行する
+14. SQL Editorで`migrations/013_morning_voice_request_note.sql`を実行する
 
 実行後、次を確認します。
 

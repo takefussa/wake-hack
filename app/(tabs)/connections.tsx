@@ -377,39 +377,47 @@ export default function ConnectionsScreen() {
 
       <NotebookWallpaper />
 
-      {/* ヘッダー */}
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <AppText style={styles.title}>起こす</AppText>
-          <AppText style={styles.subtitle}>
-            声を届けると、朝は別の誰かの声が届きます。
-          </AppText>
-        </View>
-        <Pressable
-          accessibilityLabel="起こす画面を更新"
-          accessibilityRole="button"
-          disabled={isRefreshing}
-          hitSlop={8}
-          onPress={() => void handleRefresh()}
-          style={({ pressed }) => [
-            styles.refreshButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          {isRefreshing ? (
-            <ActivityIndicator color="#30463E" size="small" />
-          ) : (
-            <Ionicons color="#30463E" name="refresh" size={21} />
-          )}
-        </Pressable>
-      </View>
+      <View style={styles.topCard}>
+        <View pointerEvents="none" style={styles.topTape} />
 
-      {/* Twitter風 上タブ */}
-      <View style={styles.modeTabs}>
-        <Pressable
-          onPress={() => moveTo('personal')}
-          style={styles.modeButton}
-        >
+        {/* ヘッダー */}
+        <View style={styles.header}>
+          <View style={styles.headerCopy}>
+            <AppText style={styles.title}>起こす</AppText>
+            <View pointerEvents="none" style={styles.titleUnderline} />
+            <AppText style={styles.subtitle}>
+              声を届けると、朝は別の誰かの声が届きます。
+            </AppText>
+          </View>
+          <Pressable
+            accessibilityLabel="起こす画面を更新"
+            accessibilityRole="button"
+            disabled={isRefreshing}
+            hitSlop={8}
+            onPress={() => void handleRefresh()}
+            style={({ pressed }) => [
+              styles.refreshButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            {isRefreshing ? (
+              <ActivityIndicator color="#30463E" size="small" />
+            ) : (
+              <Ionicons color="#30463E" name="refresh" size={21} />
+            )}
+          </Pressable>
+        </View>
+
+        {/* 上タブ */}
+        <View style={styles.modeTabs}>
+          <Pressable
+            onPress={() => moveTo('personal')}
+            style={({ pressed }) => [
+              styles.modeButton,
+              mode === 'personal' && styles.modeButtonActive,
+              pressed && styles.pressed,
+            ]}
+          >
           <AppText
             style={[
               styles.modeText,
@@ -427,12 +435,17 @@ export default function ConnectionsScreen() {
               ]}
             />
           ) : null}
-        </Pressable>
+          </Pressable>
 
-        <Pressable
-          onPress={() => moveTo('community')}
-          style={styles.modeButton}
-        >
+          <Pressable
+            onPress={() => moveTo('community')}
+            style={({ pressed }) => [
+              styles.modeButton,
+              styles.modeButtonDivider,
+              mode === 'community' && styles.modeButtonActive,
+              pressed && styles.pressed,
+            ]}
+          >
           <View style={styles.communityLabelRow}>
             <AppText
               style={[
@@ -459,7 +472,8 @@ export default function ConnectionsScreen() {
               ]}
             />
           ) : null}
-        </Pressable>
+          </Pressable>
+        </View>
       </View>
 
       {/* 横スワイプ領域 */}
@@ -778,10 +792,33 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(243, 196, 197, 0.80)',
   },
 
+  topCard: {
+    position: 'relative',
+    marginTop: 16,
+    marginHorizontal: 24,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 16,
+    backgroundColor: paperColors.base,
+    ...shadows.paper,
+  },
+
+  topTape: {
+    position: 'absolute',
+    zIndex: 2,
+    top: -11,
+    left: '38%',
+    width: 82,
+    height: 22,
+    backgroundColor: paperColors.tape,
+    transform: [{ rotate: '-1deg' }],
+  },
+
   header: {
-    paddingHorizontal: 28,
-    paddingTop: 8,
-    paddingBottom: 14,
+    paddingHorizontal: 18,
+    paddingTop: 24,
+    paddingBottom: 17,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -796,42 +833,61 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#D4C7B2',
-    backgroundColor: '#FFFDF7',
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    backgroundColor: paperColors.salmon,
     borderRadius: 10,
   },
 
   title: {
     fontFamily: fontFamilyName,
-    color: '#30463E',
-    fontSize: 29,
+    color: paperColors.ink,
+    fontSize: 32,
+    lineHeight: 39,
+  },
+
+  titleUnderline: {
+    width: 88,
+    height: 5,
+    marginTop: 2,
+    marginBottom: 7,
+    borderRadius: 3,
+    backgroundColor: paperColors.ruleBlue,
+    transform: [{ rotate: '-1deg' }],
   },
 
   subtitle: {
-    marginTop: 3,
     fontFamily: fontFamilyName,
-    color: '#6B716C',
-    fontSize: 13,
+    color: '#55585B',
+    fontSize: 14,
+    lineHeight: 20,
   },
 
   modeTabs: {
-    height: 55,
+    height: 59,
     flexDirection: 'row',
-
-    backgroundColor: '#FFFDF8',
-
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: paperColors.ruleBlue,
+    overflow: 'hidden',
+    backgroundColor: paperColors.base,
+    borderTopWidth: 2,
+    borderTopColor: paperColors.ink,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
   },
 
   modeButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-
     position: 'relative',
+  },
+
+  modeButtonActive: {
+    backgroundColor: paperColors.noteBlue,
+  },
+
+  modeButtonDivider: {
+    borderLeftWidth: 2,
+    borderLeftColor: paperColors.ink,
   },
 
   communityLabelRow: {
@@ -842,21 +898,21 @@ const styles = StyleSheet.create({
 
   modeText: {
     fontFamily: fontFamilyName,
-    color: '#777B77',
-    fontSize: 15,
+    color: '#666A67',
+    fontSize: 16,
   },
 
   modeTextActive: {
     fontFamily: fontFamilyName,
-    color: '#30463E',
+    color: paperColors.ink,
   },
 
   marker: {
     position: 'absolute',
-    bottom: 5,
-    width: 105,
-    height: 6,
-    opacity: 0.65,
+    bottom: 4,
+    width: 112,
+    height: 5,
+    opacity: 0.9,
     borderRadius: 5,
     transform: [{ rotate: '-1deg' }],
   },
