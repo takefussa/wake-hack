@@ -148,6 +148,9 @@ function CurvedLabel({ text, style }: { text: string; style?: StyleProp<TextStyl
             key={`${character}-${index}`}
             style={[
               style,
+              // 文字ごとに均等な幅を割り当てることで、長い属性も折り返さず
+              // ラベル全体に収める。回転はこれまでの見た目を維持する。
+              { flex: 1, textAlign: 'center' },
               { transform: [{ perspective: CURVED_LABEL_PERSPECTIVE }, { rotateY }] },
             ]}
           >
@@ -1038,9 +1041,10 @@ const styles = StyleSheet.create({
   cassetteNameOverlay: {
     position: 'absolute',
     top: '26.1%',
-    left: '28.4%',
+    // ラベルの左右に余っている領域も使い、長い名前を1行で収める
+    left: '22%',
 
-    width: '43.2%',
+    width: '56%',
     height: '24.4%',
 
     alignItems: 'center',
@@ -1049,19 +1053,22 @@ const styles = StyleSheet.create({
   },
 
   cassetteName: {
+    width: '100%',
     maxWidth: '100%',
+    flexShrink: 1,
     fontFamily: fontFamilyName,
     color: '#2E2E2E',
     fontSize: 20,
+    textAlign: 'center',
   },
 
   // ラベル下部にある帯にちょうど収まる位置に属性を表示
   cassetteAttributeOverlay: {
     position: 'absolute',
     top: '50.6%',
-    left: '28.4%',
+    left: '22%',
 
-    width: '43.2%',
+    width: '56%',
     height: '9.1%',
 
     alignItems: 'center',
@@ -1069,7 +1076,9 @@ const styles = StyleSheet.create({
   },
 
   cassetteAttributeValue: {
+    width: '100%',
     maxWidth: '100%',
+    flexShrink: 1,
     fontFamily: fontFamilyName,
     color: '#2E2E2E',
     fontSize: 12,
@@ -1109,6 +1118,7 @@ const styles = StyleSheet.create({
   },
 
   curvedLabelRow: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
