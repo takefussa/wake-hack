@@ -18,6 +18,12 @@ const recordingOptions = {
   isMeteringEnabled: true,
 };
 
+function waitForAudioSource(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 120);
+  });
+}
+
 export type MicrophonePermissionState = 'checking' | 'granted' | 'denied';
 
 export type LocalVoiceRecording = {
@@ -235,6 +241,9 @@ export function useVoiceRecorder() {
 
     try {
       if (!player.isLoaded) {
+        player.replace({ uri: recording.uri });
+      }
+      if (!recording.uri) {
         setError('再生の準備中です。少し待ってからお試しください。');
         return;
       }
@@ -243,6 +252,8 @@ export function useVoiceRecorder() {
         player.pause();
         return;
       }
+      player.replace({ uri: recording.uri });
+      await waitForAudioSource();
       if (
         playerStatus.didJustFinish ||
         playerStatus.currentTime >= Math.max(0, playerStatus.duration - 0.05)

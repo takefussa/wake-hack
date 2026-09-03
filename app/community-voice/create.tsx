@@ -73,7 +73,7 @@ export default function CommunityVoiceCreateScreen() {
       router.replace('/community-voice/history');
     } catch {
       setSubmitError(
-        'Community Voiceを投稿できませんでした。通信状態を確認して、もう一度試してください。'
+        'Voiceを投稿できませんでした。みんなが気持ちよく朝を迎えられる内容に変更して、もう一度お試しください。'
       );
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -152,7 +152,7 @@ export default function CommunityVoiceCreateScreen() {
         <AppButton
           disabled={!recorder.recording || recorder.isRecording || isSubmitting}
           icon="send-outline"
-          label={isSubmitting ? '投稿しています...' : '投稿する'}
+          label={isSubmitting ? 'Voiceを確認しています...' : '投稿する'}
           legacy
           onPress={() => void handleSubmit()}
           testID="submit-community-voice"
