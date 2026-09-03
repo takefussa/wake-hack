@@ -18,6 +18,7 @@ import {
   scheduleOptions,
   voiceStyleOptions,
 } from '@/constants/options';
+import { prototypeConfig } from '@/constants/config';
 import { paperColors, shadows } from '@/constants/theme';
 import { demoMorningDefaults } from '@/data/demo-scenario';
 import { toggleSchedule } from '@/features/morning/morning-request-form';
@@ -105,6 +106,9 @@ export default function TomorrowConditionScreen() {
   const [voiceStyle, setVoiceStyle] = useState<VoiceStyle | null>(
     currentMorningRequest?.preferredVoiceStyle ?? demoMorningDefaults.preferredVoiceStyle
   );
+  const [voiceRequestNote, setVoiceRequestNote] = useState(
+    currentMorningRequest?.voiceRequestNote ?? ''
+  );
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,6 +149,7 @@ export default function TomorrowConditionScreen() {
         schedules: normalizedSchedules,
         mood,
         preferredVoiceStyle: voiceStyle,
+        voiceRequestNote: voiceRequestNote.trim() || undefined,
       };
 
       const startsNewMorning =
@@ -324,6 +329,27 @@ export default function TomorrowConditionScreen() {
                 tone="blue"
               />
             ))}
+          </View>
+
+          <View style={styles.voiceNoteField}>
+            <View style={styles.voiceNoteLabelRow}>
+              <AppText style={styles.voiceNoteLabel}>一言</AppText>
+              <AppText style={styles.caption}>任意</AppText>
+              <AppText style={styles.voiceNoteCount}>
+                {voiceRequestNote.length} / {prototypeConfig.morningVoiceNoteMaxLength}
+              </AppText>
+            </View>
+            <TextInput
+              accessibilityLabel="希望する声についての一言"
+              maxLength={prototypeConfig.morningVoiceNoteMaxLength}
+              multiline
+              onChangeText={setVoiceRequestNote}
+              placeholder="例：明日は発表なので、背中を押してほしい"
+              placeholderTextColor="#8A918C"
+              style={styles.voiceNoteInput}
+              textAlignVertical="top"
+              value={voiceRequestNote}
+            />
           </View>
         </View>
 
@@ -566,6 +592,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+
+  voiceNoteField: {
+    marginTop: 18,
+    padding: 12,
+    backgroundColor: paperColors.noteBlue,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: paperColors.ink,
+  },
+
+  voiceNoteLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    marginBottom: 8,
+  },
+
+  voiceNoteLabel: {
+    color: '#30463E',
+    fontSize: 16,
+  },
+
+  voiceNoteCount: {
+    marginLeft: 'auto',
+    color: '#6E746E',
+    fontSize: 12,
+  },
+
+  voiceNoteInput: {
+    minHeight: 72,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    color: '#30463E',
+    fontSize: 16,
+    lineHeight: 23,
+    fontFamily: 'Tegaki851',
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1,
+    borderColor: '#B9B5A5',
   },
 
   choice: {
