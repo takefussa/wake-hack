@@ -161,7 +161,7 @@ export class SupabaseWakeVoiceRepository implements WakeVoiceRepository {
     if (error) throw error;
     const rows = (data ?? []) as unknown as Record<string, unknown>[];
     const matching = rows.find(
-      (row) => getString(row, 'voice_style', 'style', 'category') === request.preferredVoiceStyle
+      (row) => toVoiceStyle(getString(row, 'voice_style', 'wake_style', 'style', 'category')) === request.preferredVoiceStyle
     );
     const row = matching ?? rows[0];
     if (!row) return this.fallbackRepository.findCommunityForRequest(request, receiverId);
