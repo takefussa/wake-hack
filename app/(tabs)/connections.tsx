@@ -128,36 +128,19 @@ function VoiceOptionsPanel({ options }: { options: readonly string[] }) {
   );
 }
 
-const CURVED_LABEL_ARC_ANGLE = 30;
-const CURVED_LABEL_PERSPECTIVE = 300;
-
-// 実物のカセットの持ち手部分にある、円柱に巻き付くような湾曲した印字を再現する
-// (Y軸まわりに回転させることで、両端が奥へ回り込むように見せる)
+// カセットの下部ラベル。文字を分割・回転すると端の文字が切れるため、
+// 1つのTextとして自動縮小し、常に1行全体を表示する。
 function CurvedLabel({ text, style }: { text: string; style?: StyleProp<TextStyle> }) {
-  const characters = Array.from(text);
-  const mid = (characters.length - 1) / 2;
-
   return (
     <View style={styles.curvedLabelRow}>
-      {characters.map((character, index) => {
-        const t = mid === 0 ? 0 : (index - mid) / mid;
-        const rotateY = `${t * CURVED_LABEL_ARC_ANGLE}deg`;
-
-        return (
-          <AppText
-            key={`${character}-${index}`}
-            style={[
-              style,
-              // 文字ごとに均等な幅を割り当てることで、長い属性も折り返さず
-              // ラベル全体に収める。回転はこれまでの見た目を維持する。
-              { flex: 1, textAlign: 'center' },
-              { transform: [{ perspective: CURVED_LABEL_PERSPECTIVE }, { rotateY }] },
-            ]}
-          >
-            {character}
-          </AppText>
-        );
-      })}
+      <AppText
+        adjustsFontSizeToFit
+        minimumFontScale={0.55}
+        numberOfLines={1}
+        style={[styles.curvedLabelText, style]}
+      >
+        {text}
+      </AppText>
     </View>
   );
 }
@@ -1119,9 +1102,14 @@ const styles = StyleSheet.create({
 
   curvedLabelRow: {
     width: '100%',
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  curvedLabelText: {
+    width: '100%',
+    flexShrink: 1,
+    textAlign: 'center',
   },
 
   pressed: {
