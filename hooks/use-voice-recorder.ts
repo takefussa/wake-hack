@@ -16,17 +16,15 @@ import { prototypeConfig } from '@/constants/config';
 
 const recordingOptions = {
   ...RecordingPresets.HIGH_QUALITY,
-  // Record an AlarmKit-compatible PCM WAV on iOS. Expo's AAC recorder omits a
-  // channel layout on these devices, which makes AVFoundation reject the file
-  // when preparing a custom alarm sound.
+  // Keep the proven AAC/M4A recorder format. AlarmKit converts this file to a
+  // Linear PCM WAV after download. Direct LINEARPCM recording on iOS 26 can
+  // produce a header-only WAV (zero audio frames), which results in a silent
+  // human-voice alarm even though recording appears to succeed.
   numberOfChannels: 1,
   ios: {
     ...RecordingPresets.HIGH_QUALITY.ios,
-    extension: '.wav',
-    outputFormat: IOSOutputFormat.LINEARPCM,
-    linearPCMBitDepth: 16,
-    linearPCMIsBigEndian: false,
-    linearPCMIsFloat: false,
+    extension: '.m4a',
+    outputFormat: IOSOutputFormat.MPEG4AAC,
   },
   isMeteringEnabled: true,
 };
