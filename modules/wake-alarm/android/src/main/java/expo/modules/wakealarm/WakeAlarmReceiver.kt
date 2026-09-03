@@ -10,13 +10,19 @@ class WakeAlarmReceiver : BroadcastReceiver() {
       WakeAlarmScheduler.actionFire -> {
         val id = intent.getStringExtra(WakeAlarmScheduler.extraAlarmId) ?: return
         val title = intent.getStringExtra(WakeAlarmScheduler.extraTitle) ?: "朝の時間です"
-        WakeAlarmPlayerService.start(context, id, title)
+        val morningRequestId = intent.getStringExtra(WakeAlarmScheduler.extraMorningRequestId) ?: ""
+        val soundFilePath = intent.getStringExtra(WakeAlarmScheduler.extraSoundFilePath)
+        WakeAlarmPlayerService.start(context, id, title, morningRequestId, soundFilePath)
       }
 
       WakeAlarmScheduler.actionStop -> {
         val id = intent.getStringExtra(WakeAlarmScheduler.extraAlarmId)
+        val morningRequestId = intent.getStringExtra(WakeAlarmScheduler.extraMorningRequestId)
+          ?: WakeAlarmStorage.read(context)?.morningRequestId
         WakeAlarmPlayerService.stop(context, id)
         WakeAlarmStorage.clear(context, id)
+        WakeAlarmStorage.markStopped(context, morningRequestId)
+        WakeAlarmScheduler.launchApp(context)
       }
 
       Intent.ACTION_BOOT_COMPLETED,

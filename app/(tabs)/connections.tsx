@@ -8,7 +8,6 @@ import {
   Animated,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Platform,
   Pressable,
   ScrollView,
   StyleProp,
@@ -60,18 +59,6 @@ const CASSETTE_IMAGE_BY_VOICE_STYLE: Record<VoiceStyle, number> = {
   面白く愉快に: require('../../assets/images/cassette-icon-yellow.png'),
 };
 const CASSETTE_MARGIN_BOTTOM = 1;
-// カセットが浮いて見えるよう、それぞれに薄い影をつける
-const cassetteShadow =
-  Platform.select({
-    web: { boxShadow: '0 4px 10px rgba(23, 32, 51, 0.22)' },
-    default: {
-      shadowColor: '#172033',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.22,
-      shadowRadius: 10,
-      elevation: 6,
-    },
-  }) ?? {};
 const PAGE_CONTENT_HORIZONTAL_PADDING = 24;
 // カセットだけページ余白より少しはみ出させて大きく見せるための量
 const CASSETTE_HORIZONTAL_BLEED = 12;
@@ -929,7 +916,6 @@ const styles = StyleSheet.create({
   cassetteTouchable: {
     marginBottom: CASSETTE_MARGIN_BOTTOM,
     marginHorizontal: -CASSETTE_HORIZONTAL_BLEED,
-    ...cassetteShadow,
   },
 
   thanksSection: {

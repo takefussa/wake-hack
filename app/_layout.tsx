@@ -13,6 +13,7 @@ import { colors, fontFamilyName, paperColors } from '@/constants/theme';
 import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useAlarmStopFlow } from '@/hooks/use-alarm-stop-flow';
 import { useAuthBootstrap } from '@/hooks/use-auth-bootstrap';
+import { WakeAlarm } from '@/modules/wake-alarm';
 import { useAppStore } from '@/store/use-app-store';
 
 void SplashScreen.preventAutoHideAsync();
@@ -49,6 +50,12 @@ export default function RootLayout() {
       void SplashScreen.hideAsync();
     }
   }, [isFontReady]);
+
+  useEffect(() => {
+    if (isReady) {
+      void WakeAlarm.requestNotificationPermission();
+    }
+  }, [isReady]);
 
   if (!isFontReady) {
     return null;

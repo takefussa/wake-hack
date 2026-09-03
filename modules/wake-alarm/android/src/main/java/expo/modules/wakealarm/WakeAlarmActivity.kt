@@ -31,6 +31,7 @@ class WakeAlarmActivity : Activity() {
 
     val alarmId = intent.getStringExtra(WakeAlarmScheduler.extraAlarmId)
     val title = intent.getStringExtra(WakeAlarmScheduler.extraTitle) ?: "朝の時間です"
+    val morningRequestId = intent.getStringExtra(WakeAlarmScheduler.extraMorningRequestId)
     setContentView(
       LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -50,6 +51,8 @@ class WakeAlarmActivity : Activity() {
           setOnClickListener {
             WakeAlarmPlayerService.stop(this@WakeAlarmActivity, alarmId)
             WakeAlarmStorage.clear(this@WakeAlarmActivity, alarmId)
+            WakeAlarmStorage.markStopped(this@WakeAlarmActivity, morningRequestId)
+            WakeAlarmScheduler.launchApp(this@WakeAlarmActivity)
             finishAndRemoveTask()
           }
         }, LinearLayout.LayoutParams(
@@ -61,10 +64,11 @@ class WakeAlarmActivity : Activity() {
   }
 
   companion object {
-    fun intent(context: Context, id: String, title: String): Intent =
+    fun intent(context: Context, id: String, title: String, morningRequestId: String? = null): Intent =
       Intent(context, WakeAlarmActivity::class.java)
         .putExtra(WakeAlarmScheduler.extraAlarmId, id)
         .putExtra(WakeAlarmScheduler.extraTitle, title)
+        .putExtra(WakeAlarmScheduler.extraMorningRequestId, morningRequestId)
         .addFlags(
           Intent.FLAG_ACTIVITY_NEW_TASK or
             Intent.FLAG_ACTIVITY_CLEAR_TOP or
