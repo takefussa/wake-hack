@@ -13,15 +13,17 @@ export type AvatarOption = {
   background: string;
   foreground: string;
   initial: string;
+  selectable?: boolean;
 };
 
 export const avatarOptions: AvatarOption[] = [
-  { id: 'luna', label: 'ネイビー', background: '#D9DFE8', foreground: '#3B4E69', initial: 'A' },
-  { id: 'sunny', label: 'オーカー', background: '#EEE1C9', foreground: '#6B5637', initial: 'K' },
-  { id: 'sky', label: 'ブルー', background: '#DCE7EC', foreground: '#3D5967', initial: 'S' },
-  { id: 'violet', label: 'モーヴ', background: '#E2DEE7', foreground: '#5B5268', initial: 'M' },
-  { id: 'ember', label: 'テラコッタ', background: '#E9D8D1', foreground: '#674C42', initial: 'H' },
-  { id: 'mint', label: 'セージ', background: '#DCE5DE', foreground: '#496056', initial: 'Y' },
+  { id: 'sunny', label: 'ロボット', background: '#F2F7FF', foreground: '#4C5C94', initial: 'R' },
+  { id: 'sky', label: 'ねこ', background: '#F2F7FF', foreground: '#4C5C94', initial: 'C' },
+  { id: 'ember', label: '宇宙人', background: '#F2F7FF', foreground: '#4C5C94', initial: 'A' },
+  { id: 'luna', label: '青い髪の男の子', background: '#F2F7FF', foreground: '#4C5C94', initial: 'B' },
+  { id: 'violet', label: 'ショートヘアの男の子', background: '#F2F7FF', foreground: '#4C5C94', initial: 'S' },
+  // 以前保存されたプロフィールとの互換性用。新しい選択肢には表示しない。
+  { id: 'mint', label: '以前のアイコン', background: '#F2F7FF', foreground: '#4C5C94', initial: 'B', selectable: false },
 ];
 
 export const userTypeOptions: UserType[] = ['中高生', '大学生・専門学生', '社会人', 'その他'];
