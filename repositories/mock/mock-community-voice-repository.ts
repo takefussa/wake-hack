@@ -86,6 +86,12 @@ export class MockCommunityVoiceRepository implements CommunityVoiceRepository {
   async listMine(userId: string): Promise<CommunityVoice[]> {
     return this.voices.filter((voice) => voice.senderId === userId);
   }
+
+  async deleteMine(voiceId: string, userId: string): Promise<void> {
+    this.voices = this.voices.filter(
+      (voice) => voice.id !== voiceId || voice.senderId !== userId
+    );
+  }
 }
 
 export function getMockWakeVoice(receiverId: string, morningRequestId: string) {

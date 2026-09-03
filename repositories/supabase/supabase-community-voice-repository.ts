@@ -1,6 +1,9 @@
 import { avatarOptions } from '@/constants/options';
 import { isWakeStyle } from '@/constants/community-voice';
-import { logDevelopmentError } from '@/lib/development-logger';
+import {
+  logDevelopmentError,
+  logDevelopmentWarning,
+} from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { CommunityVoiceRepository } from '@/repositories/interfaces/community-voice-repository';
 import { authService } from '@/services/auth-service';
@@ -257,12 +260,46 @@ export class SupabaseCommunityVoiceRepository
           .createSignedUrl(row.audio_path, signedUrlLifetimeSeconds);
 
         if (signedUrlError) {
-          logDevelopmentError('communityVoice.history.signedUrl', signedUrlError);
+          logDevelopmentWarning('communityVoice.history.missingAudio', signedUrlError);
           return null;
         }
         return mapCommunityVoiceRow(row, signedUrl.signedUrl);
       })
     );
     return voices.filter((voice): voice is CommunityVoice => voice !== null);
+  }
+
+  async deleteMine(voiceId: string, userId: string): Promise<void> {
+    const authenticatedUserId = authService.getAuthenticatedUserId();
+    if (userId !== authenticatedUserId) {
+      throw new Error('Community voice delete user does not match the authenticated user');
+    }
+
+    const supabase = getSupabaseClient();
+    const { data: voice, error: findError } = await supabase
+      .from('community_voices')
+      .select('id,audio_path,sender_id')
+      .eq('id', voiceId)
+      .eq('sender_id', authenticatedUserId)
+      .maybeSingle();
+
+    if (findError) throw findError;
+    if (!voice) return;
+
+    const { error: storageError } = await supabase.storage
+      .from(communityVoiceBucket)
+      .remove([voice.audio_path]);
+
+    if (storageError && storageError.message !== 'Object not found') {
+      logDevelopmentWarning('communityVoice.deleteMine.storage', storageError);
+    }
+
+    const { error: deleteError } = await supabase
+      .from('community_voices')
+      .delete()
+      .eq('id', voiceId)
+      .eq('sender_id', authenticatedUserId);
+
+    if (deleteError) throw deleteError;
   }
 }

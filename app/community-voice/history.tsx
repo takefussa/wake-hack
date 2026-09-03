@@ -1,7 +1,7 @@
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
@@ -21,6 +21,7 @@ export default function CommunityVoiceHistoryScreen() {
     thanksCount: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingVoiceId, setDeletingVoiceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadHistory = useCallback(async () => {
@@ -45,6 +46,43 @@ export default function CommunityVoiceHistoryScreen() {
   useEffect(() => {
     void loadHistory();
   }, [loadHistory]);
+
+  const handleDelete = useCallback(
+    (voice: CommunityVoice) => {
+      if (!currentUser || deletingVoiceId) return;
+
+      Alert.alert(
+        'Community Voiceを削除しますか？',
+        '削除すると、このVoiceは履歴と起床候補から消えます。',
+        [
+          { text: 'キャンセル', style: 'cancel' },
+          {
+            text: '削除',
+            style: 'destructive',
+            onPress: () => {
+              void (async () => {
+                setDeletingVoiceId(voice.id);
+                setError(null);
+                try {
+                  await communityVoiceService.deleteMine(voice.id, currentUser.id);
+                  setVoices((current) => current.filter((item) => item.id !== voice.id));
+                  setStats((current) => ({
+                    wakeCount: Math.max(0, current.wakeCount - voice.playCount),
+                    thanksCount: Math.max(0, current.thanksCount - voice.thanksCount),
+                  }));
+                } catch {
+                  setError('Community Voiceを削除できませんでした。もう一度お試しください。');
+                } finally {
+                  setDeletingVoiceId(null);
+                }
+              })();
+            },
+          },
+        ]
+      );
+    },
+    [currentUser, deletingVoiceId]
+  );
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -121,7 +159,12 @@ export default function CommunityVoiceHistoryScreen() {
       {!isLoading && !error && voices.length > 0 ? (
         <View style={styles.list}>
           {voices.map((voice) => (
-            <CommunityVoiceHistoryRow key={voice.id} voice={voice} />
+            <CommunityVoiceHistoryRow
+              isDeleting={deletingVoiceId === voice.id}
+              key={voice.id}
+              onDelete={handleDelete}
+              voice={voice}
+            />
           ))}
         </View>
       ) : null}

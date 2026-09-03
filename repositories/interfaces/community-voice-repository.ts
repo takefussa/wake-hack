@@ -16,4 +16,5 @@ export interface CommunityVoiceRepository {
   hasThanks(voiceId: string, userId: string): Promise<boolean>;
   getStats(userId: string): Promise<CommunityVoiceStats>;
   listMine(userId: string): Promise<CommunityVoice[]>;
+  deleteMine(voiceId: string, userId: string): Promise<void>;
 }
