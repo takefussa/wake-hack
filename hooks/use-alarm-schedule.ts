@@ -39,23 +39,6 @@ export function useAlarmSchedule(request: MorningRequest | null) {
     return () => subscription.remove();
   }, []);
 
-  // A Personal Voice can arrive after the Community fallback has already been
-  // installed. While waiting, periodically re-check the request so an app
-  // that stays open does not need to be backgrounded or restarted. The
-  // service-level promise cache coalesces concurrent checks from screens that
-  // mount this hook at the same time.
-  useEffect(() => {
-    if (!request || request.status === 'completed' || personalVoiceSyncStatus !== 'waiting') {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setAttempt((value) => value + 1);
-    }, 20_000);
-
-    return () => clearInterval(timer);
-  }, [personalVoiceSyncStatus, request]);
-
   useEffect(() => {
     if (!request || request.status === 'completed') {
       setState({ status: 'loading' });
