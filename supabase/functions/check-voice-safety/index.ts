@@ -110,8 +110,9 @@ Deno.serve(async (request) => {
 
     return json(result);
   } catch (error) {
+    const reason = getPublicFailureReason(error);
     console.error('[voice-safety] failed', error?.message ?? error);
-    return json(failedResult('voice_check_failed'), 500);
+    return json(failedResult(reason), 500);
   }
 });
 
@@ -240,10 +241,12 @@ async function checkWithGemini({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Api-Revision': '2026-05-20',
         'x-goog-api-key': apiKey,
       },
       body: JSON.stringify({
         model,
+        store: false,
         input: [
           {
             type: 'text',
@@ -255,27 +258,6 @@ async function checkWithGemini({
             mime_type: mimeType,
           },
         ],
-        response_format: {
-          type: 'object',
-          properties: {
-            safe: { type: 'boolean' },
-            category: {
-              type: 'string',
-              enum: [
-                'safe',
-                'insult',
-                'hate',
-                'sexual',
-                'threat',
-                'harassment',
-                'irrelevant',
-                'other',
-              ],
-            },
-            reason: { type: 'string' },
-          },
-          required: ['safe', 'category', 'reason'],
-        },
       }),
     }
   );
@@ -291,11 +273,58 @@ async function checkWithGemini({
   }
 
   const payload = await response.json();
+  const text = extractResponseText(payload);
+  const parsed = parseJsonObject(text);
+  return validateResult(parsed);
+}
+
+function extractResponseText(payload: any): string {
   const text =
     payload?.output_text ??
     payload?.candidates?.[0]?.content?.parts?.[0]?.text ??
-    payload?.steps?.at?.(-1)?.content?.[0]?.text;
-  return validateResult(typeof text === 'string' ? JSON.parse(text) : null);
+    payload?.steps?.at?.(-1)?.content?.[0]?.text ??
+    payload?.output?.at?.(-1)?.content?.[0]?.text;
+
+  if (typeof text !== 'string' || !text.trim()) {
+    console.error('[voice-safety] Gemini response had no text', {
+      keys: Object.keys(payload ?? {}),
+    });
+    throw new Error('gemini_response_missing_text');
+  }
+
+  return text;
+}
+
+function parseJsonObject(text: string): unknown {
+  const trimmed = text.trim();
+  const unfenced = trimmed
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  try {
+    return JSON.parse(unfenced);
+  } catch {
+    const start = unfenced.indexOf('{');
+    const end = unfenced.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      return JSON.parse(unfenced.slice(start, end + 1));
+    }
+    throw new Error('gemini_response_invalid_json');
+  }
+}
+
+function getPublicFailureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (
+    message.startsWith('gemini_request_failed_') ||
+    message.startsWith('gemini_response_') ||
+    message === 'audio_download_failed' ||
+    message === 'supabase_auth_unavailable'
+  ) {
+    return message;
+  }
+  return 'voice_check_failed';
 }
 
 function normalizeAudioMimeType(mimeType: string | undefined, path: string): string {
@@ -375,7 +404,7 @@ function validateResult(value: unknown): VoiceCheckResult {
   const category = allowedCategories.has(candidate.category ?? '')
     ? (candidate.category as VoiceSafetyCategory)
     : 'other';
-  const safe = candidate.safe === true && category === 'safe';
+  const safe = candidate.safe === true;
   const reason =
     typeof candidate.reason === 'string' && candidate.reason.trim()
       ? candidate.reason.trim().slice(0, 240)
