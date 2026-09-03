@@ -163,6 +163,13 @@ export default function MorningSummaryScreen() {
             label="希望する声"
             value={currentMorningRequest.preferredVoiceStyle}
           />
+          {currentMorningRequest.voiceRequestNote ? (
+            <SummaryRow
+              icon="chatbubble-ellipses-outline"
+              label="一言"
+              value={currentMorningRequest.voiceRequestNote}
+            />
+          ) : null}
         </View>
 
         <View
