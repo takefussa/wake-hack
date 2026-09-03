@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
@@ -12,42 +12,19 @@ import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { ScreenHeader } from '@/components/common/screen-header';
 import { paperColors, shadows, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
-import { friendshipService } from '@/services/friendship-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
-import type { Friendship, MorningRequest, UserProfile } from '@/types';
-
-function includesUsers(friendship: Friendship, currentUserId: string, profileId: string) {
-  const normalize = (id: string) => (id === 'current-user' ? currentUserId : id);
-  const userAId = normalize(friendship.userAId);
-  const userBId = normalize(friendship.userBId);
-  return (
-    (userAId === currentUserId && userBId === profileId) ||
-    (userAId === profileId && userBId === currentUserId)
-  );
-}
+import type { MorningRequest, UserProfile } from '@/types';
 
 export default function UserProfileScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const profileId = Array.isArray(params.id) ? params.id[0] : params.id;
   const currentUser = useAppStore((state) => state.currentUser);
-  const friendships = useAppStore((state) => state.friendships);
-  const upsertFriendship = useAppStore((state) => state.upsertFriendship);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [request, setRequest] = useState<MorningRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const friendship = useMemo(
-    () =>
-      currentUser && profileId
-        ? friendships.find((item) => includesUsers(item, currentUser.id, profileId)) ?? null
-        : null,
-    [currentUser, friendships, profileId]
-  );
-  const isOkimate = friendship?.status === 'matched';
 
   useEffect(() => {
     if (!currentUser || !profileId) {
@@ -82,20 +59,6 @@ export default function UserProfileScreen() {
   }, [currentUser, profileId]);
 
   if (!currentUser) return <Redirect href="/onboarding" />;
-
-  async function handleAddOkimate() {
-    if (!profile || isAdding || isOkimate) return;
-    setIsAdding(true);
-    setError(null);
-    try {
-      const matched = await friendshipService.addOkimate(currentUser!.id, profile.id);
-      upsertFriendship(matched);
-    } catch {
-      setError('オキメイトに追加できませんでした。もう一度お試しください。');
-    } finally {
-      setIsAdding(false);
-    }
-  }
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea} testID="user-profile-screen">
@@ -144,26 +107,6 @@ export default function UserProfileScreen() {
           ) : null}
 
           {error ? <AppText style={styles.error}>{error}</AppText> : null}
-
-          <Pressable
-            accessibilityRole="button"
-            disabled={isAdding || isOkimate}
-            onPress={() => void handleAddOkimate()}
-            style={({ pressed }) => [
-              styles.addButton,
-              isOkimate && styles.addedButton,
-              (pressed || isAdding) && styles.pressed,
-            ]}
-            testID="add-okimate-button">
-            <Ionicons
-              color={paperColors.ink}
-              name={isOkimate ? 'checkmark-circle' : 'heart-outline'}
-              size={22}
-            />
-            <AppText style={styles.addButtonText}>
-              {isOkimate ? 'オキメイトに追加済み' : isAdding ? '追加しています…' : 'オキメイトに追加'}
-            </AppText>
-          </Pressable>
         </>
       ) : null}
       </ScrollView>
@@ -236,20 +179,5 @@ const styles = StyleSheet.create({
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   time: { color: paperColors.ink, fontSize: 34, lineHeight: 42, letterSpacing: 1 },
   detail: { color: paperColors.ink, fontSize: 14, lineHeight: 21 },
-  addButton: {
-    minHeight: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 2,
-    borderColor: paperColors.ink,
-    borderRadius: 10,
-    backgroundColor: paperColors.salmon,
-    ...shadows.paper,
-  },
-  addedButton: { backgroundColor: paperColors.noteBlue },
-  addButtonText: { color: paperColors.ink, fontSize: 18, lineHeight: 24 },
-  pressed: { opacity: 0.65, transform: [{ translateY: 1 }] },
   error: { color: paperColors.ink, fontSize: 13, lineHeight: 20, textAlign: 'center' },
 });
