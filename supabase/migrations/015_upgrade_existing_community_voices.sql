@@ -60,3 +60,53 @@ on public.community_voices
 for insert
 to authenticated
 with check ((select auth.uid()) = sender_id);
+
+-- Existing projects also need the Storage policies from migration 014. Without
+-- these policies the audio upload succeeds only up to the final object insert,
+-- which is rejected by storage.objects RLS (`new row violates row-level
+-- security policy`). Keep this block idempotent so it is safe to run against
+-- a database that already has some or all of the policies.
+update storage.buckets
+set allowed_mime_types = array[
+  'audio/mp4',
+  'audio/m4a',
+  'audio/x-m4a',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/aac',
+  'audio/mpeg',
+  'audio/webm'
+]
+where id = 'voice-messages';
+
+drop policy if exists "Authenticated users can upload community voice audio" on storage.objects;
+create policy "Authenticated users can upload community voice audio"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'voice-messages'
+  and (storage.foldername(name))[1] = 'community'
+  and (select auth.uid())::text = (storage.foldername(name))[2]
+);
+
+drop policy if exists "Authenticated users can read community voice audio" on storage.objects;
+create policy "Authenticated users can read community voice audio"
+on storage.objects
+for select
+to authenticated
+using (
+  bucket_id = 'voice-messages'
+  and (storage.foldername(name))[1] = 'community'
+);
+
+drop policy if exists "Users can delete their own community voice audio" on storage.objects;
+create policy "Users can delete their own community voice audio"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'voice-messages'
+  and (storage.foldername(name))[1] = 'community'
+  and (select auth.uid())::text = (storage.foldername(name))[2]
+);
