@@ -80,7 +80,11 @@ export default function CommunityRecordScreen() {
     try {
       const source = new File(voiceUri);
       if (source.exists) {
-        const destination = new File(Paths.document, `community-${Date.now()}-${user.id}.wav`);
+        // Keep the recorder's container extension. The iOS recorder uses AAC
+        // in an M4A container; naming those bytes `.wav` makes local fallback
+        // playback (and local Community Voice alarm preparation) fail even
+        // though the upload itself succeeded.
+        const destination = new File(Paths.document, `community-${Date.now()}-${user.id}.m4a`);
         source.copy(destination);
         voiceUri = destination.uri;
       }

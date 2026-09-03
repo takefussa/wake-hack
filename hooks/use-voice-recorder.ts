@@ -37,6 +37,18 @@ export type LocalVoiceRecording = {
   durationMs: number;
 };
 
+async function waitForRecordedFile(uri: string): Promise<File> {
+  // `stop()` resolves before the container's final bytes are visible on a few
+  // iOS versions. Give the encoder a short window to flush instead of
+  // treating a temporarily tiny file as a failed recording.
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const file = new File(uri);
+    if (file.exists && file.size > 4_096) return file;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error('Recording file contains no audio data');
+}
+
 export function useVoiceRecorder() {
   const [permissionState, setPermissionState] =
     useState<MicrophonePermissionState>('checking');
@@ -168,10 +180,7 @@ export function useVoiceRecorder() {
       if (!uri) {
         throw new Error('Recording URI unavailable');
       }
-      const recordingFile = new File(uri);
-      if (!recordingFile.exists || recordingFile.size <= 4_096) {
-        throw new Error('Recording file contains no audio data');
-      }
+      await waitForRecordedFile(uri);
 
       setRecording({
         uri,
