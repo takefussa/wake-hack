@@ -15,6 +15,7 @@ import { prototypeConfig } from '@/constants/config';
 import { colors, radii, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { formatRecordingDuration } from '@/features/voice/format-duration';
+import { logDevelopmentError } from '@/lib/development-logger';
 import { giveService } from '@/services/give-service';
 import { isSupabaseUuid } from '@/lib/identifiers';
 import { morningRequestService } from '@/services/morning-request-service';
@@ -182,14 +183,20 @@ export default function RecordVoiceScreen() {
         uri: recorder.recording.uri,
         durationMs: recorder.recording.durationMs,
       });
+      // The Supabase RPC is the source of truth. Local Zustand state can be
+      // stale after a request migration or an app reload; that must not turn a
+      // successfully delivered voice into a false failure screen.
       if (!completeGive(voiceMessage)) {
-        throw new Error('Give state could not be completed');
+        logDevelopmentError('give.completeLocal', {
+          message: 'Voice was delivered remotely but local Give state was stale',
+        });
       }
       router.replace({
         pathname: '/morning/give-complete',
         params: { requestId: request.id },
       });
-    } catch {
+    } catch (error) {
+      logDevelopmentError('give.send', error);
       setPageError('声を届けられませんでした。もう一度お試しください。');
       isSendingRef.current = false;
       setIsSending(false);
