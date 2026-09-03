@@ -21,6 +21,7 @@ export type MorningRequest = {
   id: string;
   userId: string;
   wakeAt: string;
+  scheduledFor?: string;
   schedules: ScheduleType[];
   mood: MoodType;
   preferredVoiceStyle: VoiceStyle;

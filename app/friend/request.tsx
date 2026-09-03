@@ -2,14 +2,15 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
-import { Screen } from '@/components/common/screen';
-import { colors, radii, spacing } from '@/constants/theme';
+import { IconButton } from '@/components/common/icon-button';
+import { MorningScreen } from '@/components/wake/morning-screen';
+import { colors, fonts, paperColors, radii, shadows, spacing } from '@/constants/theme';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { friendshipService } from '@/services/friendship-service';
@@ -41,6 +42,33 @@ export default function FriendRequestScreen() {
   const [error, setError] = useState<string | null>(null);
   const isMatchingRef = useRef(false);
 
+  const restoreFriendship = useCallback(async () => {
+    if (!currentUser || !assignedWakeVoice || assignedWakeVoice.type !== 'personal') {
+      return;
+    }
+    const userId = currentUser.id;
+    const senderId = assignedWakeVoice.senderId;
+    setError(null);
+
+    try {
+      const restored = await friendshipService.getBetween(
+        userId,
+        senderId,
+        friendships
+      );
+      if (restored) {
+        upsertFriendship(restored);
+        setFriendship(restored);
+      }
+    } catch {
+      setError('オキメイトの状態を確認できませんでした。');
+    }
+  }, [assignedWakeVoice, currentUser, friendships, upsertFriendship]);
+
+  useEffect(() => {
+    void restoreFriendship();
+  }, [restoreFriendship]);
+
   if (!currentUser || !currentMorningRequest || !assignedWakeVoice || !wakeSession) {
     return <Redirect href="/(tabs)" />;
   }
@@ -70,8 +98,13 @@ export default function FriendRequestScreen() {
     return <Redirect href="/wake/thanks" />;
   }
 
-  const isMatched = friendship?.status === 'matched';
-  const isPending = friendship?.status === 'pending';
+  if (friendship) {
+    return (
+      <Redirect
+        href={friendship.status === 'matched' ? '/(tabs)/friends' : '/(tabs)'}
+      />
+    );
+  }
 
   async function handleRequest() {
     if (!currentUser || !assignedWakeVoice || friendship || isMatchingRef.current) return;
@@ -82,19 +115,19 @@ export default function FriendRequestScreen() {
     try {
       const pending = await friendshipService.request(
         currentUser.id,
-        assignedWakeVoice.senderId
+        assignedWakeVoice.senderId,
+        assignedWakeVoice.id
       );
       upsertFriendship(pending);
-      setFriendship(pending);
 
       const resolved = await friendshipService.resolveDemoMatch(pending);
       upsertFriendship(resolved);
-      setFriendship(resolved);
       if (resolved.status === 'matched') {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
           () => undefined
         );
       }
+      router.replace(resolved.status === 'matched' ? '/(tabs)/friends' : '/(tabs)');
     } catch {
       setError('気持ちを届けられませんでした。もう一度お試しください。');
     } finally {
@@ -104,10 +137,19 @@ export default function FriendRequestScreen() {
   }
 
   return (
-    <Screen contentStyle={styles.content} testID="friend-request-screen">
+    <MorningScreen contentStyle={styles.content} testID="friend-request-screen">
       <StatusBar style="dark" />
 
+      <View style={styles.navigation}>
+        <IconButton
+          icon="chevron-back"
+          label="完了画面に戻る"
+          onPress={() => router.replace('/wake/complete')}
+        />
+      </View>
+
       <View style={styles.hero}>
+        <View pointerEvents="none" style={styles.blueTape} />
         <View style={styles.people}>
           <Avatar
             avatarId={currentUser.avatarId}
@@ -127,19 +169,15 @@ export default function FriendRequestScreen() {
         </View>
 
         <View style={styles.copy}>
-          <AppText variant="screenTitle" style={styles.centeredText}>
-            {isMatched
-              ? '朝フレンドになりました'
-              : isPending || isMatching
-                ? '気持ちを届けています'
-                : `また${sender?.nickname ?? 'この人'}さんと朝を迎えたい？`}
+          <AppText style={[styles.centeredText, styles.title]}>
+            {isMatching
+              ? '気持ちを届けています'
+              : `また${sender?.nickname ?? 'この人'}さんと朝を迎えたい？`}
           </AppText>
           <AppText variant="secondary" tone="soft" style={styles.centeredText}>
-            {isMatched
-              ? '今朝の声から生まれた、小さなつながりです。'
-              : isPending || isMatching
-                ? '相手も同じ気持ちなら、朝フレンドになります。'
-                : '今朝の声がよかったと感じたときだけ、次の朝にもつながれます。'}
+            {isMatching
+              ? '希望を保存しています。'
+              : '今朝の声がよかったと感じたときだけ、次の朝にもつながれます。'}
           </AppText>
         </View>
 
@@ -153,39 +191,23 @@ export default function FriendRequestScreen() {
       ) : null}
 
       <View style={styles.actions}>
-        {friendship ? (
-          <AppButton
-            disabled={isMatching}
-            icon={isMatched ? 'heart-outline' : 'people-outline'}
-            label={
-              isMatched
-                ? 'フレンドを見る'
-                : isMatching
-                  ? '相手の気持ちを確認しています'
-                  : 'つながりを見る'
-            }
-            onPress={() =>
-              router.replace(isMatched ? '/(tabs)/friends' : '/(tabs)/connections')
-            }
-          />
-        ) : (
-          <AppButton
-            disabled={isMatching}
-            icon="heart-outline"
-            label="また朝を迎えたい"
-            onPress={() => void handleRequest()}
-            testID="request-friend"
-          />
-        )}
-        {!isMatched ? (
-          <AppButton
-            label="今回はここまで"
-            onPress={() => router.replace('/(tabs)/connections')}
-            variant="text"
-          />
-        ) : null}
+        <AppButton
+          disabled={isMatching}
+          icon="heart-outline"
+          label="また朝を迎えたい"
+          onPress={() => void handleRequest()}
+          style={styles.primaryAction}
+          testID="request-friend"
+        />
+        <AppButton
+          disabled={isMatching}
+          label="今回はここまで"
+          onPress={() => router.replace('/(tabs)')}
+          style={styles.secondaryAction}
+          variant="text"
+        />
       </View>
-    </Screen>
+    </MorningScreen>
   );
 }
 
@@ -193,14 +215,26 @@ const styles = StyleSheet.create({
   content: {
     minHeight: '100%',
     justifyContent: 'space-between',
-    gap: spacing.xxxl,
+    gap: spacing.xl,
+  },
+  navigation: {
+    minHeight: 44,
+    marginLeft: -spacing.md,
+    alignItems: 'flex-start',
   },
   hero: {
-    flex: 1,
-    minHeight: 420,
+    position: 'relative',
+    minHeight: 440,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxxl,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xxl,
+    ...shadows.paper,
   },
   people: {
     flexDirection: 'row',
@@ -212,7 +246,9 @@ const styles = StyleSheet.create({
     width: 64,
     height: 32,
     borderRadius: radii.badge,
-    backgroundColor: colors.indigoSoft,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    backgroundColor: paperColors.noteBlue,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -221,11 +257,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
+  title: {
+    fontFamily: fonts?.handwritten,
+    fontSize: 30,
+    lineHeight: 40,
+  },
   centeredText: {
     textAlign: 'center',
   },
   actions: {
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
     gap: spacing.sm,
+    ...shadows.paper,
+  },
+  primaryAction: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+  },
+  secondaryAction: {
+    borderWidth: 1,
+    borderColor: paperColors.clockGray,
+  },
+  blueTape: {
+    position: 'absolute',
+    top: -13,
+    left: '34%',
+    right: '34%',
+    zIndex: 2,
+    height: 24,
+    backgroundColor: paperColors.tape,
+    transform: [{ rotate: '-1deg' }],
   },
   error: {
     color: colors.danger,

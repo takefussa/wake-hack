@@ -23,10 +23,12 @@ import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { wakeStyleOptions, type WakeStyleOption } from '@/constants/community-voice';
 import { fontFamilyName, paperColors, shadows } from '@/constants/theme';
 import { useTapLock } from '@/hooks/use-tap-lock';
+import { isSupabaseUuid } from '@/lib/identifiers';
 import { rankMorningRequests } from '@/services/matching-service';
 import type { MorningRequestMatch } from '@/services/matching-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
+import { voiceService } from '@/services/voice-service';
 import { useAppStore } from '@/store/use-app-store';
 import type { UserProfile, VoiceStyle } from '@/types';
 
@@ -34,6 +36,12 @@ type TimelineMode = 'personal' | 'community';
 
 type RequestCandidate = MorningRequestMatch & {
   user: UserProfile;
+};
+
+type DeliveryStatusItem = {
+  voiceId: string;
+  recipient: UserProfile;
+  alarmReceivedAt: string | null;
 };
 
 function isUserProfile(profile: UserProfile | null): profile is UserProfile {
@@ -151,8 +159,8 @@ function CurvedLabel({ text, style }: { text: string; style?: StyleProp<TextStyl
 export default function ConnectionsScreen() {
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
-  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
   const replaceMorningRequest = useAppStore((state) => state.replaceMorningRequest);
+  const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const { width, height } = useWindowDimensions();
 
   const horizontalRef = useRef<ScrollView>(null);
@@ -229,6 +237,8 @@ export default function ConnectionsScreen() {
   const [candidates, setCandidates] = useState<RequestCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deliveryItems, setDeliveryItems] = useState<DeliveryStatusItem[]>([]);
 
   const loadCandidates = useCallback(async () => {
     if (!currentUser || !currentMorningRequest) {
@@ -252,7 +262,11 @@ export default function ConnectionsScreen() {
         remoteCurrentRequest.id
       );
       const requests = availableRequests.filter(
-        (request) => !currentGiveReceiverIds.includes(request.userId)
+        (request) =>
+          request.voiceCount === 0 &&
+          !givenVoiceMessages.some(
+            (voice) => voice.morningRequestId === request.id
+          )
       );
       const profiles = (
         await Promise.all(requests.map((request) => profileService.getProfile(request.userId)))
@@ -270,11 +284,55 @@ export default function ConnectionsScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentGiveReceiverIds, currentMorningRequest, currentUser, replaceMorningRequest]);
+  }, [currentMorningRequest, currentUser, givenVoiceMessages, replaceMorningRequest]);
 
   useEffect(() => {
     void loadCandidates();
   }, [loadCandidates]);
+
+  const loadDeliveryStatuses = useCallback(async () => {
+    if (!currentUser) {
+      setDeliveryItems([]);
+      return;
+    }
+
+    const sentVoices = givenVoiceMessages
+      .filter(
+        (voice) =>
+          voice.type === 'personal' &&
+          voice.senderId === currentUser.id &&
+          !!voice.receiverId &&
+          isSupabaseUuid(voice.id)
+      )
+      .slice(-3)
+      .reverse();
+
+    const items = await Promise.all(
+      sentVoices.map(async (voice): Promise<DeliveryStatusItem | null> => {
+        const recipient = await profileService.getProfile(voice.receiverId!);
+        let alarmReceivedAt = voice.alarmReceivedAt ?? null;
+        try {
+          alarmReceivedAt = await voiceService.getAlarmReceivedAt(voice.id);
+        } catch {
+          // A missing receipt migration or a temporary network failure means
+          // the last known state remains "waiting".
+        }
+        return recipient
+          ? { voiceId: voice.id, recipient, alarmReceivedAt }
+          : null;
+      })
+    );
+    setDeliveryItems(
+      items.filter((item): item is DeliveryStatusItem => item !== null)
+    );
+  }, [currentUser, givenVoiceMessages]);
+
+  useEffect(() => {
+    void loadDeliveryStatuses().catch(() => {
+      // The delivery receipt migration may not be installed yet or the device
+      // may be offline. The timeline remains usable in either case.
+    });
+  }, [loadDeliveryStatuses]);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -300,6 +358,19 @@ export default function ConnectionsScreen() {
     setMode(page === 0 ? 'personal' : 'community');
   }
 
+  async function handleRefresh() {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        loadCandidates(),
+        loadDeliveryStatuses().catch(() => undefined),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -308,10 +379,29 @@ export default function ConnectionsScreen() {
 
       {/* ヘッダー */}
       <View style={styles.header}>
-        <AppText style={styles.title}>起こす</AppText>
-        <AppText style={styles.subtitle}>
-          誰かの明日の朝に、声を届けよう。
-        </AppText>
+        <View style={styles.headerCopy}>
+          <AppText style={styles.title}>起こす</AppText>
+          <AppText style={styles.subtitle}>
+            声を届けると、朝は別の誰かの声が届きます。
+          </AppText>
+        </View>
+        <Pressable
+          accessibilityLabel="起こす画面を更新"
+          accessibilityRole="button"
+          disabled={isRefreshing}
+          hitSlop={8}
+          onPress={() => void handleRefresh()}
+          style={({ pressed }) => [
+            styles.refreshButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          {isRefreshing ? (
+            <ActivityIndicator color="#30463E" size="small" />
+          ) : (
+            <Ionicons color="#30463E" name="refresh" size={21} />
+          )}
+        </Pressable>
       </View>
 
       {/* Twitter風 上タブ */}
@@ -326,7 +416,7 @@ export default function ConnectionsScreen() {
               mode === 'personal' && styles.modeTextActive,
             ]}
           >
-            個人を起こす
+            ひとりを起こす
           </AppText>
 
           {mode === 'personal' ? (
@@ -549,6 +639,36 @@ export default function ConnectionsScreen() {
                   </Animated.View>
                 </Pressable>
               ))}
+
+            {deliveryItems.length > 0 ? (
+              <View style={styles.deliverySection}>
+                <AppText style={styles.thanksTitle}>最近届けた声</AppText>
+                <AppText style={styles.thanksDescription}>
+                  相手のAlarmKitへ設定できたかを表示します。
+                </AppText>
+                <View style={styles.deliveryList}>
+                  {deliveryItems.map((item) => (
+                    <View key={item.voiceId} style={styles.deliveryRow}>
+                      <Ionicons
+                        color={item.alarmReceivedAt ? '#66835F' : '#9A765B'}
+                        name={
+                          item.alarmReceivedAt
+                            ? 'checkmark-circle'
+                            : 'time-outline'
+                        }
+                        size={20}
+                      />
+                      <AppText style={styles.deliveryText}>
+                        {item.alarmReceivedAt
+                          ? `${item.recipient.nickname}さんに届きました`
+                          : `${item.recipient.nickname}さんの受け取り待ち`}
+                      </AppText>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
             </View>
           </Animated.ScrollView>
         </View>
@@ -662,6 +782,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingTop: 8,
     paddingBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  headerCopy: {
+    flex: 1,
+  },
+
+  refreshButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#D4C7B2',
+    backgroundColor: '#FFFDF7',
+    borderRadius: 10,
   },
 
   title: {
@@ -802,6 +940,93 @@ const styles = StyleSheet.create({
   cassetteTouchable: {
     marginBottom: CASSETTE_MARGIN_BOTTOM,
     marginHorizontal: -CASSETTE_HORIZONTAL_BLEED,
+  },
+
+  thanksSection: {
+    marginTop: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+    backgroundColor: '#FFFDF7',
+    borderWidth: 1,
+    borderColor: '#D4C7B2',
+  },
+
+  deliverySection: {
+    marginTop: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+    backgroundColor: '#FFFDF7',
+    borderWidth: 1,
+    borderColor: '#A8BC91',
+  },
+
+  deliveryList: {
+    marginTop: 12,
+    gap: 9,
+  },
+
+  deliveryRow: {
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    paddingHorizontal: 11,
+    backgroundColor: '#F2F5E9',
+  },
+
+  deliveryText: {
+    flex: 1,
+    fontFamily: fontFamilyName,
+    color: '#405348',
+    fontSize: 13,
+  },
+
+  thanksHeading: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+
+  thanksTitle: {
+    fontFamily: fontFamilyName,
+    color: '#30463E',
+    fontSize: 17,
+  },
+
+  thanksCount: {
+    fontFamily: fontFamilyName,
+    color: '#6B716C',
+    fontSize: 12,
+  },
+
+  thanksDescription: {
+    marginTop: 5,
+    fontFamily: fontFamilyName,
+    color: '#6B716C',
+    fontSize: 12,
+  },
+
+  thanksError: {
+    marginTop: 12,
+    fontFamily: fontFamilyName,
+    color: '#A65353',
+    fontSize: 12,
+  },
+
+  thanksLoader: {
+    marginTop: 20,
+  },
+
+  thanksEmpty: {
+    marginTop: 18,
+    fontFamily: fontFamilyName,
+    color: '#777B77',
+    fontSize: 13,
+  },
+
+  thanksList: {
+    marginTop: 10,
   },
 
   cassette: {

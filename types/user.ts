@@ -9,12 +9,19 @@ export type UserProfile = {
   nickname: string;
   avatarId: AvatarId;
   profileImageUri?: string;
+  profileImagePath?: string;
+  profileDetailsSynced?: boolean;
   bio?: string;
   userType: UserType;
   tags: LifeRhythm[];
   createdAt: string;
 };
 
-export type CreateProfileInput = Omit<UserProfile, 'id' | 'createdAt'>;
+export type CreateProfileInput = Omit<
+  UserProfile,
+  'id' | 'createdAt' | 'profileImagePath' | 'profileDetailsSynced'
+>;
 
-export type UpdateProfileInput = CreateProfileInput;
+export type UpdateProfileInput = CreateProfileInput & {
+  removeProfileImage?: boolean;
+};

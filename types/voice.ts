@@ -18,6 +18,8 @@ export type VoiceMessage = {
   wakeStyle?: import('@/types/community-voice').WakeStyle;
   transcript?: string;
   createdAt: string;
+  alarmReceivedAt?: string;
+  voiceStyle?: VoiceStyle;
 };
 
 export type CreatePersonalVoiceInput = {
@@ -28,3 +30,4 @@ export type CreatePersonalVoiceInput = {
   uri: string;
   durationMs: number;
 };
+import type { VoiceStyle } from './morning';
