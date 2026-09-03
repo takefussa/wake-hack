@@ -8,6 +8,7 @@ import type {
 } from '@/types';
 
 const voiceBucket = 'voice-messages';
+const legacyCommunityVoiceBucket = 'community-voices';
 const signedUrlLifetimeSeconds = 15 * 60;
 const voiceColumns =
   'id,sender_id,receiver_id,morning_request_id,storage_path,duration_ms,type,created_at' as const;
@@ -45,6 +46,21 @@ function getDuration(row: Record<string, unknown>): number {
   return typeof value === 'number' && value > 0 ? value : 5_000;
 }
 
+function toVoiceStyle(value: string | null): VoiceStyle | undefined {
+  switch (value) {
+    case 'gentle':
+      return 'そっと優しく';
+    case 'cheerful':
+      return '明るく元気に';
+    case 'strict':
+      return '渇を入れて';
+    case 'funny':
+      return '面白く愉快に';
+    default:
+      return value as VoiceStyle | undefined;
+  }
+}
+
 function mapCommunityVoice(
   row: Record<string, unknown>,
   uri: string
@@ -60,7 +76,7 @@ function mapCommunityVoice(
     storagePath: getString(row, 'storage_path', 'audio_path', 'file_path', 'path') ?? undefined,
     durationMs: getDuration(row),
     type: 'community',
-    voiceStyle: getString(row, 'voice_style', 'style', 'category') as VoiceStyle | undefined,
+    voiceStyle: toVoiceStyle(getString(row, 'voice_style', 'wake_style', 'style', 'category')),
     createdAt: getString(row, 'created_at') ?? new Date(0).toISOString(),
   };
 }
@@ -154,11 +170,25 @@ export class SupabaseWakeVoiceRepository implements WakeVoiceRepository {
     const directUri = getString(row, 'audio_url', 'voice_url', 'url', 'uri');
     let uri = directUri;
     if (storagePath) {
-      const { data: signedUrl, error: signedUrlError } = await supabase.storage
-        .from(voiceBucket)
-        .createSignedUrl(storagePath, signedUrlLifetimeSeconds);
-      if (signedUrlError) throw signedUrlError;
-      uri = signedUrl.signedUrl;
+      // Migration 006 used community-voices/<uid>/<id>.m4a; migration 014
+      // uses voice-messages/community/<uid>/<id>.wav. Select the matching
+      // bucket and retry the other one for rows created during migration.
+      const preferredBucket = storagePath.startsWith('community/')
+        ? voiceBucket
+        : legacyCommunityVoiceBucket;
+      const buckets = [preferredBucket, preferredBucket === voiceBucket ? legacyCommunityVoiceBucket : voiceBucket];
+      let lastError: unknown = null;
+      for (const bucket of buckets) {
+        const { data: signedUrl, error: signedUrlError } = await supabase.storage
+          .from(bucket)
+          .createSignedUrl(storagePath, signedUrlLifetimeSeconds);
+        if (!signedUrlError && signedUrl) {
+          uri = signedUrl.signedUrl;
+          break;
+        }
+        lastError = signedUrlError;
+      }
+      if (!uri && lastError) throw lastError;
     }
     if (!uri) return this.fallbackRepository.findCommunityForRequest(request, receiverId);
 
