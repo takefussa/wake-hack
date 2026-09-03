@@ -238,7 +238,10 @@ export function useVoiceRecorder() {
       await recorder.prepareToRecordAsync();
       hasActiveRecording.current = true;
       recordingStartedAt.current = Date.now();
-      recorder.record();
+      // Let the native recorder enforce the ten-second cap as well as the JS
+      // timer. This is the behavior used by the previously working recorder
+      // and prevents an iOS session from ending without a finalized file.
+      recorder.record({ forDuration: prototypeConfig.recordingMaxMs / 1_000 });
       autoStopTimer.current = setTimeout(() => {
         void finishRecording();
       }, prototypeConfig.recordingMaxMs + 100);

@@ -98,24 +98,43 @@ export class SupabaseVoiceRepository
         await supabase
           .rpc('send_personal_voice', {
             p_voice_id: voiceId,
-            p_receiver_id:
-              input.receiverId,
-            p_morning_request_id:
-              input.morningRequestId,
-            p_sender_morning_request_id:
-              input.senderMorningRequestId,
-            p_storage_path:
-              storagePath,
-            p_duration_ms:
-              input.durationMs,
+            p_receiver_id: input.receiverId,
+            p_morning_request_id: input.morningRequestId,
+            p_sender_morning_request_id: input.senderMorningRequestId,
+            p_storage_path: storagePath,
+            p_duration_ms: input.durationMs,
           })
           .single();
 
-      if (error) {
-        throw error;
+      // Some existing projects still contain the old moderation overload of
+      // this RPC. PostgREST returns PGRST203 before executing either function
+      // when only the canonical six arguments are sent. Retry with the
+      // overload's explicit parameters so those installations keep working;
+      // new installations continue using the six-argument function above.
+      const resolved = error?.code === 'PGRST203'
+        ? await supabase
+            .rpc('send_personal_voice', {
+              p_voice_id: voiceId,
+              p_receiver_id: input.receiverId,
+              p_morning_request_id: input.morningRequestId,
+              p_sender_morning_request_id: input.senderMorningRequestId,
+              p_storage_path: storagePath,
+              p_duration_ms: input.durationMs,
+              p_moderation_status: 'approved',
+              p_moderation_category: null,
+              p_moderation_reason: null,
+            } as never)
+            .single()
+        : { data, error };
+
+      if (resolved.error) {
+        throw resolved.error;
+      }
+      if (!resolved.data) {
+        throw new Error('Personal Voice was not returned by Supabase');
       }
 
-      return mapVoiceRow(data, input.uri);
+      return mapVoiceRow(resolved.data, input.uri);
     } catch (error) {
       const { error: cleanupError } =
         await supabase.storage

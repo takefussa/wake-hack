@@ -168,7 +168,9 @@ export default function RecordVoiceScreen() {
       // migrate it before uploading so the voice is not rejected with a
       // generic "声を届けられませんでした" message.
       const senderRequestSource = currentMorningRequest;
-      if (!senderRequestSource) return;
+      if (!senderRequestSource) {
+        throw new Error('Sender morning request is unavailable');
+      }
       const senderRequest = await morningRequestService.ensureRemoteRequest(
         senderRequestSource
       );
