@@ -88,7 +88,7 @@ export class SupabaseVoiceRepository
     }
 
     try {
-      const checkResult = await voiceSafetyService.assertVoiceIsSafe({
+      await voiceSafetyService.assertVoiceIsSafe({
         bucket: voiceBucket,
         path: storagePath,
         voiceKind: 'personal',
@@ -103,9 +103,6 @@ export class SupabaseVoiceRepository
           p_sender_morning_request_id: input.senderMorningRequestId,
           p_storage_path: storagePath,
           p_duration_ms: input.durationMs,
-          p_moderation_status: 'approved',
-          p_moderation_category: checkResult.category,
-          p_moderation_reason: checkResult.reason,
         })
         .single();
 
