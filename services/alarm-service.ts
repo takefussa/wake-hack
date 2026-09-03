@@ -324,7 +324,9 @@ export class AlarmService {
     } catch (error) {
       // The default native alarm stays scheduled unless the replacement was
       // completely prepared, so a failed download never leaves the user silent.
-      logDevelopmentError('alarm.replaceWithWakeVoice', error);
+      // Voice preparation failures are handled by PersonalAlarmVoiceService,
+      // which tries Community Voice and then keeps the standard alarm. Avoid
+      // logging an expected fallback as an uncaught app error.
       throw error;
     }
   }

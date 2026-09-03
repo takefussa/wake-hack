@@ -11,7 +11,7 @@ export type PersonalAlarmVoiceSyncResult =
   | {
       status: 'ready';
       alarm: ActiveAlarm;
-      source: 'personal' | 'community';
+      source: 'personal' | 'community' | 'default';
       personalVoice?: VoiceMessage;
     }
   | { status: 'waiting' | 'unavailable' | 'failed' };
@@ -181,18 +181,60 @@ export class PersonalAlarmVoiceService {
         voiceMessageId: preparation.voice.id,
       });
 
-      const alarm = await alarmService.replaceWithPersonalVoice({
-        morningRequestId: request.id,
-        voiceMessageId: preparation.voice.id,
-        remoteUrl: preparation.voice.uri,
-        senderId: preparation.voice.senderId,
-      });
-      if (!alarm) {
+      let alarm: ActiveAlarm | null = null;
+      try {
+        alarm = await alarmService.replaceWithPersonalVoice({
+          morningRequestId: request.id,
+          voiceMessageId: preparation.voice.id,
+          remoteUrl: preparation.voice.uri,
+          senderId: preparation.voice.senderId,
+        });
+      } catch (error) {
+        // A malformed/legacy recording must never leave the user without an
+        // alarm. Try the latest Community Voice, then keep the already
+        // scheduled standard alarm as the final fallback.
         await saveDiagnostic(request, {
           status: 'failed',
           voiceMessageId: preparation.voice.id,
-          error: 'AlarmKit did not return a replacement alarm',
+          error: getErrorMessage(error),
         });
+        try {
+          const community = await wakeService.prepareCommunityAlarmVoice(
+            request,
+            receiverId,
+            communityVoices
+          );
+          alarm = await alarmService.replaceWithCommunityVoice({
+            morningRequestId: request.id,
+            voiceMessageId: community.voice.id,
+            remoteUrl: community.voice.uri,
+          });
+          if (alarm) {
+            await saveDiagnostic(request, {
+              status: 'ready',
+              voiceMessageId: community.voice.id,
+              soundFileName: alarm.soundFileName,
+            });
+            return { status: 'ready', alarm, source: 'community' };
+          }
+        } catch (fallbackError) {
+          // The standard AlarmKit alarm remains scheduled when replacement
+          // fails. Do not surface an expected conversion failure as an app
+          // error; report the standard alarm as the safe result instead.
+          await saveDiagnostic(request, {
+            status: 'failed',
+            voiceMessageId: preparation.voice.id,
+            error: getErrorMessage(fallbackError),
+          });
+        }
+
+        const standardAlarm = await alarmService.getActiveAlarm();
+        if (standardAlarm) {
+          return { status: 'ready', alarm: standardAlarm, source: 'default' };
+        }
+        return { status: 'failed' };
+      }
+      if (!alarm) {
         return { status: 'failed' };
       }
       await saveDiagnostic(request, {
@@ -217,12 +259,16 @@ export class PersonalAlarmVoiceService {
         personalVoice: preparation.voice,
       };
     } catch (error) {
-      logDevelopmentError('personalAlarmVoice.sync', error);
+      // Keep the already scheduled standard alarm and avoid turning a voice
+      // conversion issue into a red error state on the preparation screen.
       await saveDiagnostic(request, {
         status: 'failed',
         error: getErrorMessage(error),
       });
-      return { status: 'failed' };
+      const standardAlarm = await alarmService.getActiveAlarm();
+      return standardAlarm
+        ? { status: 'ready', alarm: standardAlarm, source: 'default' }
+        : { status: 'failed' };
     }
   }
 }
