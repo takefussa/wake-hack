@@ -12,6 +12,7 @@ import { Screen } from '@/components/common/screen';
 import { BoomboxRecorder } from '@/components/voice/boombox-recorder';
 import { MicrophonePermissionGate } from '@/components/voice/microphone-permission-gate';
 import { RecordingRecipient } from '@/components/voice/recording-recipient';
+import { VoiceExampleCard } from '@/components/voice/voice-example-card';
 import { prototypeConfig } from '@/constants/config';
 import { colors, fonts, paperColors, shadows, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
@@ -20,6 +21,7 @@ import { logDevelopmentError } from '@/lib/development-logger';
 import { giveService } from '@/services/give-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
+import { voiceExampleService } from '@/services/voice-example-service';
 import { useVoiceRecorder } from '@/hooks/use-voice-recorder';
 import { useAppStore } from '@/store/use-app-store';
 import type { MorningRequest, UserProfile } from '@/types';
@@ -38,8 +40,12 @@ export default function RecordVoiceScreen() {
   const [isSending, setIsSending] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
   const [displayDurationMs, setDisplayDurationMs] = useState(0);
+  const [voiceExample, setVoiceExample] = useState<string[] | null>(null);
+  const [isExampleLoading, setIsExampleLoading] = useState(false);
+  const [hasExampleError, setHasExampleError] = useState(false);
   const isSendingRef = useRef(false);
   const isLeavingRef = useRef(false);
+  const exampleGenerationRef = useRef(0);
 
   useEffect(() => {
     if (recorder.isRecording) {
@@ -90,6 +96,33 @@ export default function RecordVoiceScreen() {
     };
   }, [requestId]);
 
+  useEffect(() => {
+    if (!request || !recipient) return;
+
+    const generationId = exampleGenerationRef.current + 1;
+    exampleGenerationRef.current = generationId;
+    setIsExampleLoading(true);
+    setHasExampleError(false);
+
+    void voiceExampleService
+      .generate({ recipient, request })
+      .then((lines) => {
+        if (exampleGenerationRef.current === generationId) {
+          setVoiceExample(lines);
+        }
+      })
+      .catch(() => {
+        if (exampleGenerationRef.current === generationId) {
+          setHasExampleError(true);
+        }
+      })
+      .finally(() => {
+        if (exampleGenerationRef.current === generationId) {
+          setIsExampleLoading(false);
+        }
+      });
+  }, [recipient, request]);
+
   if (!currentUser) {
     return <Redirect href={onboardingRoute} />;
   }
@@ -134,6 +167,30 @@ export default function RecordVoiceScreen() {
     isLeavingRef.current = true;
     await recorder.leaveRecording();
     goBackOrReplace('/(tabs)/connections');
+  }
+
+  async function handleGenerateExample() {
+    if (!request || !recipient || isExampleLoading) return;
+
+    const generationId = exampleGenerationRef.current + 1;
+    exampleGenerationRef.current = generationId;
+    setIsExampleLoading(true);
+    setHasExampleError(false);
+
+    try {
+      const lines = await voiceExampleService.generate({ recipient, request });
+      if (exampleGenerationRef.current === generationId) {
+        setVoiceExample(lines);
+      }
+    } catch {
+      if (exampleGenerationRef.current === generationId) {
+        setHasExampleError(true);
+      }
+    } finally {
+      if (exampleGenerationRef.current === generationId) {
+        setIsExampleLoading(false);
+      }
+    }
   }
 
   async function handleSkip() {
@@ -247,6 +304,13 @@ export default function RecordVoiceScreen() {
             <>
               <RecordingRecipient request={request} user={recipient} />
 
+              <VoiceExampleCard
+                error={hasExampleError}
+                isLoading={isExampleLoading}
+                lines={voiceExample}
+                onRegenerate={() => void handleGenerateExample()}
+              />
+
               {recorder.permissionState !== 'granted' ? (
                 <MicrophonePermissionGate
                   canAskPermissionAgain={recorder.canAskPermissionAgain}
@@ -258,36 +322,35 @@ export default function RecordVoiceScreen() {
                 />
               ) : (
                 <>
-                  <View style={styles.statusCard}>
-                    <View pointerEvents="none" style={styles.blueTape} />
-                    <AppText variant="caption" tone="muted">
-                      この人の明日の朝へ
-                    </AppText>
-                    <AppText variant="displayNumber" style={styles.time}>
-                      {formatRecordingDuration(displayDurationMs)}
-                    </AppText>
-                    <AppText variant="caption" tone="muted">
-                      最大10秒
-                    </AppText>
-                    <AppText
-                      variant="secondary"
-                      tone="soft"
-                      style={[styles.stateLabel, !stateLabel && styles.hiddenLabel]}
-                    >
-                      {stateLabel ?? ' '}
-                    </AppText>
-                  </View>
-
-                  <View style={styles.actionArea}>
-                    {recorder.recording ? (
-                      <View style={styles.sendSection}>
-                        <AppText
-                          variant="caption"
-                          tone="muted"
-                          style={[styles.sendNote, !isTooShort && styles.hiddenLabel]}
-                        >
-                          2秒以上録音すると送信できます
+                  {!recorder.recording ? (
+                    <View style={styles.statusCard}>
+                      <View style={styles.statusTimeBlock}>
+                        <AppText variant="caption" tone="muted">
+                          録音時間
                         </AppText>
+                        <AppText variant="displayNumber" style={styles.statusTime}>
+                          {formatRecordingDuration(displayDurationMs)}
+                        </AppText>
+                      </View>
+                      <View style={styles.statusCopy}>
+                        <AppText variant="caption" tone="muted">
+                          最大10秒
+                        </AppText>
+                        <AppText variant="secondary" tone="soft" style={styles.statusLabel}>
+                          {stateLabel ?? '録音前'}
+                        </AppText>
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {recorder.recording ? (
+                    <View style={styles.actionArea}>
+                      <View style={styles.sendSection}>
+                        {isTooShort ? (
+                          <AppText variant="caption" tone="muted" style={styles.sendNote}>
+                            2秒以上録音すると送信できます
+                          </AppText>
+                        ) : null}
                         <AppButton
                           buttonColor={paperColors.salmon}
                           contentColor={paperColors.ink}
@@ -304,13 +367,12 @@ export default function RecordVoiceScreen() {
                           style={styles.sendButton}
                           testID="send-personal-voice"
                         />
+                        <AppText variant="secondary" tone="soft" style={styles.recordingComplete}>
+                          {stateLabel ?? '録音できました'}
+                        </AppText>
                       </View>
-                    ) : (
-                      <AppText variant="secondary" tone="soft" style={styles.description}>
-                        長く考えなくて大丈夫です。今のあなたの声を、短く届けます。
-                      </AppText>
-                    )}
-                  </View>
+                    </View>
+                  ) : null}
                 </>
               )}
 
@@ -409,34 +471,33 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-1deg' }],
   },
   statusCard: {
-    position: 'relative',
-    padding: spacing.lg,
-    borderRadius: 18,
+    minHeight: 76,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xl,
     borderWidth: 2,
     borderColor: paperColors.ink,
+    borderRadius: 16,
     backgroundColor: paperColors.cardGray,
-    alignItems: 'center',
-    gap: spacing.xs,
     ...shadows.paper,
   },
-  blueTape: {
-    position: 'absolute',
-    top: -12,
-    left: '36%',
-    right: '36%',
-    zIndex: 2,
-    height: 23,
-    backgroundColor: paperColors.tape,
-    transform: [{ rotate: '1deg' }],
+  statusTimeBlock: {
+    alignItems: 'center',
   },
-  time: {
-    marginTop: spacing.xs,
+  statusTime: {
+    fontSize: 30,
+    lineHeight: 34,
   },
-  stateLabel: {
-    marginTop: spacing.sm,
+  statusCopy: {
+    minWidth: 104,
+    gap: 3,
   },
-  hiddenLabel: {
-    opacity: 0,
+  statusLabel: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   actionArea: {
     minHeight: 84,
@@ -448,9 +509,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     ...shadows.paper,
   },
-  description: {
-    textAlign: 'center',
-  },
   sendSection: {
     gap: spacing.sm,
   },
@@ -459,6 +517,10 @@ const styles = StyleSheet.create({
     borderColor: paperColors.ink,
   },
   sendNote: {
+    textAlign: 'center',
+  },
+  recordingComplete: {
+    marginTop: spacing.xs,
     textAlign: 'center',
   },
   error: {

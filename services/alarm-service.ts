@@ -142,7 +142,9 @@ export class AlarmService {
                   active.id,
                   Crypto.randomUUID(),
                   wakeDate.getTime(),
-                  '朝の声が届いています',
+                  active.sound === 'community'
+                    ? 'みんなから声が届いています。起きてください'
+                    : '誰かから声が届いています。起きてください',
                   active.soundFileName,
                   request.id
                 );
@@ -246,6 +248,7 @@ export class AlarmService {
     voiceMessageId: string;
     remoteUrl: string;
     senderId: string;
+    senderName?: string;
   }): Promise<ActiveAlarm | null> {
     return this.replaceWithWakeVoice({ ...input, sound: 'personal' });
   }
@@ -267,6 +270,7 @@ export class AlarmService {
     voiceMessageId: string;
     remoteUrl: string;
     senderId: string;
+    senderName?: string;
     sound: 'personal' | 'community';
   }): Promise<ActiveAlarm | null> {
     if (!this.isNativeAlarmAvailable()) {
@@ -297,8 +301,8 @@ export class AlarmService {
         Crypto.randomUUID(),
         fireDateMs,
         input.sound === 'personal'
-          ? '朝の声が届いています'
-          : 'Community Voiceで朝を始めます',
+          ? `${input.senderName ?? '誰か'}さんから声が届いています。起きてください`
+          : 'みんなから声が届いています。起きてください',
         input.remoteUrl,
         input.voiceMessageId,
         input.morningRequestId

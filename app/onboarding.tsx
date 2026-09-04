@@ -63,7 +63,7 @@ export default function OnboardingScreen() {
         <OnboardingScene scene={page.scene} />
 
         {page.title && page.description && (
-          <View style={[styles.copy, page.scene === 'receive' && styles.receiveCopy]}>
+          <View style={styles.copy}>
             <View style={styles.marker} />
             <AppText style={styles.title}>{page.title}</AppText>
             <AppText style={styles.description}>{page.description}</AppText>
@@ -82,6 +82,7 @@ export default function OnboardingScreen() {
                   index === 0 && styles.dotBlue,
                   index === 1 && styles.dotPink,
                   index === 2 && styles.dotYellow,
+                  index === 3 && styles.dotGreen,
                   index === pageIndex && styles.dotActive,
                 ]}
               />
@@ -148,10 +149,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
 
-  receiveCopy: {
-    marginTop: 30,
-  },
-
   marker: {
     position: 'absolute',
     top: 22,
@@ -210,6 +207,11 @@ const styles = StyleSheet.create({
   dotYellow: {
     backgroundColor: '#FFF3C4',
     borderColor: '#C49A42',
+  },
+
+  dotGreen: {
+    backgroundColor: '#CAD6C6',
+    borderColor: '#667D69',
   },
 
   dotActive: {

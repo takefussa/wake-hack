@@ -57,7 +57,8 @@
         }
       ],
       "expo-asset",
-      "./plugins/withAndroidOverridePathCheck.js"
+      "./plugins/withAndroidOverridePathCheck.js",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,
