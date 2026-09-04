@@ -372,7 +372,7 @@ export default function MorningSummaryScreen() {
               ]}
               testID="morning-summary-demo-wake"
             >
-              <Ionicons color="#30463E" name="play-circle-outline" size={18} />
+              <Ionicons color="#30463E" name="play-circle-outline" size={22} />
               <AppText style={styles.demoWakeButtonText}>
                 {isStartingDemoWake ? '朝を準備しています…' : '朝を体験する（デモ）'}
               </AppText>
@@ -680,20 +680,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   demoWakeButton: {
-    minHeight: 40,
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1,
+    gap: 9,
+    paddingHorizontal: 22,
+    paddingVertical: 11,
+    borderWidth: 2,
     borderColor: paperColors.ink,
     borderRadius: 8,
-    backgroundColor: paperColors.noteBlue,
+    backgroundColor: '#FFE38A',
+    ...shadows.paper,
   },
   demoWakeButtonText: {
     color: '#30463E',
-    fontSize: 14,
+    fontSize: 16,
   },
   demoWakeHint: {
     color: '#657169',
