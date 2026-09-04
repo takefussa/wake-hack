@@ -26,8 +26,12 @@ export class ProfileService {
 
   async createProfile(input: CreateProfileInput): Promise<UserProfile> {
     try {
+      const authenticatedUser =
+        authService.getAuthenticatedUserIdOrNull() ??
+        (await authService.initializeSession()).id;
+
       return await this.repository.create(
-        authService.getAuthenticatedUserId(),
+        authenticatedUser,
         normalizeProfileInput(input)
       );
     } catch (error) {

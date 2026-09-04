@@ -13,6 +13,7 @@ import { demoProfileDefaults } from '@/data/demo-scenario';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { isProfileInputValid } from '@/features/profile/profile-form';
+import { logDevelopmentError } from '@/lib/development-logger';
 import { authService } from '@/services/auth-service';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -115,7 +116,8 @@ export default function ProfileSetupScreen() {
       }
 
       router.replace('/(tabs)');
-    } catch {
+    } catch (error) {
+      logDevelopmentError('profile.create.submit', error);
       setError(
         'プロフィールを作成できませんでした。もう一度お試しください。'
       );

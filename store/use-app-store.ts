@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 
 import { mockCommunityVoices, mockPersonalWakeVoice } from '@/data/mock-voices';
+import { isDemoMode } from '@/features/demo/demo-mode';
 import { getPrototypeStateRepair } from '@/features/prototype/repair-persisted-state';
 import { bindWakeVoice } from '@/features/wake/bind-wake-voice';
 import { createDemoWokeAt } from '@/features/wake/create-demo-woke-at';
@@ -103,9 +104,10 @@ export const useAppStore = create<AppStore>()(
         }),
       setHydrated: (isHydrated) => set({ isHydrated }),
       setProfile: (profile) => {
-        if (profile.id !== get().authUserId) return false;
+        const authUserId = get().authUserId;
+        if (profile.id !== authUserId && !(isDemoMode && !authUserId)) return false;
 
-        set({ currentUser: profile });
+        set({ authUserId: profile.id, currentUser: profile });
         return true;
       },
       updateProfile: (profile) => {
