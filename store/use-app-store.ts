@@ -374,7 +374,16 @@ export const useAppStore = create<AppStore>()(
         friendships: state.friendships,
       }),
       onRehydrateStorage: (state) => () => {
-        state.repairPersistedState();
+        // A stale/corrupt browser localStorage entry must not leave the web
+        // app on its loading screen forever. Keep the persisted-state repair
+        // best-effort, then always release the hydration gate.
+        try {
+          state.repairPersistedState();
+        } catch {
+          state.setHydrated(true);
+          void state.resetPrototype();
+          return;
+        }
         state.setHydrated(true);
       },
     }

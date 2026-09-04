@@ -22,11 +22,12 @@ export function getSupabaseClient(): SupabaseClient<Database> {
 
   client = createClient<Database>(supabaseUrl, supabasePublishableKey, {
     auth: {
-      ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
+      ...(Platform.OS !== 'web'
+        ? { storage: AsyncStorage, lock: processLock }
+        : {}),
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
-      lock: processLock,
     },
   });
 
