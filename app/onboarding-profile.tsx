@@ -13,6 +13,7 @@ import { demoProfileDefaults } from '@/data/demo-scenario';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { isProfileInputValid } from '@/features/profile/profile-form';
+import { authService } from '@/services/auth-service';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
 import type {
@@ -26,6 +27,9 @@ type ProfileStep = 1 | 2;
 
 export default function ProfileSetupScreen() {
   const setProfile = useAppStore((state) => state.setProfile);
+  const setAuthenticatedUserId = useAppStore(
+    (state) => state.setAuthenticatedUserId
+  );
 
   const [step, setStep] = useState<ProfileStep>(1);
 
@@ -101,6 +105,9 @@ export default function ProfileSetupScreen() {
     setError(null);
 
     try {
+      const user = await authService.initializeSession();
+      setAuthenticatedUserId(user.id);
+
       const profile = await profileService.createProfile(input);
 
       if (!setProfile(profile)) {
