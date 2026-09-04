@@ -42,8 +42,10 @@ export default function MorningSummaryScreen() {
     (state) => state.currentMorningRequest
   );
   const assignedWakeVoice = useAppStore((state) => state.assignedWakeVoice);
+  const currentGiveReceiverIds = useAppStore(
+    (state) => state.currentGiveReceiverIds
+  );
   const startWakeSession = useAppStore((state) => state.startWakeSession);
-  const completeWakeSession = useAppStore((state) => state.completeWakeSession);
   const runOnce = useTapLock();
   const alarmSchedule = useAlarmSchedule(currentMorningRequest);
   const preparedVoiceSender = useVoiceSender(
@@ -52,8 +54,9 @@ export default function MorningSummaryScreen() {
   const hasPersonalAlarm =
     alarmSchedule.state.status === 'scheduled' &&
     alarmSchedule.state.alarm.sound === 'personal';
-  const [skipTarget, setSkipTarget] = useState<'personal' | 'community' | null>(null);
-  const [skipError, setSkipError] = useState<string | null>(null);
+  const hasRecordedVoice = currentGiveReceiverIds.length > 0;
+  const [isStartingExperience, setIsStartingExperience] = useState(false);
+  const [experienceError, setExperienceError] = useState<string | null>(null);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -63,35 +66,30 @@ export default function MorningSummaryScreen() {
     return <Redirect href="/morning/setup" />;
   }
 
-  function handleSkipToWake(type: 'personal' | 'community') {
-    if (skipTarget) return;
-    setSkipTarget(type);
-    setSkipError(null);
+  function handleStartExperience() {
+    if (isStartingExperience) return;
+    setIsStartingExperience(true);
+    setExperienceError(null);
 
     const mockVoice: VoiceMessage = {
-      id: `dev-skip-${type}-${Date.now()}`,
-      senderId: type === 'personal' ? demoWakeSenderId : 'community',
+      id: `morning-experience-${Date.now()}`,
+      senderId: demoWakeSenderId,
       receiverId: currentUser!.id,
       morningRequestId: currentMorningRequest!.id,
-      uri: 'dev-skip-no-audio',
+      uri: 'morning-experience-no-audio',
       durationMs: 4_000,
-      type,
+      type: 'personal',
       createdAt: new Date().toISOString(),
     };
 
     const didStart = startWakeSession(mockVoice);
     if (!didStart) {
-      setSkipError('[開発用] 朝へのスキップに失敗しました(セッション開始エラー)。');
-      setSkipTarget(null);
+      setExperienceError('朝の体験を開始できませんでした。もう一度お試しください。');
+      setIsStartingExperience(false);
       return;
     }
-    const completedSession = completeWakeSession();
-    if (!completedSession) {
-      setSkipError('[開発用] 朝へのスキップに失敗しました(セッション完了エラー)。');
-      setSkipTarget(null);
-      return;
-    }
-    router.replace('/wake/complete');
+
+    router.replace('/wake/alarm');
   }
 
   return (
@@ -165,6 +163,13 @@ export default function MorningSummaryScreen() {
             label="希望する声"
             value={currentMorningRequest.preferredVoiceStyle}
           />
+          {currentMorningRequest.voiceRequestNote ? (
+            <SummaryRow
+              icon="chatbubble-ellipses-outline"
+              label="一言"
+              value={currentMorningRequest.voiceRequestNote}
+            />
+          ) : null}
         </View>
 
         <View
@@ -319,9 +324,7 @@ export default function MorningSummaryScreen() {
           accessibilityRole="button"
           onPress={() =>
             runOnce(() =>
-              router.replace(
-                assignedWakeVoice ? '/morning/ready' : '/(tabs)/connections'
-              )
+              router.replace(hasRecordedVoice ? '/(tabs)' : '/(tabs)/connections')
             )
           }
           style={({ pressed }) => [
@@ -331,45 +334,34 @@ export default function MorningSummaryScreen() {
           testID="morning-summary-next"
         >
           <AppText style={styles.nextButtonText}>
-            {assignedWakeVoice ? '朝の準備を見る' : 'タイムラインへ'}
+            {hasRecordedVoice ? 'ホームへ' : 'タイムラインへ'}
           </AppText>
-          <Ionicons color="#30463E" name="arrow-forward" size={22} />
+          <Ionicons
+            color="#30463E"
+            name={hasRecordedVoice ? 'home-outline' : 'arrow-forward'}
+            size={22}
+          />
         </Pressable>
 
-        <View style={styles.devSkipSection}>
-          <AppText style={styles.devSkipSectionLabel}>
-            [開発用] 声を伴わずに朝の画面へ進む
+        <View style={styles.experienceSection}>
+          <AppText style={styles.experienceSectionLabel}>
+            体験用
           </AppText>
-          <View style={styles.devSkipRow}>
-            <Pressable
-              accessibilityRole="button"
-              disabled={skipTarget !== null}
-              onPress={() => runOnce(() => handleSkipToWake('personal'))}
-              style={({ pressed }) => [
-                styles.devSkipButton,
-                pressed && styles.linkPressed,
-              ]}
-              testID="morning-summary-dev-skip-personal"
-            >
-              <Ionicons color="#8A674E" name="person-outline" size={15} />
-              <AppText style={styles.devSkipButtonText}>Personal Voiceへ</AppText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              disabled={skipTarget !== null}
-              onPress={() => runOnce(() => handleSkipToWake('community'))}
-              style={({ pressed }) => [
-                styles.devSkipButton,
-                pressed && styles.linkPressed,
-              ]}
-              testID="morning-summary-dev-skip-community"
-            >
-              <Ionicons color="#8A674E" name="people-outline" size={15} />
-              <AppText style={styles.devSkipButtonText}>Community Voiceへ</AppText>
-            </Pressable>
-          </View>
-          {skipError ? (
-            <AppText style={styles.devSkipError}>{skipError}</AppText>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isStartingExperience}
+            onPress={() => runOnce(handleStartExperience)}
+            style={({ pressed }) => [
+              styles.experienceButton,
+              pressed && styles.linkPressed,
+            ]}
+            testID="morning-summary-experience"
+          >
+            <Ionicons color="#8A674E" name="sunny-outline" size={17} />
+            <AppText style={styles.experienceButtonText}>朝を体験する</AppText>
+          </Pressable>
+          {experienceError ? (
+            <AppText style={styles.experienceError}>{experienceError}</AppText>
           ) : null}
         </View>
       </ScrollView>
@@ -438,22 +430,16 @@ const styles = StyleSheet.create({
   linkPressed: {
     opacity: 0.58,
   },
-  devSkipSection: {
+  experienceSection: {
     marginTop: 28,
     alignItems: 'center',
     gap: 8,
   },
-  devSkipSectionLabel: {
+  experienceSectionLabel: {
     color: '#8A674E',
     fontSize: 11,
   },
-  devSkipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  devSkipButton: {
+  experienceButton: {
     minHeight: 36,
     flexDirection: 'row',
     alignItems: 'center',
@@ -466,11 +452,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#FFF6E7',
   },
-  devSkipButtonText: {
+  experienceButtonText: {
     color: '#8A674E',
-    fontSize: 12,
+    fontSize: 14,
   },
-  devSkipError: {
+  experienceError: {
     marginTop: 2,
     color: '#A5574C',
     fontSize: 11,

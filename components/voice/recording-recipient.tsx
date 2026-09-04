@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, paperColors, shadows, spacing } from '@/constants/theme';
 import type { MorningRequest, UserProfile } from '@/types';
 
 type RecordingRecipientProps = {
@@ -14,6 +14,7 @@ type RecordingRecipientProps = {
 export function RecordingRecipient({ request, user }: RecordingRecipientProps) {
   return (
     <View style={styles.container}>
+      <View pointerEvents="none" style={styles.tape} />
       <Avatar
         avatarId={user.avatarId}
         imageUri={user.profileImageUri}
@@ -36,6 +37,12 @@ export function RecordingRecipient({ request, user }: RecordingRecipientProps) {
             希望する声：{request.preferredVoiceStyle}
           </AppText>
         </View>
+        {request.voiceRequestNote ? (
+          <View style={styles.requestNote}>
+            <Ionicons name="chatbubble-ellipses-outline" color={paperColors.ink} size={16} />
+            <AppText style={styles.requestNoteText}>{request.voiceRequestNote}</AppText>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -43,14 +50,26 @@ export function RecordingRecipient({ request, user }: RecordingRecipientProps) {
 
 const styles = StyleSheet.create({
   container: {
+    position: 'relative',
     padding: spacing.lg,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    backgroundColor: paperColors.base,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    ...shadows.paper,
+  },
+  tape: {
+    position: 'absolute',
+    top: -11,
+    right: 34,
+    width: 78,
+    height: 22,
+    zIndex: 2,
+    backgroundColor: paperColors.tape,
+    transform: [{ rotate: '-1deg' }],
   },
   copy: {
     flex: 1,
@@ -67,5 +86,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+  },
+  requestNote: {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    borderLeftWidth: 3,
+    borderLeftColor: paperColors.orange,
+    backgroundColor: paperColors.paleYellow,
+  },
+  requestNoteText: {
+    flex: 1,
+    color: paperColors.ink,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

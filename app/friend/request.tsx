@@ -8,8 +8,9 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
-import { Screen } from '@/components/common/screen';
-import { colors, radii, spacing } from '@/constants/theme';
+import { IconButton } from '@/components/common/icon-button';
+import { MorningScreen } from '@/components/wake/morning-screen';
+import { colors, fonts, paperColors, radii, shadows, spacing } from '@/constants/theme';
 import { isWakeContextValid } from '@/features/wake/is-wake-context-valid';
 import { useVoiceSender } from '@/hooks/use-voice-sender';
 import { friendshipService } from '@/services/friendship-service';
@@ -136,10 +137,19 @@ export default function FriendRequestScreen() {
   }
 
   return (
-    <Screen contentStyle={styles.content} testID="friend-request-screen">
+    <MorningScreen contentStyle={styles.content} testID="friend-request-screen">
       <StatusBar style="dark" />
 
+      <View style={styles.navigation}>
+        <IconButton
+          icon="chevron-back"
+          label="完了画面に戻る"
+          onPress={() => router.replace('/wake/complete')}
+        />
+      </View>
+
       <View style={styles.hero}>
+        <View pointerEvents="none" style={styles.blueTape} />
         <View style={styles.people}>
           <Avatar
             avatarId={currentUser.avatarId}
@@ -159,7 +169,7 @@ export default function FriendRequestScreen() {
         </View>
 
         <View style={styles.copy}>
-          <AppText variant="screenTitle" style={styles.centeredText}>
+          <AppText style={[styles.centeredText, styles.title]}>
             {isMatching
               ? '気持ちを届けています'
               : `また${sender?.nickname ?? 'この人'}さんと朝を迎えたい？`}
@@ -186,16 +196,18 @@ export default function FriendRequestScreen() {
           icon="heart-outline"
           label="また朝を迎えたい"
           onPress={() => void handleRequest()}
+          style={styles.primaryAction}
           testID="request-friend"
         />
         <AppButton
           disabled={isMatching}
           label="今回はここまで"
           onPress={() => router.replace('/(tabs)')}
+          style={styles.secondaryAction}
           variant="text"
         />
       </View>
-    </Screen>
+    </MorningScreen>
   );
 }
 
@@ -203,14 +215,26 @@ const styles = StyleSheet.create({
   content: {
     minHeight: '100%',
     justifyContent: 'space-between',
-    gap: spacing.xxxl,
+    gap: spacing.xl,
+  },
+  navigation: {
+    minHeight: 44,
+    marginLeft: -spacing.md,
+    alignItems: 'flex-start',
   },
   hero: {
-    flex: 1,
-    minHeight: 420,
+    position: 'relative',
+    minHeight: 440,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxxl,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xxl,
+    ...shadows.paper,
   },
   people: {
     flexDirection: 'row',
@@ -222,7 +246,9 @@ const styles = StyleSheet.create({
     width: 64,
     height: 32,
     borderRadius: radii.badge,
-    backgroundColor: colors.indigoSoft,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    backgroundColor: paperColors.noteBlue,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -231,11 +257,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
+  title: {
+    fontFamily: fonts?.handwritten,
+    fontSize: 30,
+    lineHeight: 40,
+  },
   centeredText: {
     textAlign: 'center',
   },
   actions: {
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
     gap: spacing.sm,
+    ...shadows.paper,
+  },
+  primaryAction: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+  },
+  secondaryAction: {
+    borderWidth: 1,
+    borderColor: paperColors.clockGray,
+  },
+  blueTape: {
+    position: 'absolute',
+    top: -13,
+    left: '34%',
+    right: '34%',
+    zIndex: 2,
+    height: 24,
+    backgroundColor: paperColors.tape,
+    transform: [{ rotate: '-1deg' }],
   },
   error: {
     color: colors.danger,

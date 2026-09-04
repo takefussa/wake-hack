@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
-import { colors, componentSizes, radii, spacing } from '@/constants/theme';
+import { colors, componentSizes, paperColors, radii, spacing } from '@/constants/theme';
 
 type ChoiceChipProps = {
   label: string;
@@ -10,6 +10,7 @@ type ChoiceChipProps = {
   onPress: () => void;
   mode?: 'light' | 'dark';
   emphasized?: boolean;
+  selectedStyle?: 'default' | 'warm';
 };
 
 export function ChoiceChip({
@@ -18,9 +19,11 @@ export function ChoiceChip({
   onPress,
   mode = 'light',
   emphasized = false,
+  selectedStyle = 'default',
 }: ChoiceChipProps) {
   const isDark = mode === 'dark';
-  const textTone = isDark ? 'light' : selected ? 'accent' : 'soft';
+  const isWarmSelected = selected && selectedStyle === 'warm';
+  const textTone = isDark ? 'light' : selected && !isWarmSelected ? 'accent' : 'soft';
 
   return (
     <Pressable
@@ -32,16 +35,21 @@ export function ChoiceChip({
         emphasized && styles.emphasized,
         isDark ? styles.dark : styles.light,
         selected && (isDark ? styles.selectedDark : styles.selectedLight),
+        isWarmSelected && styles.selectedWarm,
         pressed && styles.pressed,
       ]}>
-      <AppText variant="secondary" tone={textTone}>
+      <AppText
+        variant="secondary"
+        tone={textTone}
+        style={isWarmSelected ? styles.warmContent : undefined}
+      >
         {label}
       </AppText>
       {selected ? (
         <Ionicons
           name="checkmark"
           size={15}
-          color={isDark ? colors.textInverse : colors.indigo}
+          color={isDark ? colors.textInverse : isWarmSelected ? paperColors.ink : colors.indigo}
         />
       ) : null}
     </Pressable>
@@ -77,6 +85,13 @@ const styles = StyleSheet.create({
   selectedDark: {
     backgroundColor: colors.navyRaised,
     borderColor: colors.textInverse,
+  },
+  selectedWarm: {
+    backgroundColor: paperColors.paleYellow,
+    borderColor: paperColors.orange,
+  },
+  warmContent: {
+    color: paperColors.ink,
   },
   pressed: {
     opacity: 0.68,

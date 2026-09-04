@@ -11,9 +11,11 @@ type AvatarPickerProps = {
 };
 
 export function AvatarPicker({ value, onChange }: AvatarPickerProps) {
+  const selectableAvatars = avatarOptions.filter((avatar) => avatar.selectable !== false);
+
   return (
     <View style={styles.container}>
-      {avatarOptions.slice(0, 4).map((avatar) => (
+      {selectableAvatars.map((avatar) => (
         <Pressable
           accessibilityRole="radio"
           accessibilityLabel={avatar.label}
@@ -30,7 +32,7 @@ export function AvatarPicker({ value, onChange }: AvatarPickerProps) {
 
 const styles = StyleSheet.create({
   container: {
-    width: 96,
+    width: 150,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,

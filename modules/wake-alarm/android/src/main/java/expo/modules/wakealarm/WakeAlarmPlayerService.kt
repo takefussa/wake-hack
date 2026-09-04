@@ -15,12 +15,15 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Log
+import java.io.File
 
 class WakeAlarmPlayerService : Service() {
   private var mediaPlayer: MediaPlayer? = null
   private var vibrator: Vibrator? = null
   private var wakeLock: PowerManager.WakeLock? = null
   private var activeAlarmId: String? = null
+  private var activeMorningRequestId: String? = null
 
   override fun onBind(intent: Intent?): IBinder? = null
 
@@ -30,19 +33,25 @@ class WakeAlarmPlayerService : Service() {
       return START_NOT_STICKY
     }
 
+    val stored = WakeAlarmStorage.read(this)
     val id = intent?.getStringExtra(WakeAlarmScheduler.extraAlarmId)
-      ?: WakeAlarmStorage.read(this)?.id
+      ?: stored?.id
       ?: return START_NOT_STICKY
     val title = intent?.getStringExtra(WakeAlarmScheduler.extraTitle)
-      ?: WakeAlarmStorage.read(this)?.title
+      ?: stored?.title
       ?: "朝の時間です"
+    val morningRequestId = intent?.getStringExtra(WakeAlarmScheduler.extraMorningRequestId)
+      ?: stored?.morningRequestId
+    val soundFilePath = intent?.getStringExtra(WakeAlarmScheduler.extraSoundFilePath)
+      ?: stored?.soundFilePath
 
     activeAlarmId = id
+    activeMorningRequestId = morningRequestId
     ensureNotificationChannel()
-    startForeground(notificationId, buildNotification(id, title))
+    startForeground(notificationId, buildNotification(id, title, morningRequestId))
     acquireWakeLock()
     startVibration()
-    startSound()
+    startSound(soundFilePath)
     return START_STICKY
   }
 
@@ -51,11 +60,11 @@ class WakeAlarmPlayerService : Service() {
     super.onDestroy()
   }
 
-  private fun buildNotification(id: String, title: String): Notification {
+  private fun buildNotification(id: String, title: String, morningRequestId: String?): Notification {
     val fullScreenIntent = PendingIntent.getActivity(
       this,
       id.hashCode(),
-      WakeAlarmActivity.intent(this, id, title),
+      WakeAlarmActivity.intent(this, id, title, morningRequestId),
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
     val stopIntent = PendingIntent.getBroadcast(
@@ -63,7 +72,8 @@ class WakeAlarmPlayerService : Service() {
       id.hashCode(),
       Intent(this, WakeAlarmReceiver::class.java)
         .setAction(WakeAlarmScheduler.actionStop)
-        .putExtra(WakeAlarmScheduler.extraAlarmId, id),
+        .putExtra(WakeAlarmScheduler.extraAlarmId, id)
+        .putExtra(WakeAlarmScheduler.extraMorningRequestId, morningRequestId),
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
     val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -101,8 +111,37 @@ class WakeAlarmPlayerService : Service() {
     getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
   }
 
-  private fun startSound() {
+  /**
+   * Plays [soundFilePath] (a downloaded Personal/Community Voice recording)
+   * when it exists and is playable. Any problem with the custom file falls
+   * back to the system default alarm sound so the alarm never rings silent
+   * (Business Rule 7).
+   */
+  private fun startSound(soundFilePath: String?) {
     if (mediaPlayer?.isPlaying == true) return
+
+    if (soundFilePath != null && File(soundFilePath).let { it.exists() && it.length() > 0 }) {
+      try {
+        mediaPlayer = MediaPlayer().apply {
+          setAudioAttributes(
+            AudioAttributes.Builder()
+              .setUsage(AudioAttributes.USAGE_ALARM)
+              .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+              .build()
+          )
+          setDataSource(soundFilePath)
+          isLooping = true
+          prepare()
+          start()
+        }
+        return
+      } catch (error: Exception) {
+        Log.w("WakeAlarmPlayerService", "Falling back to the default alarm sound", error)
+        mediaPlayer?.runCatching { release() }
+        mediaPlayer = null
+      }
+    }
+
     val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
       ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
     mediaPlayer = MediaPlayer().apply {
@@ -143,6 +182,8 @@ class WakeAlarmPlayerService : Service() {
   private fun stopAlarm(requestedId: String?) {
     if (requestedId != null && activeAlarmId != null && requestedId != activeAlarmId) return
     activeAlarmId?.let { WakeAlarmStorage.clear(this, it) }
+    WakeAlarmStorage.markStopped(this, activeMorningRequestId)
+    WakeAlarmScheduler.launchApp(this)
     releaseResources()
     stopForeground(STOP_FOREGROUND_REMOVE)
     stopSelf()
@@ -166,11 +207,19 @@ class WakeAlarmPlayerService : Service() {
     private const val actionStart = "expo.modules.wakealarm.START_SERVICE"
     private const val actionStop = "expo.modules.wakealarm.STOP_SERVICE"
 
-    fun start(context: Context, id: String, title: String) {
+    fun start(
+      context: Context,
+      id: String,
+      title: String,
+      morningRequestId: String? = null,
+      soundFilePath: String? = null
+    ) {
       val intent = Intent(context, WakeAlarmPlayerService::class.java)
         .setAction(actionStart)
         .putExtra(WakeAlarmScheduler.extraAlarmId, id)
         .putExtra(WakeAlarmScheduler.extraTitle, title)
+        .putExtra(WakeAlarmScheduler.extraMorningRequestId, morningRequestId)
+        .putExtra(WakeAlarmScheduler.extraSoundFilePath, soundFilePath)
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         context.startForegroundService(intent)
       } else {
