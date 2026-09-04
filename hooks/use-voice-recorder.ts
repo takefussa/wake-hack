@@ -31,6 +31,21 @@ const recordingOptions = {
   isMeteringEnabled: true,
 };
 
+// Thanks messages are played directly from Supabase with AVPlayer. Keep
+// those recordings in the standard AAC/M4A container. Wake recordings keep
+// the AlarmKit-compatible options above so changing the thanks flow cannot
+// regress human-voice alarms.
+const playbackRecordingOptions = {
+  ...RecordingPresets.HIGH_QUALITY,
+  numberOfChannels: 1,
+  ios: {
+    ...RecordingPresets.HIGH_QUALITY.ios,
+    extension: '.m4a',
+    outputFormat: IOSOutputFormat.MPEG4AAC,
+  },
+  isMeteringEnabled: true,
+};
+
 function waitForAudioSource(): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, 120);
@@ -44,7 +59,11 @@ export type LocalVoiceRecording = {
   durationMs: number;
 };
 
-export function useVoiceRecorder() {
+export type VoiceRecorderPurpose = 'alarm' | 'playback';
+
+export function useVoiceRecorder(
+  purpose: VoiceRecorderPurpose = 'alarm'
+) {
   const [permissionState, setPermissionState] =
     useState<MicrophonePermissionState>('checking');
   const [canAskPermissionAgain, setCanAskPermissionAgain] = useState(true);
@@ -52,7 +71,9 @@ export function useVoiceRecorder() {
   const [recording, setRecording] = useState<LocalVoiceRecording | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const recorder = useAudioRecorder(recordingOptions);
+  const recorder = useAudioRecorder(
+    purpose === 'playback' ? playbackRecordingOptions : recordingOptions
+  );
   const recorderState = useAudioRecorderState(recorder, 100);
   const player = useAudioPlayer(null, { updateInterval: 100 });
   const playerStatus = useAudioPlayerStatus(player);
@@ -85,7 +106,17 @@ export function useVoiceRecorder() {
       if (player.playing) {
         player.pause();
       }
+    } catch {
+      // A stale pause must not prevent the new recording from being loaded.
+    }
+
+    try {
       player.replace({ uri: recording.uri });
+      try {
+        player.pause();
+      } catch {
+        // Pausing immediately after replace is best-effort on iOS.
+      }
     } catch {
       setError('録音した声の再生を準備できませんでした。');
     }

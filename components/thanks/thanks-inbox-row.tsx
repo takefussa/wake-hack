@@ -45,7 +45,7 @@ export function ThanksInboxRow({ item }: ThanksInboxRowProps) {
       item.message.senderId,
     ]
   );
-  const player = useVoicePlayer(voice);
+  const player = useVoicePlayer(voice, false, { downloadFirst: true });
 
   return (
     <View style={styles.container}>
@@ -77,29 +77,39 @@ export function ThanksInboxRow({ item }: ThanksInboxRowProps) {
           />
           <View style={styles.voiceControls}>
             <Pressable
-              accessibilityLabel={player.isPlaying ? '返ってきた声を一時停止' : '返ってきた声を再生'}
+              accessibilityLabel={
+                player.error
+                  ? '返ってきたボイメを再試行'
+                  : player.isPlaying
+                    ? '返ってきた声を一時停止'
+                    : '返ってきた声を再生'
+              }
               accessibilityRole="button"
-              disabled={!player.isReady}
-              onPress={() => void player.togglePlayback()}
+              disabled={!player.isReady && !player.error}
+              onPress={() =>
+                void (player.error ? player.retry() : player.togglePlayback())
+              }
               style={({ pressed }) => [
                 styles.playButton,
-                !player.isReady && styles.disabled,
-                pressed && player.isReady && styles.pressed,
+                !player.isReady && !player.error && styles.disabled,
+                pressed && (player.isReady || player.error) && styles.pressed,
               ]}
             >
-              {!player.isReady ? (
+              {!player.isReady && !player.error ? (
                 <ActivityIndicator color={paperColors.ink} size="small" />
               ) : (
                 <Ionicons
                   color={paperColors.ink}
-                  name={player.isPlaying ? 'pause' : 'play'}
+                  name={player.error ? 'refresh' : player.isPlaying ? 'pause' : 'play'}
                   size={18}
                 />
               )}
             </Pressable>
             <View style={styles.voiceCopy}>
               <AppText variant="secondary">
-                {!player.isReady
+                {player.error
+                  ? '読み込めませんでした。タップして再試行'
+                  : !player.isReady
                   ? 'ボイメを準備しています'
                   : player.isPlaying
                     ? '再生しています'
