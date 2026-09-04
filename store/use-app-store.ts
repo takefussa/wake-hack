@@ -353,6 +353,7 @@ export const useAppStore = create<AppStore>()(
         }
         set({
           ...initialPersistedState,
+          authUserId: null,
           isHydrated: true,
         });
       },

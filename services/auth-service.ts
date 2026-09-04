@@ -55,6 +55,18 @@ export class AuthService {
     return this.authenticatedUserId;
   }
 
+  async resetPrototypeSession(): Promise<void> {
+    this.initializationPromise = null;
+    this.authenticatedUserId = null;
+
+    if (isDemoMode) {
+      await AsyncStorage.removeItem(demoUserStorageKey);
+      return;
+    }
+
+    await getSupabaseClient().auth.signOut();
+  }
+
   startSessionAutoRefresh(): () => void {
     if (Platform.OS === 'web' || this.appStateSubscription) {
       return () => undefined;

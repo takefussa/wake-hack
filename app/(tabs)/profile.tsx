@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
@@ -10,6 +10,7 @@ import { NotebookWallpaper } from '@/components/common/notebook-wallpaper';
 import { fonts, paperColors, shadows, spacing } from '@/constants/theme';
 import { onboardingRoute } from '@/features/navigation/onboarding-route';
 import { alarmService } from '@/services/alarm-service';
+import { authService } from '@/services/auth-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
 import { useAppStore } from '@/store/use-app-store';
@@ -41,9 +42,12 @@ export default function ProfileScreen() {
     isResettingRef.current = true;
     setIsResetting(true);
     try {
-      await alarmService.cancelScheduledAlarm();
+      if (Platform.OS !== 'web') {
+        await alarmService.cancelScheduledAlarm();
+      }
       await profileService.deleteCurrentProfile();
       await morningRequestService.resetPrototypeData();
+      await authService.resetPrototypeSession();
       await resetPrototype();
       router.replace(onboardingRoute);
     } catch {
@@ -54,6 +58,14 @@ export default function ProfileScreen() {
   }
 
   function handleReset() {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'プロフィールと朝の状態を消して、最初から確認します。'
+      );
+      if (confirmed) void performReset();
+      return;
+    }
+
     Alert.alert('プロトタイプをリセット', 'プロフィールと朝の状態を消して、最初から確認します。', [
       { text: 'キャンセル', style: 'cancel' },
       { text: 'リセット', style: 'destructive', onPress: () => void performReset() },
