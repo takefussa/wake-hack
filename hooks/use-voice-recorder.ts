@@ -75,27 +75,13 @@ export function useVoiceRecorder() {
   useEffect(() => {
     if (!recording?.uri) return;
 
-    // `pause()` can throw when the player has not loaded a source yet. Keep
-    // each operation independent so that failure never prevents `replace()`
-    // from loading the newly-recorded take for preview.
     try {
-      player.pause();
-    } catch {
-      // There may be no previous source to pause.
-    }
-
-    try {
+      if (player.playing) {
+        player.pause();
+      }
       player.replace({ uri: recording.uri });
     } catch {
       setError('録音した声の再生を準備できませんでした。');
-      return;
-    }
-
-    try {
-      player.pause();
-    } catch {
-      // Replacing the source is enough to make the preview available; a
-      // native player may reject this second pause while it is loading.
     }
   }, [player, recording?.uri]);
 
@@ -224,10 +210,8 @@ export function useVoiceRecorder() {
       setRecording(null);
       latestRecordingDurationMs.current = 0;
       recordingStartedAt.current = null;
-      try {
+      if (player.playing) {
         player.pause();
-      } catch {
-        // Starting a new recording remains available even if the player has no source yet.
       }
       await setAudioModeAsync({
         allowsRecording: true,
@@ -237,7 +221,7 @@ export function useVoiceRecorder() {
       await recorder.prepareToRecordAsync();
       hasActiveRecording.current = true;
       recordingStartedAt.current = Date.now();
-      recorder.record();
+      recorder.record({ forDuration: prototypeConfig.recordingMaxMs / 1_000 });
       autoStopTimer.current = setTimeout(() => {
         void finishRecording();
       }, prototypeConfig.recordingMaxMs + 100);
@@ -281,7 +265,9 @@ export function useVoiceRecorder() {
 
   const resetRecording = useCallback(() => {
     try {
-      player.pause();
+      if (player.playing) {
+        player.pause();
+      }
     } catch {
       // Reset remains available even if the native player has already stopped.
     }
