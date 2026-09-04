@@ -4,7 +4,7 @@
     "slug": "wake-hack",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-okita.png",
     "scheme": "wakehack",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -17,10 +17,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#1E2A4A",
+        "foregroundImage": "./assets/images/icon-okita.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -54,7 +52,9 @@
           "cameraPermission": false
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "./plugins/withAndroidOverridePathCheck.js",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,

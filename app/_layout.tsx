@@ -13,6 +13,8 @@ import { colors, fontFamilyName, paperColors } from '@/constants/theme';
 import { AlarmScheduleProvider } from '@/hooks/use-alarm-schedule';
 import { useAlarmStopFlow } from '@/hooks/use-alarm-stop-flow';
 import { useAuthBootstrap } from '@/hooks/use-auth-bootstrap';
+import { WakeAlarm } from '@/modules/wake-alarm';
+import { ensureBackgroundVoiceSyncRegistered } from '@/services/background-voice-sync-task';
 import { useAppStore } from '@/store/use-app-store';
 
 void SplashScreen.preventAutoHideAsync();
@@ -49,6 +51,13 @@ export default function RootLayout() {
     }
   }, [isFontReady]);
 
+  useEffect(() => {
+    if (isReady) {
+      void WakeAlarm.requestNotificationPermission();
+      void ensureBackgroundVoiceSyncRegistered();
+    }
+  }, [isReady]);
+
   if (!isFontReady) {
     return null;
   }
@@ -70,6 +79,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="profile-edit" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="user/[id]" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="community-voice" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="morning" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="wake" options={{ animation: 'fade' }} />
             <Stack.Screen name="friend" options={{ animation: 'slide_from_right' }} />

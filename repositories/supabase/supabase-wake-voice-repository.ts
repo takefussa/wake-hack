@@ -7,7 +7,17 @@ const signedUrlLifetimeSeconds = 15 * 60;
 const voiceColumns =
   'id,sender_id,receiver_id,morning_request_id,storage_path,duration_ms,type,created_at' as const;
 
-type WakeVoiceRow = Omit<VoiceMessageRow, 'alarm_received_at'>;
+type WakeVoiceRow = Pick<
+  VoiceMessageRow,
+  | 'id'
+  | 'sender_id'
+  | 'receiver_id'
+  | 'morning_request_id'
+  | 'storage_path'
+  | 'duration_ms'
+  | 'type'
+  | 'created_at'
+>;
 
 function mapReceivedVoice(row: WakeVoiceRow, signedUrl: string): VoiceMessage {
   if (row.type !== 'personal') {

@@ -5,7 +5,14 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
 import { Waveform } from '@/components/common/waveform';
-import { legacyColors as colors, componentSizes, radii, shadows, spacing } from '@/constants/theme';
+import {
+  legacyColors as colors,
+  componentSizes,
+  paperColors,
+  radii,
+  shadows,
+  spacing,
+} from '@/constants/theme';
 import { useVoicePlayer } from '@/hooks/use-voice-player';
 import type { UserProfile, VoiceMessage } from '@/types';
 
@@ -14,6 +21,9 @@ type WakeVoicePlayerProps = {
   sender: UserProfile | null;
   autoPlay?: boolean;
   onPlayerReady?: (stopPlayback: () => void) => void;
+  waveformColor?: string;
+  waveformMutedColor?: string;
+  controlColor?: string;
 };
 
 function formatSeconds(seconds: number): string {
@@ -27,6 +37,9 @@ export function WakeVoicePlayer({
   sender,
   autoPlay = false,
   onPlayerReady,
+  waveformColor = colors.indigo,
+  waveformMutedColor = colors.indigoSoft,
+  controlColor = colors.indigo,
 }: WakeVoicePlayerProps) {
   const player = useVoicePlayer(voice, autoPlay);
   const isCommunity = voice.type === 'community';
@@ -61,9 +74,9 @@ export function WakeVoicePlayer({
       </View>
 
       <Waveform
-        color={colors.indigo}
+        color={waveformColor}
         height={44}
-        mutedColor={colors.indigoSoft}
+        mutedColor={waveformMutedColor}
         progress={player.progress}
       />
 
@@ -75,6 +88,7 @@ export function WakeVoicePlayer({
           onPress={() => void player.togglePlayback()}
           style={({ pressed }) => [
             styles.playButton,
+            { backgroundColor: controlColor },
             !player.isReady && styles.disabled,
             pressed && player.isReady && styles.pressed,
           ]}>
@@ -115,10 +129,12 @@ export function WakeVoicePlayer({
 const styles = StyleSheet.create({
   container: {
     padding: spacing.xl,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
     borderRadius: radii.card,
-    backgroundColor: colors.surface,
+    backgroundColor: paperColors.base,
     gap: spacing.xl,
-    ...shadows.surface,
+    ...shadows.paper,
   },
   senderRow: {
     flexDirection: 'row',

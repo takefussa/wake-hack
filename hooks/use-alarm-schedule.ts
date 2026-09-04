@@ -1,8 +1,9 @@
 import { createContext, createElement, type PropsWithChildren, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 
 import { logDevelopmentError } from '@/lib/development-logger';
 import { isSupabaseUuid } from '@/lib/identifiers';
+import { WakeAlarm } from '@/modules/wake-alarm';
 import { alarmService, type AlarmSetupResult } from '@/services/alarm-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { personalAlarmVoiceService } from '@/services/personal-alarm-voice-service';
@@ -29,10 +30,28 @@ function useAlarmScheduleController(request: MorningRequest | null) {
   const [preparedPersonalVoice, setPreparedPersonalVoice] =
     useState<VoiceMessage | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [isBatteryOptimizationExcluded, setIsBatteryOptimizationExcluded] =
+    useState(true);
+  const [canUseFullScreenIntent, setCanUseFullScreenIntent] = useState(true);
+  const [hasNotificationPermission, setHasNotificationPermission] = useState(true);
   const appStateRef = useRef(AppState.currentState);
 
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
   const openSettings = useCallback(() => alarmService.openSettings(), []);
+  const openBatteryOptimizationSettings = useCallback(
+    () => WakeAlarm.openBatteryOptimizationSettings(),
+    []
+  );
+  const openNotificationSettings = useCallback(
+    () => WakeAlarm.openNotificationSettings(),
+    []
+  );
+
+  useEffect(() => {
+    setIsBatteryOptimizationExcluded(WakeAlarm.isIgnoringBatteryOptimizations());
+    setCanUseFullScreenIntent(WakeAlarm.canUseFullScreenIntent());
+    setHasNotificationPermission(WakeAlarm.hasNotificationPermission());
+  }, [attempt]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
@@ -79,8 +98,7 @@ function useAlarmScheduleController(request: MorningRequest | null) {
 
         const shouldSyncPersonalVoice =
           result.status === 'scheduled' &&
-          result.alarm.deliveryMode === 'native' &&
-          Platform.OS === 'ios';
+          result.alarm.deliveryMode === 'native';
         if (!shouldSyncPersonalVoice) {
           // AlarmKit is intentionally unavailable in Expo Go. Keep the
           // Personal Voice receive path alive so A can see who sent the voice,
@@ -148,6 +166,11 @@ function useAlarmScheduleController(request: MorningRequest | null) {
     preparedPersonalVoice,
     retry,
     openSettings,
+    isBatteryOptimizationExcluded,
+    canUseFullScreenIntent,
+    openBatteryOptimizationSettings,
+    hasNotificationPermission,
+    openNotificationSettings,
   };
 }
 

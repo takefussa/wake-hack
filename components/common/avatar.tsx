@@ -1,10 +1,19 @@
 import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText } from '@/components/common/app-text';
 import { avatarOptions } from '@/constants/options';
-import { colors, fonts, radii } from '@/constants/theme';
+import { colors, radii } from '@/constants/theme';
 import type { AvatarId } from '@/types';
+
+const avatarImages: Record<AvatarId, number> = {
+  luna: require('../../assets/images/avatar-blue-bob.png'),
+  sunny: require('../../assets/images/avatar-robot.png'),
+  sky: require('../../assets/images/avatar-cat.png'),
+  violet: require('../../assets/images/avatar-blue-short.png'),
+  ember: require('../../assets/images/avatar-alien.png'),
+  // 旧アイコンを使っていたプロフィールも新しいデフォルト画像で表示する。
+  mint: require('../../assets/images/avatar-blue-bob.png'),
+};
 
 type AvatarProps = {
   avatarId: AvatarId;
@@ -22,8 +31,6 @@ export function Avatar({
   selected = false,
 }: AvatarProps) {
   const option = avatarOptions.find((item) => item.id === avatarId) ?? avatarOptions[0];
-  const initial = (name?.trim().slice(0, 1) || option.initial).toUpperCase();
-
   return (
     <View
       accessibilityLabel={`${name ?? option.label}のアバター`}
@@ -38,26 +45,13 @@ export function Avatar({
           borderWidth: selected ? 2 : 1,
         },
       ]}>
-      {imageUri ? (
-        <Image
-          accessibilityIgnoresInvertColors
-          contentFit="cover"
-          source={{ uri: imageUri }}
-          style={StyleSheet.absoluteFill}
-          transition={120}
-        />
-      ) : (
-        <AppText
-          variant="bodyMedium"
-          style={{
-            color: option.foreground,
-            fontFamily: fonts?.rounded,
-            fontSize: Math.max(14, Math.round(size * 0.34)),
-            lineHeight: Math.max(18, Math.round(size * 0.42)),
-          }}>
-          {initial}
-        </AppText>
-      )}
+      <Image
+        accessibilityIgnoresInvertColors
+        contentFit="cover"
+        source={imageUri ? { uri: imageUri } : avatarImages[avatarId]}
+        style={StyleSheet.absoluteFill}
+        transition={120}
+      />
     </View>
   );
 }

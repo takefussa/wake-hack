@@ -1,23 +1,26 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
+import { IconButton } from '@/components/common/icon-button';
 import { LoadingState } from '@/components/common/loading-state';
 import { Screen } from '@/components/common/screen';
-import { ScreenHeader } from '@/components/common/screen-header';
 import { BoomboxRecorder } from '@/components/voice/boombox-recorder';
 import { MicrophonePermissionGate } from '@/components/voice/microphone-permission-gate';
 import { RecordingRecipient } from '@/components/voice/recording-recipient';
+import { VoiceExampleCard } from '@/components/voice/voice-example-card';
 import { prototypeConfig } from '@/constants/config';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, fonts, paperColors, shadows, spacing } from '@/constants/theme';
 import { goBackOrReplace } from '@/features/navigation/go-back';
 import { formatRecordingDuration } from '@/features/voice/format-duration';
+import { logDevelopmentError } from '@/lib/development-logger';
 import { giveService } from '@/services/give-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { profileService } from '@/services/profile-service';
+import { voiceExampleService } from '@/services/voice-example-service';
 import { useVoiceRecorder } from '@/hooks/use-voice-recorder';
 import { useAppStore } from '@/store/use-app-store';
 import type { MorningRequest, UserProfile } from '@/types';
@@ -36,8 +39,12 @@ export default function RecordVoiceScreen() {
   const [isSending, setIsSending] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
   const [displayDurationMs, setDisplayDurationMs] = useState(0);
+  const [voiceExample, setVoiceExample] = useState<string[] | null>(null);
+  const [isExampleLoading, setIsExampleLoading] = useState(false);
+  const [hasExampleError, setHasExampleError] = useState(false);
   const isSendingRef = useRef(false);
   const isLeavingRef = useRef(false);
+  const exampleGenerationRef = useRef(0);
 
   useEffect(() => {
     if (recorder.isRecording) {
@@ -87,6 +94,33 @@ export default function RecordVoiceScreen() {
       isMounted = false;
     };
   }, [requestId]);
+
+  useEffect(() => {
+    if (!request || !recipient) return;
+
+    const generationId = exampleGenerationRef.current + 1;
+    exampleGenerationRef.current = generationId;
+    setIsExampleLoading(true);
+    setHasExampleError(false);
+
+    void voiceExampleService
+      .generate({ recipient, request })
+      .then((lines) => {
+        if (exampleGenerationRef.current === generationId) {
+          setVoiceExample(lines);
+        }
+      })
+      .catch(() => {
+        if (exampleGenerationRef.current === generationId) {
+          setHasExampleError(true);
+        }
+      })
+      .finally(() => {
+        if (exampleGenerationRef.current === generationId) {
+          setIsExampleLoading(false);
+        }
+      });
+  }, [recipient, request]);
 
   if (!currentUser) {
     return <Redirect href="/onboarding" />;
@@ -146,19 +180,52 @@ export default function RecordVoiceScreen() {
     goBackOrReplace('/(tabs)/connections');
   }
 
+  async function handleGenerateExample() {
+    if (!request || !recipient || isExampleLoading) return;
+
+    const generationId = exampleGenerationRef.current + 1;
+    exampleGenerationRef.current = generationId;
+    setIsExampleLoading(true);
+    setHasExampleError(false);
+
+    try {
+      const lines = await voiceExampleService.generate({ recipient, request });
+      if (exampleGenerationRef.current === generationId) {
+        setVoiceExample(lines);
+      }
+    } catch {
+      if (exampleGenerationRef.current === generationId) {
+        setHasExampleError(true);
+      }
+    } finally {
+      if (exampleGenerationRef.current === generationId) {
+        setIsExampleLoading(false);
+      }
+    }
+  }
+
+  async function handleSkip() {
+    if (isLeavingRef.current || isSendingRef.current || !requestId) return;
+
+    isLeavingRef.current = true;
+    await recorder.leaveRecording();
+    router.replace({
+      pathname: '/morning/give-complete',
+      params: { requestId, preview: '1' },
+    });
+  }
+
   async function handleSend() {
     if (recorder.recording && isTooShort) {
       setPageError('声は2秒以上必要です。もう一度、少し長めに録音してください。');
       return;
     }
 
-    if (
-      !request ||
-      !recipient ||
-      !recorder.recording ||
-      isSendingRef.current ||
-      hasAlreadyGiven
-    ) {
+    if (isSendingRef.current || hasAlreadyGiven) {
+      return;
+    }
+    if (!request || !recipient || !recorder.recording) {
+      setPageError('相手の情報を確認できませんでした。画面を開き直してお試しください。');
       return;
     }
 
@@ -182,8 +249,11 @@ export default function RecordVoiceScreen() {
         pathname: '/morning/give-complete',
         params: { requestId: request.id },
       });
-    } catch {
-      setPageError('声を届けられませんでした。もう一度お試しください。');
+    } catch (error) {
+      logDevelopmentError('morningRecord.send', error);
+      setPageError(
+        'Voiceを送信できませんでした。相手が気持ちよく朝を迎えられる内容に変更して、もう一度お試しください。'
+      );
       isSendingRef.current = false;
       setIsSending(false);
     }
@@ -198,7 +268,31 @@ export default function RecordVoiceScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         style={styles.scrollArea}>
-          <ScreenHeader onBack={() => void handleBack()} title="声を届ける" />
+          <View style={styles.navigation}>
+            <IconButton
+              icon="chevron-back"
+              label="この人の明日の朝へ戻る"
+              onPress={() => void handleBack()}
+            />
+            <Pressable
+              accessibilityLabel="声の送信をスキップして次へ"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => void handleSkip()}
+              style={({ pressed }) => [
+                styles.skipButton,
+                pressed && styles.skipButtonPressed,
+              ]}
+            >
+              <AppText style={styles.skipText}>スキップ</AppText>
+              <View pointerEvents="none" style={styles.skipUnderline} />
+            </Pressable>
+          </View>
+
+          <View style={styles.heading}>
+            <AppText style={styles.title}>声を届ける</AppText>
+            <View pointerEvents="none" style={styles.titleUnderline} />
+          </View>
 
           {isLoading ? <LoadingState label="相手の朝を確認しています" /> : null}
 
@@ -221,6 +315,13 @@ export default function RecordVoiceScreen() {
             <>
               <RecordingRecipient request={request} user={recipient} />
 
+              <VoiceExampleCard
+                error={hasExampleError}
+                isLoading={isExampleLoading}
+                lines={voiceExample}
+                onRegenerate={() => void handleGenerateExample()}
+              />
+
               {recorder.permissionState !== 'granted' ? (
                 <MicrophonePermissionGate
                   canAskPermissionAgain={recorder.canAskPermissionAgain}
@@ -232,55 +333,57 @@ export default function RecordVoiceScreen() {
                 />
               ) : (
                 <>
-                  <View style={styles.statusCard}>
-                    <AppText variant="caption" tone="muted">
-                      この人の明日の朝へ
-                    </AppText>
-                    <AppText variant="displayNumber" style={styles.time}>
-                      {formatRecordingDuration(displayDurationMs)}
-                    </AppText>
-                    <AppText variant="caption" tone="muted">
-                      最大10秒
-                    </AppText>
-                    <AppText
-                      variant="secondary"
-                      tone="soft"
-                      style={[styles.stateLabel, !stateLabel && styles.hiddenLabel]}
-                    >
-                      {stateLabel ?? ' '}
-                    </AppText>
-                  </View>
-
-                  <View style={styles.actionArea}>
-                    {recorder.recording ? (
-                      <View style={styles.sendSection}>
-                        <AppText
-                          variant="caption"
-                          tone="muted"
-                          style={[styles.sendNote, !isTooShort && styles.hiddenLabel]}
-                        >
-                          2秒以上録音すると送信できます
+                  {!recorder.recording ? (
+                    <View style={styles.statusCard}>
+                      <View style={styles.statusTimeBlock}>
+                        <AppText variant="caption" tone="muted">
+                          録音時間
                         </AppText>
+                        <AppText variant="displayNumber" style={styles.statusTime}>
+                          {formatRecordingDuration(displayDurationMs)}
+                        </AppText>
+                      </View>
+                      <View style={styles.statusCopy}>
+                        <AppText variant="caption" tone="muted">
+                          最大10秒
+                        </AppText>
+                        <AppText variant="secondary" tone="soft" style={styles.statusLabel}>
+                          {stateLabel ?? '録音前'}
+                        </AppText>
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {recorder.recording ? (
+                    <View style={styles.actionArea}>
+                      <View style={styles.sendSection}>
+                        {isTooShort ? (
+                          <AppText variant="caption" tone="muted" style={styles.sendNote}>
+                            2秒以上録音すると送信できます
+                          </AppText>
+                        ) : null}
                         <AppButton
+                          buttonColor={paperColors.salmon}
+                          contentColor={paperColors.ink}
                           disabled={isSending}
                           icon="paper-plane-outline"
                           label={
                             isSending
-                              ? '届けています…'
+                              ? 'Voiceを確認しています...'
                               : isTooShort
                                 ? '2秒以上録音してください'
                                 : 'この声を届ける'
                           }
                           onPress={() => void handleSend()}
+                          style={styles.sendButton}
                           testID="send-personal-voice"
                         />
+                        <AppText variant="secondary" tone="soft" style={styles.recordingComplete}>
+                          {stateLabel ?? '録音できました'}
+                        </AppText>
                       </View>
-                    ) : (
-                      <AppText variant="secondary" tone="soft" style={styles.description}>
-                        長く考えなくて大丈夫です。今のあなたの声を、短く届けます。
-                      </AppText>
-                    )}
-                  </View>
+                    </View>
+                  ) : null}
                 </>
               )}
 
@@ -327,37 +430,108 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
-    gap: spacing.md,
+    gap: spacing.lg,
+  },
+  navigation: {
+    minHeight: 44,
+    marginLeft: -spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  skipButton: {
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  skipButtonPressed: {
+    opacity: 0.6,
+  },
+  skipText: {
+    color: paperColors.ink,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  skipUnderline: {
+    width: 54,
+    height: 3,
+    marginTop: 1,
+    borderRadius: 2,
+    backgroundColor: paperColors.ruleBlue,
+    transform: [{ rotate: '-2deg' }],
+  },
+  heading: {
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  title: {
+    fontFamily: fonts?.handwritten,
+    color: paperColors.ink,
+    fontSize: 36,
+    lineHeight: 44,
+    textAlign: 'center',
+  },
+  titleUnderline: {
+    width: 180,
+    height: 7,
+    marginTop: spacing.xs,
+    borderRadius: 4,
+    backgroundColor: paperColors.ruleBlue,
+    opacity: 0.8,
+    transform: [{ rotate: '-1deg' }],
   },
   statusCard: {
-    padding: spacing.lg,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    minHeight: 76,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    justifyContent: 'center',
+    gap: spacing.xl,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 16,
+    backgroundColor: paperColors.cardGray,
+    ...shadows.paper,
   },
-  time: {
-    marginTop: spacing.xs,
+  statusTimeBlock: {
+    alignItems: 'center',
   },
-  stateLabel: {
-    marginTop: spacing.sm,
+  statusTime: {
+    fontSize: 30,
+    lineHeight: 34,
   },
-  hiddenLabel: {
-    opacity: 0,
+  statusCopy: {
+    minWidth: 104,
+    gap: 3,
+  },
+  statusLabel: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   actionArea: {
     minHeight: 84,
+    padding: spacing.md,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: paperColors.base,
     justifyContent: 'flex-start',
-  },
-  description: {
-    textAlign: 'center',
+    ...shadows.paper,
   },
   sendSection: {
     gap: spacing.sm,
   },
+  sendButton: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+  },
   sendNote: {
+    textAlign: 'center',
+  },
+  recordingComplete: {
+    marginTop: spacing.xs,
     textAlign: 'center',
   },
   error: {

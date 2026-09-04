@@ -1,10 +1,15 @@
 import * as Crypto from 'expo-crypto';
-import { File } from 'expo-file-system';
 
+import { readLocalAudioData } from '@/features/voice/read-local-audio-data';
 import { logDevelopmentError } from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { VoiceRepository } from '@/repositories/interfaces/voice-repository';
 import { authService } from '@/services/auth-service';
+import {
+  voiceSafetyService,
+  VoiceSafetyRejectedError,
+  VoiceSafetyUnavailableError,
+} from '@/services/voice-safety-service';
 import type {
   CreatePersonalVoiceInput,
   VoiceMessage,
@@ -32,6 +37,10 @@ function mapVoiceRow(
     storagePath: row.storage_path,
     durationMs: row.duration_ms,
     type: 'personal',
+    moderationStatus: row.moderation_status as VoiceMessage['moderationStatus'],
+    moderationCategory: row.moderation_category as VoiceMessage['moderationCategory'],
+    moderationReason: row.moderation_reason,
+    moderatedAt: row.moderated_at,
     createdAt: row.created_at,
     alarmReceivedAt: row.alarm_received_at ?? undefined,
   };
@@ -60,22 +69,8 @@ export class SupabaseVoiceRepository
       `personal/${input.receiverId}/` +
       `${authenticatedUserId}/${voiceId}.m4a`;
 
-    const file = new File(input.uri);
-
-    if (!file.exists) {
-      throw new Error(
-        'The local recording file does not exist'
-      );
-    }
-
     const audioData =
-      await file.arrayBuffer();
-
-    if (audioData.byteLength === 0) {
-      throw new Error(
-        'The local recording file is empty'
-      );
-    }
+      await readLocalAudioData(input.uri);
 
     const supabase =
       getSupabaseClient();
@@ -85,6 +80,8 @@ export class SupabaseVoiceRepository
         .from(voiceBucket)
         .upload(storagePath, audioData, {
           cacheControl: '3600',
+          // Keep the MIME used by the verified v2 delivery path. The file is
+          // an MPEG-4 audio container even though the extension is .m4a.
           contentType: 'audio/mp4',
           upsert: false,
         });
@@ -94,22 +91,34 @@ export class SupabaseVoiceRepository
     }
 
     try {
-      const { data, error } =
-        await supabase
-          .rpc('send_personal_voice', {
-            p_voice_id: voiceId,
-            p_receiver_id:
-              input.receiverId,
-            p_morning_request_id:
-              input.morningRequestId,
-            p_sender_morning_request_id:
-              input.senderMorningRequestId,
-            p_storage_path:
-              storagePath,
-            p_duration_ms:
-              input.durationMs,
-          })
-          .single();
+      try {
+        await voiceSafetyService.assertVoiceIsSafe({
+          bucket: voiceBucket,
+          path: storagePath,
+          voiceKind: 'personal',
+          durationMs: input.durationMs,
+        });
+      } catch (safetyError) {
+        if (!(safetyError instanceof VoiceSafetyUnavailableError)) {
+          throw safetyError;
+        }
+        // The check itself is unavailable (e.g. the Gemini API is
+        // rate-limited), not a genuine content rejection -- fail open so a
+        // provider outage doesn't block every Personal Voice send. A real
+        // rejection still throws VoiceSafetyRejectedError above.
+        logDevelopmentError('voice.safetyCheck.unavailable', safetyError);
+      }
+
+      const { data, error } = await supabase
+        .rpc('send_personal_voice', {
+          p_voice_id: voiceId,
+          p_receiver_id: input.receiverId,
+          p_morning_request_id: input.morningRequestId,
+          p_sender_morning_request_id: input.senderMorningRequestId,
+          p_storage_path: storagePath,
+          p_duration_ms: input.durationMs,
+        })
+        .single();
 
       if (error) {
         throw error;
@@ -128,7 +137,9 @@ export class SupabaseVoiceRepository
           cleanupError
         );
       }
-
+      if (error instanceof VoiceSafetyRejectedError) {
+        throw error;
+      }
       throw error;
     }
   }

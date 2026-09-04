@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 
 import { logDevelopmentError } from '@/lib/development-logger';
 import { alarmService, type ActiveAlarm } from '@/services/alarm-service';
+import { profileService } from '@/services/profile-service';
 import { voiceService } from '@/services/voice-service';
 import { wakeService } from '@/services/wake-service';
 import type { MorningRequest, VoiceMessage } from '@/types';
@@ -144,7 +144,7 @@ export class PersonalAlarmVoiceService {
     voiceMessageId?: string,
     communityVoices: VoiceMessage[] = []
   ): Promise<PersonalAlarmVoiceSyncResult> {
-    if (Platform.OS !== 'ios' || !alarmService.isNativeAlarmAvailable()) {
+    if (!alarmService.isNativeAlarmAvailable()) {
       return { status: 'unavailable' };
     }
     if (request.userId !== receiverId) return { status: 'failed' };
@@ -181,11 +181,16 @@ export class PersonalAlarmVoiceService {
         voiceMessageId: preparation.voice.id,
       });
 
+      const senderProfile = await profileService
+        .getProfile(preparation.voice.senderId)
+        .catch(() => null);
+
       const alarm = await alarmService.replaceWithPersonalVoice({
         morningRequestId: request.id,
         voiceMessageId: preparation.voice.id,
         remoteUrl: preparation.voice.uri,
         senderId: preparation.voice.senderId,
+        senderName: senderProfile?.nickname,
       });
       if (!alarm) {
         await saveDiagnostic(request, {

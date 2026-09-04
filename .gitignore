@@ -46,3 +46,6 @@ app-example
 /modules/**/build/
 
 .env
+
+# Supabase CLI local cache
+supabase/.temp/

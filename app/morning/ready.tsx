@@ -3,20 +3,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useRef, useState } from 'react';
-import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, Platform, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
 import { AppText } from '@/components/common/app-text';
 import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
-import { legacyColors as colors, fonts, spacing } from '@/constants/theme';
+import {
+  legacyColors as colors,
+  fonts,
+  paperColors,
+  shadows,
+  spacing,
+} from '@/constants/theme';
 import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
 import { useTapLock } from '@/hooks/use-tap-lock';
 import { wakeService } from '@/services/wake-service';
 import { useAppStore } from '@/store/use-app-store';
 
-// 地面: 上の紺色の空(hero)と分けた、より明るいダークグレー
-const GROUND_COLOR = '#303235';
+// 地面: 上の紺色の空(hero)と分けたライトグレー
+const GROUND_COLOR = paperColors.clockGray;
 
 function centeredSquare(diameter: number, centerX: number, centerY: number) {
   return {
@@ -121,7 +127,7 @@ export default function TomorrowReadyScreen() {
 
   const moonSize = heroLayout.width / 3;
   const moonCenterX = heroLayout.width / 2;
-  const moonCenterY = heroLayout.height - moonSize * 0.45 + moonSize / 2;
+  const moonCenterY = heroLayout.height;
   const moonStyle = moonSize > 0 ? centeredSquare(moonSize, moonCenterX, moonCenterY) : null;
   const haloOuterStyle =
     moonSize > 0 ? centeredSquare(moonSize * 1.8, moonCenterX, moonCenterY) : null;
@@ -162,7 +168,6 @@ export default function TomorrowReadyScreen() {
             <AppText variant="time" tone="light" style={styles.time}>
               {currentMorningRequest.wakeAt}
             </AppText>
-            <View style={styles.divider} />
             <AppText variant="bodyMedium" tone="light" style={styles.readyCopy}>
               {isCommunity
                 ? 'みんなに向けて届けられた声で、朝を始めます。'
@@ -193,7 +198,7 @@ export default function TomorrowReadyScreen() {
         ) : null}
 
         <View style={styles.footer}>
-          <AppText variant="secondary" tone="lightMuted" style={styles.footerCopy}>
+          <AppText variant="secondary" tone="dark" style={styles.footerCopy}>
             あとは、ゆっくり休んでください。
           </AppText>
           <View style={styles.alarmStatus} testID="ready-alarm-status">
@@ -232,7 +237,7 @@ export default function TomorrowReadyScreen() {
               icon="settings-outline"
               label="端末の設定を開く"
               onPress={() => void alarmSchedule.openSettings()}
-              variant="textOnDark"
+              variant="text"
             />
           ) : alarmSchedule.state.status === 'error' ||
             alarmSchedule.personalVoiceSyncStatus === 'error' ? (
@@ -244,8 +249,44 @@ export default function TomorrowReadyScreen() {
                   : 'Wake Voiceを再確認'
               }
               onPress={alarmSchedule.retry}
-              variant="textOnDark"
+              variant="text"
             />
+          ) : null}
+          {Platform.OS === 'android' &&
+          alarmSchedule.state.status === 'scheduled' &&
+          !alarmSchedule.hasNotificationPermission ? (
+            <>
+              <View style={styles.batteryNotice} testID="ready-notification-permission-notice">
+                <Ionicons color={colors.textInverseSecondary} name="notifications-off-outline" size={16} />
+                <AppText variant="caption" tone="lightMuted" style={styles.alarmStatusCopy}>
+                  アプリの通知を許可してください。許可がないとアラームを止められません
+                </AppText>
+              </View>
+              <AppButton
+                icon="settings-outline"
+                label="通知を許可する"
+                onPress={() => void alarmSchedule.openNotificationSettings()}
+                variant="text"
+              />
+            </>
+          ) : null}
+          {Platform.OS === 'android' &&
+          alarmSchedule.state.status === 'scheduled' &&
+          !alarmSchedule.isBatteryOptimizationExcluded ? (
+            <>
+              <View style={styles.batteryNotice} testID="ready-battery-optimization-notice">
+                <Ionicons color={colors.textInverseSecondary} name="battery-half-outline" size={16} />
+                <AppText variant="caption" tone="lightMuted" style={styles.alarmStatusCopy}>
+                  端末の電池最適化が有効です。機種によってはアラームが鳴らないことがあります
+                </AppText>
+              </View>
+              <AppButton
+                icon="settings-outline"
+                label="電池最適化の対象から外す"
+                onPress={() => void alarmSchedule.openBatteryOptimizationSettings()}
+                variant="text"
+              />
+            </>
           ) : null}
           {wakeError ? (
             <AppText variant="caption" style={styles.error}>
@@ -254,10 +295,12 @@ export default function TomorrowReadyScreen() {
           ) : null}
           <AppButton
             legacy
+            contentColor={colors.textInverse}
             disabled={isStartingWake}
             icon="sunny-outline"
             label={isStartingWake ? '朝を準備しています…' : '朝を体験する'}
             onPress={() => void handleStartWake()}
+            style={styles.primaryAction}
             testID="start-wake-demo"
             variant="warm"
           />
@@ -267,7 +310,7 @@ export default function TomorrowReadyScreen() {
             label="ホーム画面に戻る"
             onPress={() => runOnce(() => router.replace('/(tabs)'))}
             testID="back-to-home"
-            variant="textOnDark"
+            variant="text"
           />
           {isCommunity ? (
             <AppButton
@@ -275,7 +318,7 @@ export default function TomorrowReadyScreen() {
               icon="mic-outline"
               label="やっぱり誰かに声を届ける"
               onPress={() => runOnce(() => router.push('/(tabs)/connections'))}
-              variant="textOnDark"
+              variant="text"
             />
           ) : null}
         </View>
@@ -300,7 +343,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xxxl,
-    backgroundColor: colors.navy,
+    position: 'relative',
+    zIndex: 2,
+    backgroundColor: 'transparent',
   },
   navigation: {
     minHeight: 44,
@@ -310,9 +355,16 @@ const styles = StyleSheet.create({
   heroContent: {
     flex: 1,
     minHeight: 350,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 18,
+    backgroundColor: 'rgba(32, 42, 62, 0.78)',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.lg,
+    ...shadows.paper,
   },
   status: {
     flexDirection: 'row',
@@ -323,26 +375,25 @@ const styles = StyleSheet.create({
   time: {
     fontFamily: fonts?.rounded,
   },
-  divider: {
-    width: 48,
-    height: 1,
-    marginVertical: spacing.sm,
-    backgroundColor: colors.navyRaised,
-  },
   readyCopy: {
     maxWidth: 300,
     textAlign: 'center',
   },
   footer: {
     flex: 1,
+    position: 'relative',
+    zIndex: 2,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xxl,
     paddingBottom: spacing.xxxl,
+    borderTopWidth: 2,
+    borderTopColor: paperColors.ink,
     gap: spacing.xl,
     backgroundColor: GROUND_COLOR,
   },
   halo: {
     position: 'absolute',
+    zIndex: 1,
     backgroundColor: '#E9EAEC',
   },
   haloOuter: {
@@ -353,6 +404,7 @@ const styles = StyleSheet.create({
   },
   moon: {
     position: 'absolute',
+    zIndex: 1,
     overflow: 'hidden',
     backgroundColor: '#D9D9DB',
   },
@@ -395,17 +447,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   alarmStatus: {
-    minHeight: 32,
+    minHeight: 58,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    backgroundColor: colors.navyRaised,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
+    ...shadows.paper,
+  },
+  batteryNotice: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: 1,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    backgroundColor: colors.navyRaised,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
   },
   alarmStatusCopy: {
     flexShrink: 1,
   },
   error: {
-    color: colors.warmSoft,
+    color: colors.danger,
     textAlign: 'center',
+  },
+  primaryAction: {
+    borderWidth: 2,
+    borderColor: paperColors.ink,
+    ...shadows.paper,
   },
 });
