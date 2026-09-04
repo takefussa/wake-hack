@@ -10,7 +10,7 @@ import 'react-native-reanimated';
 import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
 import { LoadingScreen } from '@/components/common/loading-screen';
 import { colors, fontFamilyName, paperColors } from '@/constants/theme';
-import { useAlarmSchedule } from '@/hooks/use-alarm-schedule';
+import { AlarmScheduleProvider } from '@/hooks/use-alarm-schedule';
 import { useAlarmStopFlow } from '@/hooks/use-alarm-stop-flow';
 import { useAuthBootstrap } from '@/hooks/use-auth-bootstrap';
 import { useAppStore } from '@/store/use-app-store';
@@ -42,7 +42,6 @@ export default function RootLayout() {
   const isFontReady = fontsLoaded || fontError !== null;
   const isReady = isHydrated && authStatus === 'ready';
   useAlarmStopFlow(isReady);
-  useAlarmSchedule(isReady ? currentMorningRequest : null);
 
   useEffect(() => {
     if (isFontReady) {
@@ -57,7 +56,8 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       {isReady ? (
-        <ThemeProvider value={navigationTheme}>
+        <AlarmScheduleProvider request={currentMorningRequest}>
+          <ThemeProvider value={navigationTheme}>
           <Stack
             screenOptions={{
               headerShown: false,
@@ -75,7 +75,8 @@ export default function RootLayout() {
             <Stack.Screen name="friend" options={{ animation: 'slide_from_right' }} />
           </Stack>
           <StatusBar backgroundColor={paperColors.statusGray} style="dark" />
-        </ThemeProvider>
+          </ThemeProvider>
+        </AlarmScheduleProvider>
       ) : authStatus === 'error' ? (
         <AuthErrorScreen failure={failure} onRetry={retry} />
       ) : (

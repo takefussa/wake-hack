@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, createElement, type PropsWithChildren, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
 import { logDevelopmentError } from '@/lib/development-logger';
 import { isSupabaseUuid } from '@/lib/identifiers';
-import { getSupabaseClient } from '@/lib/supabase';
 import { alarmService, type AlarmSetupResult } from '@/services/alarm-service';
 import { morningRequestService } from '@/services/morning-request-service';
 import { personalAlarmVoiceService } from '@/services/personal-alarm-voice-service';
@@ -18,7 +17,11 @@ export type PersonalVoiceSyncStatus =
   | 'voice-ready'
   | 'error';
 
-export function useAlarmSchedule(request: MorningRequest | null) {
+type AlarmScheduleController = ReturnType<typeof useAlarmScheduleController>;
+type AlarmScheduleProviderProps = PropsWithChildren<{ request: MorningRequest | null }>;
+const AlarmScheduleContext = createContext<AlarmScheduleController | null>(null);
+
+function useAlarmScheduleController(request: MorningRequest | null) {
   const communityVoices = useAppStore((state) => state.communityVoiceMessages);
   const [state, setState] = useState<AlarmScheduleState>({ status: 'loading' });
   const [personalVoiceSyncStatus, setPersonalVoiceSyncStatus] =
@@ -27,7 +30,6 @@ export function useAlarmSchedule(request: MorningRequest | null) {
     useState<VoiceMessage | null>(null);
   const [attempt, setAttempt] = useState(0);
   const appStateRef = useRef(AppState.currentState);
-  const realtimeChannelIdRef = useRef(Math.random().toString(36).slice(2));
 
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
   const openSettings = useCallback(() => alarmService.openSettings(), []);
@@ -42,52 +44,6 @@ export function useAlarmSchedule(request: MorningRequest | null) {
   }, []);
 
   useEffect(() => {
-    if (
-      !request ||
-      request.status === 'completed' ||
-      personalVoiceSyncStatus !== 'waiting' ||
-      !isSupabaseUuid(request.id)
-    ) {
-      return;
-    }
-
-    const activeRequest = request;
-    const supabase = getSupabaseClient();
-    const channel = supabase
-      .channel(
-        `personal-alarm-${activeRequest.id}-${realtimeChannelIdRef.current}`
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'voice_messages',
-          filter: `receiver_id=eq.${activeRequest.userId}`,
-        },
-        (payload) => {
-          const voice = payload.new as {
-            receiver_id?: unknown;
-            morning_request_id?: unknown;
-            type?: unknown;
-          };
-          if (
-            voice.type === 'personal' &&
-            voice.receiver_id === activeRequest.userId &&
-            voice.morning_request_id === activeRequest.id
-          ) {
-            setAttempt((value) => value + 1);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [personalVoiceSyncStatus, request]);
-
-  useEffect(() => {
     if (!request || request.status === 'completed') {
       setState({ status: 'loading' });
       setPersonalVoiceSyncStatus('not-needed');
@@ -97,11 +53,7 @@ export function useAlarmSchedule(request: MorningRequest | null) {
 
     const activeRequest = request;
     let isActive = true;
-    // Realtime/manual rechecks keep the already-working Community/default
-    // alarm visible instead of flashing the whole screen back to scheduling.
-    setState((current) =>
-      current.status === 'scheduled' ? current : { status: 'scheduling' }
-    );
+    setState({ status: 'scheduling' });
 
     async function scheduleAndSync() {
       try {
@@ -166,11 +118,7 @@ export function useAlarmSchedule(request: MorningRequest | null) {
 
         if (voiceResult.status === 'ready') {
           setState({ status: 'scheduled', alarm: voiceResult.alarm });
-          // Community Voice is only a safety fallback. Keep listening for a
-          // Personal Voice until the native alarm is actually replaced by it.
-          setPersonalVoiceSyncStatus(
-            voiceResult.source === 'personal' ? 'voice-ready' : 'waiting'
-          );
+          setPersonalVoiceSyncStatus('voice-ready');
           setPreparedPersonalVoice(voiceResult.personalVoice ?? null);
         } else {
           setPreparedPersonalVoice(null);
@@ -201,4 +149,17 @@ export function useAlarmSchedule(request: MorningRequest | null) {
     retry,
     openSettings,
   };
+}
+
+export function AlarmScheduleProvider({ request, children }: AlarmScheduleProviderProps) {
+  const value = useAlarmScheduleController(request);
+  return createElement(AlarmScheduleContext.Provider, { value }, children);
+}
+
+export function useAlarmSchedule(_request?: MorningRequest | null): AlarmScheduleController {
+  const context = useContext(AlarmScheduleContext);
+  if (!context) {
+    throw new Error('useAlarmSchedule must be used inside AlarmScheduleProvider');
+  }
+  return context;
 }
