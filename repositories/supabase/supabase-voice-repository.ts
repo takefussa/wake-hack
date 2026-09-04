@@ -8,6 +8,7 @@ import { authService } from '@/services/auth-service';
 import {
   voiceSafetyService,
   VoiceSafetyRejectedError,
+  VoiceSafetyUnavailableError,
 } from '@/services/voice-safety-service';
 import type {
   CreatePersonalVoiceInput,
@@ -88,12 +89,23 @@ export class SupabaseVoiceRepository
     }
 
     try {
-      await voiceSafetyService.assertVoiceIsSafe({
-        bucket: voiceBucket,
-        path: storagePath,
-        voiceKind: 'personal',
-        durationMs: input.durationMs,
-      });
+      try {
+        await voiceSafetyService.assertVoiceIsSafe({
+          bucket: voiceBucket,
+          path: storagePath,
+          voiceKind: 'personal',
+          durationMs: input.durationMs,
+        });
+      } catch (safetyError) {
+        if (!(safetyError instanceof VoiceSafetyUnavailableError)) {
+          throw safetyError;
+        }
+        // The check itself is unavailable (e.g. the Gemini API is
+        // rate-limited), not a genuine content rejection -- fail open so a
+        // provider outage doesn't block every Personal Voice send. A real
+        // rejection still throws VoiceSafetyRejectedError above.
+        logDevelopmentError('voice.safetyCheck.unavailable', safetyError);
+      }
 
       const { data, error } = await supabase
         .rpc('send_personal_voice', {
