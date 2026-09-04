@@ -352,6 +352,7 @@ export default function HomeScreen() {
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const thanksMessages = useAppStore((state) => state.thanksMessages);
   const addThanksMessages = useAppStore((state) => state.addThanksMessages);
+  const [homeRefreshToken, setHomeRefreshToken] = useState(0);
   const runOnce = useTapLock();
   const alarmSchedule = useAlarmSchedule(currentMorningRequest);
   const preparedVoiceSender = useVoiceSender(
@@ -374,6 +375,11 @@ export default function HomeScreen() {
     );
   }
 
+  function handleHomeRefresh() {
+    alarmSchedule.retry();
+    setHomeRefreshToken((value) => value + 1);
+  }
+
   return (
     <NotebookBackground>
       <View style={styles.homeHeader}>
@@ -382,7 +388,7 @@ export default function HomeScreen() {
           accessibilityRole="button"
           disabled={isRefreshingWakeVoice}
           hitSlop={8}
-          onPress={alarmSchedule.retry}
+          onPress={handleHomeRefresh}
           style={({ pressed }) => [
             styles.refreshButton,
             pressed && styles.refreshButtonPressed,
@@ -459,6 +465,7 @@ export default function HomeScreen() {
         givenVoices={givenVoiceMessages}
         localMessages={thanksMessages}
         onMessagesLoaded={addThanksMessages}
+        refreshToken={homeRefreshToken}
         userId={currentUser.id}
       />
       <CassetteTimeline />

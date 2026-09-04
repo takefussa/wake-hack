@@ -17,7 +17,7 @@ export default function ThanksHistoryScreen() {
   return (
     <MorningScreen contentStyle={{ gap: 24 }}>
       <StatusBar style="dark" />
-      <ScreenHeader onBack={() => goBackOrReplace('/(tabs)')} title="届いたありがとう" />
+      <ScreenHeader onBack={() => goBackOrReplace('/(tabs)')} title="帰ってきたボイメ" />
       <ReceivedThanksSection
         givenVoices={givenVoices}
         localMessages={thanksMessages}

@@ -13,6 +13,7 @@ type ReceivedThanksSectionProps = {
   givenVoices: VoiceMessage[];
   onMessagesLoaded: (messages: ThanksMessage[]) => void;
   preview?: boolean;
+  refreshToken?: number;
 };
 
 export function ReceivedThanksSection({
@@ -21,6 +22,7 @@ export function ReceivedThanksSection({
   givenVoices,
   onMessagesLoaded,
   preview = true,
+  refreshToken = 0,
 }: ReceivedThanksSectionProps) {
   const [items, setItems] = useState<ThanksInboxItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,20 +33,21 @@ export function ReceivedThanksSection({
       const messages = await thanksService.getMessagesForUser(userId, localMessages);
       const inbox = await thanksService.getInboxItems(messages, givenVoices, userId);
       onMessagesLoaded(messages);
-      setItems(inbox);
+      setItems(inbox.filter((item) => Boolean(item.message.audioUri)));
     } catch {
       const inbox = await thanksService.getInboxItems(localMessages, givenVoices, userId).catch(
         () => []
       );
-      setItems(inbox);
+      setItems(inbox.filter((item) => Boolean(item.message.audioUri)));
     } finally {
       setIsLoading(false);
     }
   }, [givenVoices, localMessages, onMessagesLoaded, userId]);
 
   useEffect(() => {
+    void refreshToken;
     void load();
-  }, [load]);
+  }, [load, refreshToken]);
 
   if (!isLoading && items.length === 0) return null;
   const shownItems = preview ? items.slice(0, 1) : items;
@@ -61,16 +64,16 @@ export function ReceivedThanksSection({
         style={styles.previewHeader}
       >
         <View style={styles.heading}>
-          <AppText style={styles.title}>届いたありがとう</AppText>
+          <AppText style={styles.title}>帰ってきたボイメ</AppText>
           {items.length > 0 ? <AppText style={styles.count}>{items.length}件</AppText> : null}
         </View>
-        <AppText style={styles.description}>あなたが届けた声への返事です。</AppText>
+        <AppText style={styles.description}>起こした相手から届いた声を聞けます。</AppText>
       </Pressable>
       {isLoading ? <ActivityIndicator color="#536052" /> : null}
       {shownItems.map((item) => <ThanksInboxRow item={item} key={item.message.id} />)}
       {preview && items.length > 1 ? (
         <Pressable accessibilityRole="button" onPress={openHistory}>
-          <AppText style={styles.more}>過去のありがとうも見る →</AppText>
+          <AppText style={styles.more}>過去のボイメも聞く →</AppText>
         </Pressable>
       ) : null}
     </View>
