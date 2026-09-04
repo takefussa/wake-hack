@@ -23,7 +23,51 @@ export function useVoicePlayer(
   });
   const status = useAudioPlayerStatus(player);
   const [error, setError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const autoPlayAttempted = useRef(false);
+
+  // AVPlayer can remain in `unknown` when a signed URL has expired or the
+  // network is unavailable. Without a timeout the UI would show a spinner
+  // forever, so turn that state into a recoverable error instead.
+  useEffect(() => {
+    setError(null);
+    autoPlayAttempted.current = false;
+
+    if (source === null) {
+      setError('ボイメの音声データがありません。');
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      if (!player.isLoaded) {
+        setError('ボイメを読み込めませんでした。再試行してください。');
+      }
+    }, 12_000);
+
+    return () => clearTimeout(timeout);
+  }, [loadAttempt, player, source]);
+
+  useEffect(() => {
+    if (status.playbackState === 'failed') {
+      setError('ボイメを読み込めませんでした。再試行してください。');
+    }
+  }, [status.playbackState]);
+
+  const retry = useCallback(() => {
+    if (source === null) {
+      setError('ボイメの音声データがありません。');
+      return;
+    }
+
+    setError(null);
+    autoPlayAttempted.current = false;
+    setLoadAttempt((attempt) => attempt + 1);
+    try {
+      player.replace(source);
+    } catch {
+      setError('ボイメを読み込めませんでした。再試行してください。');
+    }
+  }, [player, source]);
 
   const play = useCallback(async () => {
     setError(null);
@@ -91,6 +135,7 @@ export function useVoicePlayer(
     currentTimeSeconds: status.currentTime,
     durationSeconds,
     error,
+    retry,
     togglePlayback,
     stopPlayback,
   };
