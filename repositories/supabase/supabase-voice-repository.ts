@@ -80,7 +80,9 @@ export class SupabaseVoiceRepository
         .from(voiceBucket)
         .upload(storagePath, audioData, {
           cacheControl: '3600',
-          contentType: 'audio/m4a',
+          // Keep the MIME used by the verified v2 delivery path. The file is
+          // an MPEG-4 audio container even though the extension is .m4a.
+          contentType: 'audio/mp4',
           upsert: false,
         });
 

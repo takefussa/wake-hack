@@ -1,9 +1,13 @@
-import { StyleSheet, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useMemo } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/common/app-text';
 import { Avatar } from '@/components/common/avatar';
-import { colors, spacing } from '@/constants/theme';
-import type { ThanksInboxItem } from '@/types';
+import { Waveform } from '@/components/common/waveform';
+import { colors, paperColors, spacing } from '@/constants/theme';
+import { useVoicePlayer } from '@/hooks/use-voice-player';
+import type { ThanksInboxItem, VoiceMessage } from '@/types';
 
 type ThanksInboxRowProps = {
   item: ThanksInboxItem;
@@ -15,8 +19,33 @@ function formatTime(createdAt: string): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
+function formatSeconds(seconds: number): string {
+  if (!Number.isFinite(seconds)) return '0:00';
+  const rounded = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, '0')}`;
+}
+
 export function ThanksInboxRow({ item }: ThanksInboxRowProps) {
   const senderName = item.sender?.nickname ?? '誰か';
+  const voice = useMemo<VoiceMessage>(
+    () => ({
+      id: item.message.id,
+      senderId: item.message.senderId,
+      receiverId: item.message.receiverId,
+      uri: item.message.audioUri ?? '',
+      durationMs: 0,
+      type: 'thanks',
+      createdAt: item.message.createdAt,
+    }),
+    [
+      item.message.audioUri,
+      item.message.createdAt,
+      item.message.id,
+      item.message.receiverId,
+      item.message.senderId,
+    ]
+  );
+  const player = useVoicePlayer(voice, false, { downloadFirst: true });
 
   return (
     <View style={styles.container}>
@@ -34,11 +63,69 @@ export function ThanksInboxRow({ item }: ThanksInboxRowProps) {
           </AppText>
         </View>
         <AppText variant="secondary" tone="soft">
-          {item.message.content ?? 'ありがとうが届きました。'}
+          {senderName}さんからボイスメッセージが届きました
         </AppText>
         <AppText variant="caption" tone="muted">
           {item.contextLabel}
         </AppText>
+        <View style={styles.voicePlayer}>
+          <Waveform
+            color={paperColors.orange}
+            height={34}
+            mutedColor={paperColors.paleYellow}
+            progress={player.progress}
+          />
+          <View style={styles.voiceControls}>
+            <Pressable
+              accessibilityLabel={
+                player.error
+                  ? '返ってきたボイメを再試行'
+                  : player.isPlaying
+                    ? '返ってきた声を一時停止'
+                    : '返ってきた声を再生'
+              }
+              accessibilityRole="button"
+              disabled={!player.isReady && !player.error}
+              onPress={() =>
+                void (player.error ? player.retry() : player.togglePlayback())
+              }
+              style={({ pressed }) => [
+                styles.playButton,
+                !player.isReady && !player.error && styles.disabled,
+                pressed && (player.isReady || player.error) && styles.pressed,
+              ]}
+            >
+              {!player.isReady && !player.error ? (
+                <ActivityIndicator color={paperColors.ink} size="small" />
+              ) : (
+                <Ionicons
+                  color={paperColors.ink}
+                  name={player.error ? 'refresh' : player.isPlaying ? 'pause' : 'play'}
+                  size={18}
+                />
+              )}
+            </Pressable>
+            <View style={styles.voiceCopy}>
+              <AppText variant="secondary">
+                {player.error
+                  ? '読み込めませんでした。タップして再試行'
+                  : !player.isReady
+                  ? 'ボイメを準備しています'
+                  : player.isPlaying
+                    ? '再生しています'
+                    : '返ってきたボイメを聞く'}
+              </AppText>
+              <AppText variant="caption" tone="muted">
+                {formatSeconds(player.currentTimeSeconds)} / {formatSeconds(player.durationSeconds)}
+              </AppText>
+            </View>
+          </View>
+          {player.error ? (
+            <AppText variant="caption" style={styles.error}>
+              {player.error}
+            </AppText>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -62,5 +149,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  voicePlayer: {
+    marginTop: spacing.xs,
+    padding: spacing.md,
+    borderWidth: 1.5,
+    borderColor: paperColors.ink,
+    borderRadius: 12,
+    backgroundColor: paperColors.base,
+    gap: spacing.sm,
+  },
+  voiceControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  playButton: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: paperColors.ink,
+    borderRadius: 21,
+    backgroundColor: paperColors.orange,
+  },
+  voiceCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  disabled: {
+    opacity: 0.45,
+  },
+  pressed: {
+    opacity: 0.68,
+  },
+  error: {
+    color: colors.danger,
   },
 });

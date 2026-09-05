@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, createElement, type PropsWithChildren, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { logDevelopmentError } from '@/lib/development-logger';
@@ -18,7 +18,11 @@ export type PersonalVoiceSyncStatus =
   | 'voice-ready'
   | 'error';
 
-export function useAlarmSchedule(request: MorningRequest | null) {
+type AlarmScheduleController = ReturnType<typeof useAlarmScheduleController>;
+type AlarmScheduleProviderProps = PropsWithChildren<{ request: MorningRequest | null }>;
+const AlarmScheduleContext = createContext<AlarmScheduleController | null>(null);
+
+function useAlarmScheduleController(request: MorningRequest | null) {
   const communityVoices = useAppStore((state) => state.communityVoiceMessages);
   const [state, setState] = useState<AlarmScheduleState>({ status: 'loading' });
   const [personalVoiceSyncStatus, setPersonalVoiceSyncStatus] =
@@ -168,4 +172,17 @@ export function useAlarmSchedule(request: MorningRequest | null) {
     hasNotificationPermission,
     openNotificationSettings,
   };
+}
+
+export function AlarmScheduleProvider({ request, children }: AlarmScheduleProviderProps) {
+  const value = useAlarmScheduleController(request);
+  return createElement(AlarmScheduleContext.Provider, { value }, children);
+}
+
+export function useAlarmSchedule(_request?: MorningRequest | null): AlarmScheduleController {
+  const context = useContext(AlarmScheduleContext);
+  if (!context) {
+    throw new Error('useAlarmSchedule must be used inside AlarmScheduleProvider');
+  }
+  return context;
 }

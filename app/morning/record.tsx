@@ -30,7 +30,7 @@ export default function RecordVoiceScreen() {
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
   const currentUser = useAppStore((state) => state.currentUser);
   const currentMorningRequest = useAppStore((state) => state.currentMorningRequest);
-  const currentGiveReceiverIds = useAppStore((state) => state.currentGiveReceiverIds);
+  const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const completeGive = useAppStore((state) => state.completeGive);
   const recorder = useVoiceRecorder();
   const [request, setRequest] = useState<MorningRequest | null>(null);
@@ -132,7 +132,19 @@ export default function RecordVoiceScreen() {
 
   const currentUserId = currentUser.id;
   const currentMorningRequestId = currentMorningRequest.id;
-  const hasAlreadyGiven = recipient !== null && currentGiveReceiverIds.includes(recipient.id);
+  // A recipient can be selected again for a new morning request. The old
+  // receiver-id list is only a session shortcut and may contain yesterday's
+  // deliveries, so deduplicate by the actual target request and sender.
+  const hasAlreadyGiven =
+    request !== null &&
+    recipient !== null &&
+    givenVoiceMessages.some(
+      (voice) =>
+        voice.type === 'personal' &&
+        voice.senderId === currentUserId &&
+        voice.receiverId === recipient.id &&
+        voice.morningRequestId === request.id
+    );
   const isTooShort =
     recorder.recording !== null &&
     recorder.recording.durationMs < prototypeConfig.recordingMinMs;

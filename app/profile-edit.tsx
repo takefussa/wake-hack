@@ -41,6 +41,11 @@ export default function ProfileEditScreen() {
     return <Redirect href="/onboarding" />;
   }
 
+  function handleProfileImageChange(uri?: string) {
+    setProfileImageUri(uri);
+    setRemoveProfileImage(uri === undefined && Boolean(currentUser?.profileImageUri));
+  }
+
   async function handleSubmit() {
     if (!currentUser || !userType || !canSubmit || isSavingRef.current) return;
 
@@ -116,7 +121,7 @@ export default function ProfileEditScreen() {
           onAvatarChange={setAvatarId}
           onBioChange={setBio}
           onNicknameChange={setNickname}
-          onProfileImageChange={setProfileImageUri}
+          onProfileImageChange={handleProfileImageChange}
           onTagsChange={setTags}
           onUserTypeChange={setUserType}
           profileImageUri={profileImageUri}
@@ -133,7 +138,7 @@ export default function ProfileEditScreen() {
           onAvatarChange={setAvatarId}
           onBioChange={setBio}
           onNicknameChange={setNickname}
-          onProfileImageChange={setProfileImageUri}
+          onProfileImageChange={handleProfileImageChange}
           onTagsChange={setTags}
           onUserTypeChange={setUserType}
           profileImageUri={profileImageUri}
