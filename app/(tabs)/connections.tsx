@@ -125,33 +125,19 @@ function VoiceOptionsPanel({ options }: { options: readonly WakeStyleOption[] })
   );
 }
 
-const CURVED_LABEL_ARC_ANGLE = 30;
-const CURVED_LABEL_PERSPECTIVE = 300;
-
-// 実物のカセットの持ち手部分にある、円柱に巻き付くような湾曲した印字を再現する
-// (Y軸まわりに回転させることで、両端が奥へ回り込むように見せる)
+// カセットの下部ラベル。文字を分割・回転すると端の文字が切れるため、
+// 1つのTextとして自動縮小し、常に1行全体を表示する。
 function CurvedLabel({ text, style }: { text: string; style?: StyleProp<TextStyle> }) {
-  const characters = Array.from(text);
-  const mid = (characters.length - 1) / 2;
-
   return (
     <View style={styles.curvedLabelRow}>
-      {characters.map((character, index) => {
-        const t = mid === 0 ? 0 : (index - mid) / mid;
-        const rotateY = `${t * CURVED_LABEL_ARC_ANGLE}deg`;
-
-        return (
-          <AppText
-            key={`${character}-${index}`}
-            style={[
-              style,
-              { transform: [{ perspective: CURVED_LABEL_PERSPECTIVE }, { rotateY }] },
-            ]}
-          >
-            {character}
-          </AppText>
-        );
-      })}
+      <AppText
+        adjustsFontSizeToFit
+        minimumFontScale={0.55}
+        numberOfLines={1}
+        style={[styles.curvedLabelText, style]}
+      >
+        {text}
+      </AppText>
     </View>
   );
 }
@@ -639,7 +625,12 @@ export default function ConnectionsScreen() {
 
                     <View style={styles.cassetteAttributeOverlay}>
                       <View pointerEvents="none" style={styles.cassetteAttributeTape} />
-                      <AppText numberOfLines={1} style={styles.cassetteAttributeValue}>
+                      <AppText
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.55}
+                        numberOfLines={1}
+                        style={styles.cassetteAttributeValue}
+                      >
                         {user.userType}
                       </AppText>
                     </View>
@@ -1099,28 +1090,34 @@ const styles = StyleSheet.create({
   cassetteNameOverlay: {
     position: 'absolute',
     top: '26.1%',
-    left: '28.4%',
+    // ラベルの左右に余っている領域も使い、長い名前を1行で収める
+    left: '22%',
 
-    width: '43.2%',
+    width: '56%',
     height: '24.4%',
 
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 4,
   },
 
   cassetteName: {
+    width: '100%',
+    maxWidth: '100%',
+    flexShrink: 1,
     fontFamily: fontFamilyName,
     color: '#2E2E2E',
-    fontSize: 22,
+    fontSize: 20,
+    textAlign: 'center',
   },
 
   // ラベル下部にある帯にちょうど収まる位置に属性を表示
   cassetteAttributeOverlay: {
     position: 'absolute',
     top: '50.6%',
-    left: '28.4%',
+    left: '22%',
 
-    width: '43.2%',
+    width: '56%',
     height: '9.1%',
 
     alignItems: 'center',
@@ -1128,9 +1125,12 @@ const styles = StyleSheet.create({
   },
 
   cassetteAttributeValue: {
+    width: '100%',
+    maxWidth: '100%',
+    flexShrink: 1,
     fontFamily: fontFamilyName,
     color: '#2E2E2E',
-    fontSize: 13,
+    fontSize: 12,
     textAlign: 'center',
   },
 
@@ -1167,9 +1167,15 @@ const styles = StyleSheet.create({
   },
 
   curvedLabelRow: {
-    flexDirection: 'row',
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  curvedLabelText: {
+    width: '100%',
+    flexShrink: 1,
+    textAlign: 'center',
   },
 
   pressed: {
@@ -1262,7 +1268,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFDF8',
 
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderColor: paperColors.ink,
   },
 

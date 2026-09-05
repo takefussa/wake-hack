@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
 import type { PropsWithChildren } from 'react';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/common/app-text';
@@ -137,7 +137,7 @@ function BoomboxCard({ request, isVoiceReady, onPress }: BoomboxCardProps) {
 
 type TomorrowRecipient = {
   profile: UserProfile;
-  request: MorningRequest | null;
+  request: MorningRequest;
 };
 
 type TomorrowWakeCardProps = {
@@ -155,6 +155,12 @@ function TomorrowWakeCard({
 }: TomorrowWakeCardProps) {
   const [recipients, setRecipients] = useState<TomorrowRecipient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -192,7 +198,16 @@ function TomorrowWakeCard({
             morningRequestService.getRequest(voice.morningRequestId as string),
           ]);
 
-          return profile ? { profile, request } : null;
+          // A request is no longer a tomorrow delivery once its alarm time
+          // has passed or the receiver has completed the wake session. The
+          // remote RLS policy also hides completed/assigned requests from the
+          // sender, so a missing request is intentionally treated as stale.
+          if (!profile || !request || request.status === 'completed') return null;
+          if (request.scheduledFor) {
+            const scheduledFor = new Date(request.scheduledFor).getTime();
+            if (Number.isFinite(scheduledFor) && scheduledFor <= now) return null;
+          }
+          return { profile, request };
         })
       );
 
@@ -203,11 +218,15 @@ function TomorrowWakeCard({
       setIsLoading(false);
     }
 
-    void loadRecipients();
+    void loadRecipients().catch(() => {
+      if (!isMounted) return;
+      setRecipients([]);
+      setIsLoading(false);
+    });
     return () => {
       isMounted = false;
     };
-  }, [currentUserId, givenVoices, receiverIds]);
+  }, [currentUserId, givenVoices, now, receiverIds]);
 
   return (
     <View style={styles.wakePlanWrap}>
@@ -333,6 +352,7 @@ export default function HomeScreen() {
   const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
   const thanksMessages = useAppStore((state) => state.thanksMessages);
   const addThanksMessages = useAppStore((state) => state.addThanksMessages);
+  const [homeRefreshToken, setHomeRefreshToken] = useState(0);
   const runOnce = useTapLock();
   const alarmSchedule = useAlarmSchedule(currentMorningRequest);
   const preparedVoiceSender = useVoiceSender(
@@ -341,6 +361,9 @@ export default function HomeScreen() {
   const isAlarmVoiceReady =
     alarmSchedule.state.status === 'scheduled' &&
     alarmSchedule.state.alarm.sound !== 'default';
+  const isRefreshingWakeVoice =
+    alarmSchedule.state.status === 'scheduling' ||
+    alarmSchedule.personalVoiceSyncStatus === 'checking';
 
   if (!currentUser) return <Redirect href="/onboarding" />;
 
@@ -352,8 +375,33 @@ export default function HomeScreen() {
     );
   }
 
+  function handleHomeRefresh() {
+    alarmSchedule.retry();
+    setHomeRefreshToken((value) => value + 1);
+  }
+
   return (
     <NotebookBackground>
+      <View style={styles.homeHeader}>
+        <Pressable
+          accessibilityLabel="Wake Voiceを再確認"
+          accessibilityRole="button"
+          disabled={isRefreshingWakeVoice}
+          hitSlop={8}
+          onPress={handleHomeRefresh}
+          style={({ pressed }) => [
+            styles.refreshButton,
+            pressed && styles.refreshButtonPressed,
+          ]}
+          testID="home-refresh-wake-voice"
+        >
+          {isRefreshingWakeVoice ? (
+            <ActivityIndicator color="#30463E" size="small" />
+          ) : (
+            <Ionicons color="#30463E" name="refresh" size={21} />
+          )}
+        </Pressable>
+      </View>
       <MemoNote name={currentUser.nickname} />
       <BoomboxCard
         request={currentMorningRequest}
@@ -417,6 +465,7 @@ export default function HomeScreen() {
         givenVoices={givenVoiceMessages}
         localMessages={thanksMessages}
         onMessagesLoaded={addThanksMessages}
+        refreshToken={homeRefreshToken}
         userId={currentUser.id}
       />
       <CassetteTimeline />
@@ -427,6 +476,9 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: paperColors.base },
   content: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxxl, paddingBottom: spacing.xxxl, gap: spacing.xxl },
+  homeHeader: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
+  refreshButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: paperColors.ink, borderRadius: 10, backgroundColor: paperColors.base },
+  refreshButtonPressed: { opacity: 0.65 },
   memoWrap: { alignSelf: 'center', width: '92%', backgroundColor: paperColors.base, transform: [{ rotate: '-1.5deg' }], ...shadows.paper },
   tape: { position: 'absolute', zIndex: 1, top: -10, left: '37%', width: 78, height: 22, backgroundColor: paperColors.tape, transform: [{ rotate: '2deg' }] },
   memo: { paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, borderWidth: 1, borderColor: paperColors.ink, backgroundColor: paperColors.base, alignItems: 'center' },
@@ -495,7 +547,7 @@ const styles = StyleSheet.create({
   stepCopy: { color: paperColors.ink, fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 2 },
   recipientList: { paddingHorizontal: spacing.lg },
   recipientRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  recipientRowBorder: { borderTopWidth: 1, borderTopColor: paperColors.ink, borderStyle: 'dashed' },
+  recipientRowBorder: { borderTopWidth: 1, borderTopColor: paperColors.ink, borderStyle: 'solid' },
   recipientAvatar: { width: 46, height: 46, borderWidth: 1, borderColor: paperColors.ink, borderRadius: 23, backgroundColor: paperColors.olive, alignItems: 'center', justifyContent: 'center' },
   recipientAvatarPressed: { opacity: 0.6, transform: [{ scale: 0.96 }] },
   recipientAvatarText: { color: paperColors.ink, fontFamily: fonts?.rounded, fontSize: 16, lineHeight: 21 },

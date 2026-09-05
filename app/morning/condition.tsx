@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: paperColors.noteBlue,
     borderWidth: 2,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderColor: paperColors.ink,
   },
 
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     backgroundColor: '#FFFDF8',
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderColor: '#E49283',
   },
 

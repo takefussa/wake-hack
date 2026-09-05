@@ -12,7 +12,8 @@ export function useAlarmStopFlow(enabled: boolean) {
   const currentMorningRequest = useAppStore(
     (state) => state.currentMorningRequest
   );
-  const completeWakeSession = useAppStore((state) => state.completeWakeSession);
+  const givenVoiceMessages = useAppStore((state) => state.givenVoiceMessages);
+  const startWakeSession = useAppStore((state) => state.startWakeSession);
   const isConsumingRef = useRef(false);
 
   useEffect(() => {
@@ -25,21 +26,20 @@ export function useAlarmStopFlow(enabled: boolean) {
         const stopped = await alarmService.consumeStoppedAlarm();
         if (
           !stopped ||
-          stopped.morningRequestId !== currentMorningRequest!.id ||
-          stopped.sound === 'default'
+          stopped.morningRequestId !== currentMorningRequest!.id
         ) {
           return;
         }
 
-        // The store already holds the real assignedWakeVoice/wakeSession set
-        // when the alarm was originally scheduled (Personal or Community,
-        // with a real playable uri). Reuse that instead of fabricating a
-        // placeholder VoiceMessage, so /wake/alarm can actually play it back.
-        const completed = completeWakeSession();
-        if (completed) {
-          void wakeService.completeWakeSession(completed);
+        const experience = await wakeService.startWakeExperience(
+          currentMorningRequest!,
+          currentUser!.id,
+          givenVoiceMessages,
+          { isDemo: false }
+        );
+        if (startWakeSession(experience.voice, experience.session)) {
+          router.replace('/wake/mission');
         }
-        router.replace({ pathname: '/wake/alarm', params: { review: '1' } });
       } catch (error) {
         logDevelopmentError('alarmStopFlow.consume', error);
       } finally {
@@ -52,5 +52,11 @@ export function useAlarmStopFlow(enabled: boolean) {
       if (state === 'active') void consumeStop();
     });
     return () => subscription.remove();
-  }, [completeWakeSession, currentMorningRequest, currentUser, enabled]);
+  }, [
+    currentMorningRequest,
+    currentUser,
+    enabled,
+    givenVoiceMessages,
+    startWakeSession,
+  ]);
 }

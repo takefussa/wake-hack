@@ -1,3 +1,7 @@
+import * as Crypto from 'expo-crypto';
+import { File } from 'expo-file-system';
+
+import { logDevelopmentError } from '@/lib/development-logger';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { ThanksRepository } from '@/repositories/interfaces/thanks-repository';
 import { authService } from '@/services/auth-service';
@@ -28,18 +32,22 @@ async function mapThanksRow(row: ThanksMessageRow): Promise<ThanksMessage[]> {
 
   if (row.text_message?.startsWith(voiceMarker)) {
     const storagePath = row.text_message.slice(voiceMarker.length);
-    const { data } = await getSupabaseClient().storage
+    const { data, error } = await getSupabaseClient().storage
       .from(voiceBucket)
       .createSignedUrl(storagePath, 60 * 60);
-    messages.push({
-      id: `${row.id}:voice`,
-      senderId: row.sender_id,
-      receiverId: row.receiver_id,
-      sourceVoiceMessageId: row.source_voice_message_id,
-      type: 'voice',
-      audioUri: data?.signedUrl,
-      createdAt: row.created_at,
-    });
+    if (error) {
+      logDevelopmentError('thanks.voice.signedUrl', error);
+    } else {
+      messages.push({
+        id: `${row.id}:voice`,
+        senderId: row.sender_id,
+        receiverId: row.receiver_id,
+        sourceVoiceMessageId: row.source_voice_message_id,
+        type: 'voice',
+        audioUri: data.signedUrl,
+        createdAt: row.created_at,
+      });
+    }
   } else if (row.text_message) {
     messages.push({
       id: `${row.id}:text`,
@@ -146,7 +154,3 @@ export class SupabaseThanksRepository implements ThanksRepository {
     return [];
   }
 }
-import * as Crypto from 'expo-crypto';
-import { File } from 'expo-file-system';
-
-import { logDevelopmentError } from '@/lib/development-logger';

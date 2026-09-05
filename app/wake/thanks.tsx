@@ -32,7 +32,7 @@ export default function ThanksSendScreen() {
   const thanksMessages = useAppStore((state) => state.thanksMessages);
   const addThanksMessages = useAppStore((state) => state.addThanksMessages);
   const sender = useVoiceSender(assignedWakeVoice);
-  const recorder = useVoiceRecorder();
+  const recorder = useVoiceRecorder('playback');
   const [addToOkimate, setAddToOkimate] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);

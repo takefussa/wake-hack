@@ -18,6 +18,25 @@ export type AuthBootstrapFailure =
   | 'network'
   | 'unknown';
 
+const bootstrapTimeoutMs = 15_000;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error('Authentication bootstrap timed out')),
+          timeoutMs
+        );
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== null) clearTimeout(timeoutId);
+  }
+}
+
 function readErrorCode(error: unknown): string | null {
   if (
     typeof error === 'object' &&
@@ -66,7 +85,9 @@ function classifyBootstrapFailure(
   if (
     message.includes('network request failed') ||
     message.includes('failed to fetch') ||
-    message.includes('fetch failed')
+    message.includes('fetch failed') ||
+    message.includes('timed out') ||
+    message.includes('timeout')
   ) {
     return 'network';
   }
@@ -121,16 +142,18 @@ export function useAuthBootstrap() {
         stopAutoRefresh =
           authService.startSessionAutoRefresh();
 
-        const user =
-          await authService.initializeAnonymousSession();
+        const user = await withTimeout(
+          authService.initializeAnonymousSession(),
+          bootstrapTimeoutMs
+        );
 
         let profile: UserProfile | null;
 
         try {
-          profile =
-            await profileService.getCurrentProfile(
-              user.id
-            );
+          profile = await withTimeout(
+            profileService.getCurrentProfile(user.id),
+            bootstrapTimeoutMs
+          );
         } catch (error) {
           const cachedProfile =
             useAppStore.getState().currentUser;

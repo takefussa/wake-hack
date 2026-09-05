@@ -109,6 +109,37 @@ export class WakeService {
           }
         }
 
+        // A Community Voice assignment is only a fallback.  A Personal Voice
+        // can arrive after the assignment was first persisted, so do not let
+        // the old community row decide what the wake experience displays.
+        // Re-check the received messages before falling back to Community
+        // Voice.  This also keeps the stop-flow/complete screen in sync with
+        // the Personal Voice that AlarmKit may already be playing.
+        if (persistedAssignment.type === 'community') {
+          try {
+            const personalVoice =
+              await this.repository.findPersonalForRequest(
+                request,
+                receiverId
+              );
+
+            if (personalVoice?.type === 'personal') {
+              return {
+                voice: personalVoice,
+                mode: 'personal',
+                persistedAssignment,
+              };
+            }
+          } catch (error) {
+            // The Community Voice remains a safe fallback when the re-check
+            // is temporarily unavailable.
+            logDevelopmentError(
+              'wake.loadLatestPersonal',
+              error
+            );
+          }
+        }
+
         const communityVoice =
           await this.repository.findCommunityForRequest(
             request,

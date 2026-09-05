@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderColor: '#C8A97A',
     borderRadius: 6,
     backgroundColor: '#FFF6E7',
